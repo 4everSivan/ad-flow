@@ -1,9 +1,9 @@
 # ad-flow Agentic Execution Workflow (Machine-Oriented)
 # Specification for AI Agent initialization execution
-version: "1.0.0"
+version: "1.1.0"
 workflow_id: "adflow_init"
 target_actor: "AI_AGENT"
-description: "Deterministic step-by-step state machine for initializing ad-flow documentation governance."
+description: "Deterministic step-by-step state machine for initializing and upgrading ad-flow documentation governance."
 
 # 机器硬性不可变约束 (Invariants)
 invariants:
@@ -19,27 +19,33 @@ invariants:
   - id: "INV_BASE_GOVERNANCE_COUNT"
     rule: "At least 22 standardized base governance files must be created upon initialization (plus N reconstructed living design docs if legacy docs/code exist)"
     severity: "FATAL"
-  - id: "INV_IDEMPOTENCY_GUARD"
-    rule: "If target AGENTS.md contains '<!-- @ad-flow: initialized -->', re-initialization is strictly prohibited"
+  - id: "INV_VERSION_AWARE_UPGRADE_GUARD"
+    rule: "If target AGENTS.md contains '<!-- @ad-flow: initialized vX.Y.Z -->', re-initialization is blocked if version matches; if older, pipeline automatically branches to UPGRADE_GOVERNANCE_RULES"
     severity: "FATAL"
 
 pipeline:
   - step: 1
     name: "SURVEY_PROJECT_ASSETS"
-    description: "Inspect target workspace, check idempotency tag, and determine project category"
+    description: "Inspect target workspace, check version/idempotency tag, and determine project category"
     action: "INSPECT"
     inputs:
       target_dir: "${TARGET_DIR:-.}"
-    idempotency_check:
-      tag: "<!-- @ad-flow: initialized -->"
+    idempotency_and_version_check:
       scan_files:
         - "AGENTS.md"
         - "Agent.md"
         - "agents.md"
-      on_tag_found:
-        state: "ALREADY_INITIALIZED"
+        - "adflow.config.json"
+      tag_pattern: "<!-- @ad-flow: initialized(?: v(?P<ver>[0-9.]+))? -->"
+      current_version: "1.1.0"
+      on_version_match:
+        state: "ALREADY_INITIALIZED_UP_TO_DATE"
         action: "TERMINATE"
-        message: "项目已完成 ad-flow 文档治理初始化（检测到 AGENTS.md 中已存在 <!-- @ad-flow: initialized --> 标签）。严禁重复初始化，安全退出。"
+        message: "项目已完成 ad-flow 文档治理初始化且版本为最新 (v1.1.0)。严禁重复初始化，安全退出。"
+      on_version_outdated:
+        state: "NEEDS_UPGRADE"
+        action: "BRANCH_TO_UPGRADE_PIPELINE"
+        message: "检测到项目治理版本低于当前技能包 (v1.1.0)，正在进入规约与规范平滑升级流程..."
     detection_rules:
       code_indicators:
         - "package.json"
@@ -108,10 +114,15 @@ pipeline:
             > 2. 所有迁移结果已写入 docs/，仅在人类核验无误后由人类在终端手动删除。
       - branch_backup:
           if_has_docs:
-            action: "COPY_ALL_DOC_ASSETS"
+            action: "ATOMIC_MOVE_ALL_DOC_ASSETS"
+            critical_docs_dir_rule:
+              rule: "CRITICAL: If '${target_dir}/docs/' exists, AI Agent MUST execute atomic isolation: mkdir -p ${target_dir}/_adflow_backup/original_docs/ && mv ${target_dir}/docs ${target_dir}/_adflow_backup/original_docs/docs && mkdir -p ${target_dir}/docs. AI must NEVER perform in-place merge in root docs/."
             sources:
+              existing_docs_dir:
+                source: "${target_dir}/docs"
+                dest: "${target_dir}/_adflow_backup/original_docs/docs"
+                action: "ATOMIC_MOVE"
               directories:
-                - "docs/"
                 - "doc/"
                 - "openspec/"
                 - "openspecs/"
@@ -130,7 +141,7 @@ pipeline:
                 - "SPEC.md"
                 - "SPECS.md"
             dest: "${target_dir}/_adflow_backup/original_docs/"
-            behavior: "Recursively copy all discovered doc directories (including openspec, superpower, specs) and root markdown files into _adflow_backup/original_docs/ preserving structure."
+            behavior: "Atomically move existing docs/ directory into _adflow_backup/original_docs/docs/ and recreate empty docs/; move all other spec directories and root markdown files into _adflow_backup/original_docs/."
           if_code_only:
             action: "ANALYZE_AND_DRAFT"
             dest: "${target_dir}/_adflow_backup/analyzed_drafts/"
@@ -283,3 +294,45 @@ pipeline:
         - "docs/guide/01-本地部署指南.md"
       synthesized_design_docs: "List all generated 00~NN design docs if reconstructed from legacy assets"
       warning: "若生成了 _adflow_backup/ 或 local/（含打包产物与实况报告），AI 严禁擅自删除，仅由人类手动核验清理。"
+
+upgrade_pipeline:
+  trigger: "state == 'NEEDS_UPGRADE'"
+  description: "Smoothly synchronize and upgrade all governance constitutions, README specifications, and templates to v1.1.0"
+  steps:
+    - step: "U1_SNAPSHOT_CURRENT_GOVERNANCE"
+      action: "CREATE_UPGRADE_SNAPSHOT"
+      dest: "${target_dir}/_adflow_backup/upgrade_snapshot/"
+    - step: "U2_SYNC_AGENTS_CONSTITUTION"
+      action: "UPDATE_AGENTS_MD"
+      template: "templates/AGENTS.md.tpl"
+      preservation_rule: "CRITICAL: Retain all custom content under '## 项目自定义规则 (Project Custom Rules)' exactly as-is."
+      tag: "<!-- @ad-flow: initialized v1.1.0 -->"
+    - step: "U3_SYNC_DIRECTORY_READMES"
+      action: "UPDATE_STANDARD_READMES"
+      targets:
+        - "docs/README.md"
+        - "docs/assets/README.md"
+        - "docs/devel/README.md"
+        - "docs/devel/design/README.md"
+        - "docs/devel/change/README.md"
+        - "docs/devel/task/README.md"
+        - "docs/devel/todo/README.md"
+        - "docs/guide/README.md"
+        - "docs/archive/README.md"
+      note: "Update 4-chapter rules, metadata headers, and guidelines; preserve user module registrations in design/README.md"
+    - step: "U4_SYNC_CARD_TEMPLATES"
+      action: "UPDATE_TEMPLATES"
+      targets:
+        - dest: "docs/devel/change/template.json"
+          template: "templates/docs/change/change-card.json.tpl"
+        - dest: "docs/devel/task/template.json"
+          template: "templates/docs/task/task-card.json.tpl"
+      note: "Inject new fields (branch, precheck, callback) into template.json; NEVER modify existing Cxxx.json or Txx.json cards"
+    - step: "U5_SYNC_CONFIG_VERSION"
+      action: "UPDATE_JSON_FIELD"
+      target: "adflow.config.json"
+      field: "adflow_version"
+      value: "1.1.0"
+    - step: "U6_UPGRADE_REPORT"
+      action: "REPORT_UPGRADE_COMPLETE"
+      message: "ad-flow 规范已平滑升级至 v1.1.0。协作宪法、目录规范与卡片模板已同步，所有现有设计方案与业务卡片均完整保留。"

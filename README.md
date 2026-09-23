@@ -38,8 +38,8 @@
 | 功能模块 | 说明 | 核心价值 |
 |---|---|---|
 | **极简单一指令调用** | 对话框输入 `$ad-flow` 即可激活治理落地 | 移除一切碎屑子命令，实现“意图即触发，对话即落地” |
-| **防重复初始化保护** | 目标 `AGENTS.md` 注入 `<!-- @ad-flow: initialized -->` 标签，再次调用主动拦截 | 具备硬性幂等性保护，防止误操作覆盖已有治理基线 |
-| **存量工程智能迁移与基线重构** | 自动勘察旧资产（`docs/`、`openspec/`、`superpower/` 等）备份至 `_adflow_backup/`，并深度研读旧文档与源码，自动重构为自洽的现行设计基线（`00-系统总体设计.md` + 模块化 `01~NN.md`）并在总账注册 | **存量规范 0 丢失**，系统设计自动无缝升级至 ad-flow 统一标准体系 |
+| **版本感知与平滑升级引擎** | 目标 `AGENTS.md` 注入 `<!-- @ad-flow: initialized v1.1.0 -->`，重新调用 `$ad-flow` 自动感知 skill 版本并平滑升级协作宪法、README 矩阵与卡片模板 | 规则升级零手工，100% 保护存量业务设计与卡片数据 |
+| **存量工程智能迁移与基线重构** | 自动勘察旧资产（`docs/` 先原子移入 `_adflow_backup/original_docs/docs/` 并清空重建，连同 `openspec/`、`superpower/` 等备份），深度研读旧文档与源码，自动重构为自洽的现行设计基线（`00-系统总体设计.md` + 模块化 `01~NN.md`）并在总账注册 | **存量规范 0 丢失**，杜绝原地同名污染，无缝升级至 ad-flow 统一标准体系 |
 | **项目自定义规则融合引擎** | 自动提取目标工程已有 `Agent.md` 中的团队业务规约并无缝追加至新宪法 | 100% 继承团队既有开发习惯，不造成规则撕裂 |
 | **22 文件全景标准化脚手架** | 自动生成涵盖文档中心、静态资源库、指引区、内场区、总账路由、双卡模板与归档库的全套资产 | 目录结构高度对齐，每个目录均配有专属 README 与机器索引 |
 | **多分支执行标签原生感知** | 卡片与总账结构原生内嵌 `"branch": "feat/..."` / `"fix/..."` 属性 | 消除分支错乱，原生契合 Git 工作流 |
@@ -174,13 +174,14 @@ flowchart TD
 治理落地过程由确定性状态机 [workflow.yaml](workflow.yaml) 驱动，包含 **5 大机器硬性约束** 与 **7 步流水线**：
 
 - **硬性约束 (Invariants)**：
-  1. `INV_IDEMPOTENCY_GUARD`：`AGENTS.md` 包含 `<!-- @ad-flow: initialized -->` 时，严禁二次初始化；
+  1. `INV_VERSION_AWARE_UPGRADE_GUARD`：`AGENTS.md` 包含 `<!-- @ad-flow: initialized vX.Y.Z -->` 时，版本一致时安全退出；版本陈旧时自动进入平滑升级流程；
   2. `INV_NO_AGENT_DELETE_BACKUP`：AI Agent 严禁擅自删除或篡改 `_adflow_backup/`；
   3. `INV_NO_AGENT_DELETE_LOCAL`：AI Agent 严禁擅自删除或重置 `local/` 及其部署报告；
   4. `INV_EVIDENCE_BASED_DESIGN`：严禁生成空洞的占位符假设计文档；若存在旧文档或源码，**必须研读并重构为现行基线设计方案**；
   5. `INV_BASE_GOVERNANCE_COUNT`：必须精确产出至少 22 个标准化基础治理文件，并在存在旧资产时输出 N 篇重构的现行基线设计文档。
 - **流水线步骤 (Pipeline)**：
-  `Step 1: 资产勘察与防重入检测` $\rightarrow$ `Step 2: 人工确认守卫` $\rightarrow$ `Step 3: 安全隔离快照` $\rightarrow$ `Step 4: AGENTS.md 宪法融合` $\rightarrow$ `Step 5: 9大目录独立 README 矩阵` $\rightarrow$ `Step 6: 中枢总账与模板注入` $\rightarrow$ **`Step 7: 旧文档消化与设计基线重构 (Legacy Synthesis)`** $\rightarrow$ `Step 8: DoD 完整性硬断言与交付汇报`。
+  - **初次初始化流**：`Step 1: 资产勘察与版本检测` $\rightarrow$ `Step 2: 人工确认守卫` $\rightarrow$ `Step 3: docs/ 原子移走与安全快照` $\rightarrow$ `Step 4: AGENTS.md 宪法融合 (v1.1.0)` $\rightarrow$ `Step 5: 9大目录独立 README 矩阵` $\rightarrow$ `Step 6: 中枢总账与模板注入` $\rightarrow$ **`Step 7: 旧文档消化与设计基线重构 (Legacy Synthesis)`** $\rightarrow$ `Step 8: DoD 完整性硬断言与交付汇报`。
+  - **版本升级流 (Upgrade Pipeline)**：检测到旧版本时自动执行 `U1 备份快照` $\rightarrow$ `U2 宪法同步(100%保留自定义规则)` $\rightarrow$ `U3 9大 README 规范同步` $\rightarrow$ `U4 卡片模板同步(不碰业务卡片)` $\rightarrow$ `U5 配置版本号提升` $\rightarrow$ `U6 升级汇报`。
 
 ---
 

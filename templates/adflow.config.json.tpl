@@ -2,6 +2,7 @@
   "$schema": "https://ad-flow.org/schemas/adflow-config.v1.json",
   "project_name": "MyProject",
   "version": "1.0",
+  "adflow_version": "1.1.0",
   "doc_root": "docs/devel",
   "archive_root": "docs/archive",
   "enforcement": {

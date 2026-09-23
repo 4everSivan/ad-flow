@@ -1,7 +1,7 @@
 # AGENTS.md
 
-<!-- @ad-flow: initialized -->
-> MyProject 研发与 AI 协作规范 —— 适用于团队开发者与 AI Agent 的统一工程底线。全景文档导航与机器总账中枢位于 [docs/README.md](docs/README.md) 与 [docs/index.json](docs/index.json)。
+<!-- @ad-flow: initialized v1.1.0 -->
+> MyProject 研发与 AI 协作规范 (ad-flow v1.1.0) —— 适用于团队开发者与 AI Agent 的统一工程底线。全景文档导航与机器总账中枢位于 [docs/README.md](docs/README.md) 与 [docs/index.json](docs/index.json)。
 
 ---
 

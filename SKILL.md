@@ -17,8 +17,9 @@ Autonomous Agent Instruction Specification for Project Development Governance Bo
 This skill has a single, dedicated purpose: **Bootstrap and land the structured, decoupled ad-flow engineering governance framework into the target codebase.**
 
 - **Trigger**: User inputs `$ad-flow` (or `$ad-flow [target_dir]`).
-- **No Subcommands**: Do NOT parse or expect subcommands (`init`, `new-card`, `archive` are retired from this skill). Invoking `$ad-flow` ALWAYS executes the governance bootstrap pipeline.
-- **Strict Idempotency Guard**: Re-initialization is strictly prohibited. If `AGENTS.md` (or `Agent.md`) already contains `<!-- @ad-flow: initialized -->`, immediately terminate execution.
+- **Trigger**: User inputs `$ad-flow` (or `$ad-flow [target_dir]`).
+- **No Subcommands**: Do NOT parse or expect subcommands (`init`, `new-card`, `archive` are retired from this skill). Invoking `$ad-flow` ALWAYS executes the bootstrap or upgrade pipeline.
+- **Version-Aware Idempotency & Upgrade**: Checks for `<!-- @ad-flow: initialized vX.Y.Z -->` (or `"adflow_version"` in `adflow.config.json`). If version matches skill version (`v1.1.0`), safely exits with zero changes. If version is older or updated rules are detected, triggers the **Upgrade & Specification Sync Pipeline** to update constitutions, README matrices, and card templates while 100% preserving user business designs and cards.
 
 ---
 
@@ -27,16 +28,19 @@ This skill has a single, dedicated purpose: **Bootstrap and land the structured,
 ```mermaid
 flowchart TD
     Start["$ad-flow Triggered"] --> ResolvePath["Resolve target_dir (default: .)"]
-    ResolvePath --> CheckTag{"Scan AGENTS.md / Agent.md\nfor `<!-- @ad-flow: initialized -->`"}
+    ResolvePath --> CheckTag{"Scan AGENTS.md / adflow.config.json\nfor tag or adflow_version"}
     
-    CheckTag -- "Tag Found" --> AbortInit["ABORT: Already Initialized\n(Zero Changes)"]
-    CheckTag -- "Tag Not Found" --> InspectAssets{"Inspect Code/Docs Assets\n(incl. openspec, superpower, specs)"}
+    CheckTag -- "Tag Found: Version == v1.1.0" --> AbortInit["ABORT: Already Up-to-Date\n(Zero Changes)"]
+    CheckTag -- "Tag Found: Version < v1.1.0" --> UpgradeSync["Step 0-U: Upgrade & Sync Pipeline\n1. Update AGENTS.md (preserve custom rules)\n2. Update 9 directory READMEs to latest 4-chapter specs\n3. Update card templates (branch, precheck, callback)\n4. Update adflow.config.json version\n(Keep all design docs & cards 100% intact)"]
+    UpgradeSync --> ReportUpgrade["Report Upgrade to v1.1.0 Complete"]
     
-    InspectAssets -- "Empty Project" --> InjectAgents["Step 4: Inject AGENTS.md\n(with init tag)"]
+    CheckTag -- "Tag Not Found" --> InspectAssets{"Inspect Code/Docs Assets\n(incl. docs/, openspec, superpower, specs)"}
+    
+    InspectAssets -- "Empty Project" --> InjectAgents["Step 4: Inject AGENTS.md\n(with v1.1.0 tag)"]
     InspectAssets -- "Existing Project" --> CheckYesFlag{"Has --yes flag?"}
     
     CheckYesFlag -- "No" --> PromptUser["Step 2: Prompt User Confirmation [y/N]"]
-    CheckYesFlag -- "Yes" --> CreateBackup["Step 3: Create _adflow_backup/\n(AI forbidden to delete)"]
+    CheckYesFlag -- "Yes" --> CreateBackup["Step 3: Atomic Backup into _adflow_backup/\n(Atomic mv docs/ to _adflow_backup/original_docs/docs/,\nmv openspec/superpower, recreate clean docs/)"]
     PromptUser -- "User Rejects (N)" --> AbortCancel["ABORT: User Canceled\n(Zero Changes)"]
     PromptUser -- "User Confirms (y)" --> CreateBackup
     
@@ -50,7 +54,7 @@ flowchart TD
     InjectAgents --> ScaffoldMatrix["Step 5: Scaffold 9 Dirs + 9 dedicated README.md\n(incl. docs/assets/README.md)"]
     ScaffoldMatrix --> InjectHubs["Step 6: Inject 3 index.json hubs + card templates + guides + configs\n(Base 22 files)"]
     InjectHubs --> HasLegacyAssets{"Has Legacy Docs/Code in _adflow_backup?"}
-    HasLegacyAssets -- "Yes" --> SynthesizeBaselines["Step 7: Synthesize Living Baseline\n(00-系统总体设计.md & 01~NN.md with @topic,\nregister into design/README & index.json)"]
+    HasLegacyAssets -- "Yes" --> SynthesizeBaselines["Step 7: Synthesize Living Baseline\n(Read _adflow_backup/original_docs/docs & others,\ngenerate 00-系统总体设计.md & 01~NN.md with @topic,\nregister into design/README & index.json)"]
     HasLegacyAssets -- "No" --> DoDCheck
     SynthesizeBaselines --> DoDCheck{"Step 8: Assert Base Count >= 22\n& Check Backup / Local Invariants"}
     
@@ -64,23 +68,47 @@ flowchart TD
 
 When `$ad-flow` is received, the Agent MUST execute the steps below in exact sequence using native file inspection and editing tools (refer to `workflow.yaml`):
 
-### Step 0: Idempotency Verification (Hard Termination Gate)
-1. Read `${target_dir}/AGENTS.md`, `${target_dir}/Agent.md`, or `${target_dir}/agents.md` if any exists.
-2. Check for the machine tag:
+### Step 0: Idempotency & Version Upgrade Check (Smart Router)
+1. Read `${target_dir}/AGENTS.md`, `${target_dir}/Agent.md`, or `${target_dir}/adflow.config.json`.
+2. Check for machine tag:
    ```text
-   <!-- @ad-flow: initialized -->
+   <!-- @ad-flow: initialized(?: v([0-9.]+))? -->
    ```
-3. If the tag is present:
-   - **Action**: Immediately stop and output:
-     > `Project already initialized with ad-flow governance (found <!-- @ad-flow: initialized --> in AGENTS.md). Re-initialization aborted to protect existing governance baseline.`
-   - **Constraint**: Make ZERO file modifications.
+   or check `"adflow_version"` in `adflow.config.json`. Current skill version is `v1.1.0`.
+3. Decision Logic:
+   - **If Version Matches `v1.1.0`** (and no `--force` flag):
+     Immediately stop and output:
+     > `Project is already up-to-date with ad-flow governance specification (v1.1.0). Zero changes made.`
+   - **If Version is Older (e.g. v1.0.0 or unversioned)** OR user supplied `--force` / `--upgrade`:
+     Output notification and **BRANCH TO Step 0-U (Upgrade & Sync Pipeline)**.
+   - **If Tag Not Found**:
+     Proceed to initial bootstrap (Step 1).
+
+### Step 0-U: Governance Upgrade & Specification Sync Pipeline
+*Executes when an existing ad-flow project is detected with an older version than current skill.*
+1. Snapshot current governance files into `${target_dir}/_adflow_backup/upgrade_snapshot/`.
+2. Update `${target_dir}/AGENTS.md`:
+   - Refresh all core governance sections from `templates/AGENTS.md.tpl` (Code Style, Workflow, Local Build Packaging & Isolation, Testing Standards, Branching & Git conventions).
+   - Set tag to: `<!-- @ad-flow: initialized v1.1.0 -->`.
+   - **CRITICAL PRESERVATION INVARIANT**: Preserve all existing content under `## 项目自定义规则 (Project Custom Rules)` at the bottom of `AGENTS.md`.
+3. Update 9 Directory `README.md` files:
+   - Synchronize `docs/README.md`, `docs/assets/README.md`, `docs/devel/README.md`, `docs/devel/change/README.md`, `docs/devel/task/README.md`, `docs/devel/todo/README.md`, `docs/guide/README.md`, `docs/archive/README.md` to latest 4-chapter rules and metadata headers.
+   - In `docs/devel/design/README.md`, update guidelines while **strictly preserving** existing registered module matrix rows.
+4. Update Card Templates:
+   - Refresh `docs/devel/change/template.json` and `docs/devel/task/template.json` with latest standard fields (`branch`, `precheck`, `callback`).
+   - **NEVER modify or delete existing change cards (`C*.json`) or task cards (`T*.json`)**.
+5. Update Configuration Version:
+   - In `${target_dir}/adflow.config.json`, set `"adflow_version": "1.1.0"`.
+6. Strict Upgrade Invariants:
+   - **NEVER touch or delete**: `docs/devel/design/*.md` (user's living baseline designs), existing `change/C*.json`, `task/T*.json`, `todo/now.md`, `todo/future.md`, or `local/`.
+7. Report upgrade success to the user with summary of refreshed specifications. (Terminate execution).
 
 ### Step 1: Asset Survey & Classification
 1. Scan `${target_dir}` for code indicators (`package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `pom.xml`, `Makefile`, `src/`, `lib/`, `app/`).
 2. Scan for documentation indicators:
-   - Standard doc folders: `docs/`, `doc/`
-   - Framework/spec folders: `openspec/`, `openspecs/`, `.openspec/`, `superpower/`, `superpowers/`, `.superpower/`, `.superpowers/`, `specs/`, `spec/`, `specification/`, `architecture/`
-   - Root documentation: `*.md`, `*.txt`, `SPEC.md`, `SPECS.md`
+   - Standard doc folders: `docs/`, `doc/` (CRITICAL: flag if pre-existing `docs/` is present as `HAS_EXISTING_DOCS_DIR`).
+   - Framework/spec folders: `openspec/`, `openspecs/`, `.openspec/`, `superpower/`, `superpowers/`, `.superpower/`, `.superpowers/`, `specs/`, `spec/`, `specification/`, `architecture/`.
+   - Root documentation: `*.md`, `*.txt`, `SPEC.md`, `SPECS.md`.
 3. Classify workspace state into `EMPTY_PROJECT`, `ONGOING_CODE_ONLY`, or `ONGOING_CODE_AND_DOCS`.
 
 ### Step 2: Human Confirmation Gate
@@ -93,13 +121,21 @@ When `$ad-flow` is received, the Agent MUST execute the steps below in exact seq
 1. Create directory `${target_dir}/_adflow_backup/`.
 2. Write `${target_dir}/_adflow_backup/README.md` containing strict invariant notice.
    - **CRITICAL INVARIANT**: AI Agent is strictly forbidden from deleting, pruning, or modifying `_adflow_backup/`. Only human developers may delete it.
-3. If documentation exists:
-   - Recursively copy ALL discovered documentation directories (including `docs/`, `doc/`, `openspec/`, `superpower/`, `specs/`, etc.) and root markdown files into `${target_dir}/_adflow_backup/original_docs/` preserving directory structure.
+3. Atomic Documentation Isolation & Backup:
+   - **CRITICAL - Existing `docs/` Directory**: If `${target_dir}/docs` exists, AI Agent MUST execute atomic isolation:
+     ```bash
+     mkdir -p ${target_dir}/_adflow_backup/original_docs/
+     mv ${target_dir}/docs ${target_dir}/_adflow_backup/original_docs/docs
+     mkdir -p ${target_dir}/docs
+     ```
+     This completely isolates legacy documentation out of the root, preventing in-place overwriting and directory pollution.
+   - **Framework Spec Folders**: If `doc/`, `openspec/`, `superpower/`, `specs/`, etc. exist, move them into `${target_dir}/_adflow_backup/original_docs/`.
+   - **Root Markdown Files**: Copy/move all root documentation files into `${target_dir}/_adflow_backup/original_docs/root_markdowns/`.
 4. If code only, generate initial analysis draft in `_adflow_backup/analyzed_drafts/`.
 
 ### Step 4: AGENTS.md Injection & Custom Rule Merging
 1. Read `templates/AGENTS.md.tpl`.
-2. Ensure top contains `<!-- @ad-flow: initialized -->`.
+2. Ensure top contains `<!-- @ad-flow: initialized v1.1.0 -->`.
 3. If the project had an existing `Agent.md` or `AGENTS.md`:
    - Extract its original custom rules.
    - Append under `## 项目自定义规则 (Project Custom Rules)` at the bottom of the template.
@@ -166,7 +202,7 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 
 ## 4. Invariant Rules (Machine Hard Constraints)
 
-- **INV_IDEMPOTENCY_GUARD**: If `AGENTS.md` contains `<!-- @ad-flow: initialized -->`, do NOT execute re-initialization.
+- **INV_VERSION_AWARE_UPGRADE_GUARD**: If `AGENTS.md` contains `<!-- @ad-flow: initialized vX.Y.Z -->`, re-initialization is blocked if version matches `v1.1.0`. If older or forced, automatically triggers Step 0-U (Upgrade & Sync Pipeline).
 - **INV_NO_AGENT_DELETE_BACKUP**: AI Agent must NEVER delete or alter `_adflow_backup/`.
 - **INV_NO_AGENT_DELETE_LOCAL**: AI Agent must NEVER delete or reset `local/` or `local/deploy_report.md`. All build outputs (dist/, build/) and runtime data are strictly quarantined in `local/`.
 - **INV_EVIDENCE_BASED_DESIGN**: AI Agent is strictly forbidden from creating hollow placeholder design specs. When legacy docs exist in `_adflow_backup/original_docs/` or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN.md) adhering to ad-flow 4-chapter and @topic standards.
