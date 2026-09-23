@@ -2,9 +2,9 @@
 name: ad-flow
 description: >-
   Universal project development and documentation governance bootstrap skill.
-  Invoked in agent conversations via `$ad-flow`. Directly initializes the 23-file
-  governance architecture (AGENTS.md, docs/ guide, devel, assets, env, design baseline,
-  change/task routing hubs, and zero-sediment buffers). Idempotent & upgrade-aware:
+  Invoked in agent conversations via `$ad-flow`, `/ad-flow`, `ad-flow`, or governance bootstrap requests.
+  Directly initializes the 23-file governance architecture (AGENTS.md, docs/ guide, devel, assets, env,
+  design baseline, change/task routing hubs, and zero-sediment buffers). Idempotent & upgrade-aware:
   checks version tag in AGENTS.md and auto-upgrades if newer skill is available.
 ---
 
@@ -16,7 +16,12 @@ Autonomous Agent Instruction Specification for Project Development Governance Bo
 
 This skill has a single, dedicated purpose: **Bootstrap and land the structured, decoupled ad-flow engineering governance framework into the target codebase.**
 
-- **Trigger**: User inputs `$ad-flow` (or `$ad-flow [target_dir]`).
+- **Trigger (Multi-Protocol Adaptive)**:
+  - Dollar-prefixed: `$ad-flow` (e.g. Antigravity / Gemini CLI)
+  - Slash-prefixed: `/ad-flow` (e.g. Claude Code / Cursor / Windsurf / Copilot slash command)
+  - Plain CLI / Prompt: `ad-flow`, `adflow`
+  - Intent-based: Natural language requests (e.g., "初始化文档治理", "按 ad-flow 规范治理项目", "bootstrap ad-flow")
+  - Optional target argument: supports optional path argument, e.g. `$ad-flow [target_dir]` or `/ad-flow [target_dir]`.
 - **No Subcommands**: Do NOT parse or expect subcommands (`init`, `new-card`, `archive` are retired from this skill). Invoking `$ad-flow` ALWAYS executes the bootstrap or upgrade pipeline.
 - **Version-Aware Idempotency & Upgrade**: Checks for `<!-- @ad-flow: initialized vX.Y.Z -->` (or `"adflow_version"` in `docs/index.json`). If version matches skill version (`v1.1.0`), safely exits with zero changes. If version is older or updated rules are detected, triggers the **Upgrade & Specification Sync Pipeline** to update constitutions, README matrices, and card templates while 100% preserving user business designs and cards.
 
@@ -26,7 +31,7 @@ This skill has a single, dedicated purpose: **Bootstrap and land the structured,
 
 ```mermaid
 flowchart TD
-    Start["$ad-flow Triggered"] --> ResolvePath["Resolve target_dir (default: .)"]
+    Start["$ad-flow or /ad-flow Triggered"] --> ResolvePath["Resolve target_dir (default: .)"]
     ResolvePath --> CheckTag{"Scan AGENTS.md / docs/index.json\nfor tag or adflow_version"}
     
     CheckTag -- "Tag Found: Version == v1.1.0" --> AbortInit["ABORT: Already Up-to-Date\n(Zero Changes)"]
@@ -65,7 +70,7 @@ flowchart TD
 
 ## 3. Deterministic Pipeline Execution Protocol
 
-When `$ad-flow` is received, the Agent MUST execute the steps below in exact sequence using native file inspection and editing tools (refer to `workflow.yaml`):
+When `$ad-flow` or `/ad-flow` is received (or requested via natural language), the Agent MUST execute the steps below in exact sequence using native file inspection and editing tools (refer to `workflow.yaml`):
 
 ### Step 0: Idempotency & Version Upgrade Check (Smart Router)
 1. Read `${target_dir}/AGENTS.md`, `${target_dir}/Agent.md`, or `${target_dir}/docs/index.json`.

@@ -221,15 +221,23 @@ flowchart TD
 
 ## 6. 快速开始 (Quick Start)
 
-### 6.1 调用方式
+### 6.1 调用方式 (Multi-Protocol Triggers)
 
-在任意支持 Agent 的对话框中，直接键入 `$ad-flow`：
+`ad-flow` 原生自适应多平台 AI Agent 生态（Antigravity、Claude Code、Cursor、Windsurf、GitHub Copilot 等），完全兼容 `$` 与 `/` 两种主流触发协议：
 
-```text
-$ad-flow                  # 在当前项目工作区执行规范落地初始化
-$ad-flow /path/to/project # 在指定工程根目录执行规范落地初始化
-$ad-flow --yes            # 免确认快速执行初始化（适合空项目或脚本化场景）
-```
+- **美元符前缀（Antigravity / Gemini CLI 体系）**：
+  ```text
+  $ad-flow                  # 在当前项目工作区执行规范落地初始化/平滑升级
+  $ad-flow /path/to/project # 在指定工程根目录执行规范落地初始化
+  $ad-flow --yes            # 免确认快速执行初始化（适合空项目或脚本化场景）
+  ```
+- **斜杠前缀（Claude Code / Cursor / Windsurf / Slash Command 体系）**：
+  ```text
+  /ad-flow                  # 斜杠指令等价触发
+  /ad-flow /path/to/project # 支持目标路径传参
+  ```
+- **无前缀指令与自然语言意图**：
+  直接输入 `ad-flow`、`adflow`，或对 Agent 发起自然语言请求（如“按 ad-flow 规范初始化当前工程文档治理”），Agent 均能自动识别意图并精准激活。
 
 ### 6.2 初始化交互流程
 

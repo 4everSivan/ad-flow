@@ -3,6 +3,11 @@
 version: "1.1.0"
 workflow_id: "adflow_init"
 target_actor: "AI_AGENT"
+trigger_aliases:
+  - "$ad-flow"
+  - "/ad-flow"
+  - "ad-flow"
+  - "adflow"
 description: "Deterministic step-by-step state machine for initializing and upgrading ad-flow documentation governance."
 
 # 机器硬性不可变约束 (Invariants)
