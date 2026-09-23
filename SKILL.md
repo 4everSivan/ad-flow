@@ -2,10 +2,10 @@
 name: ad-flow
 description: >-
   Universal project development and documentation governance bootstrap skill.
-  Invoked in agent conversations via `$ad-flow`. Directly initializes the 22-file
+  Invoked in agent conversations via `$ad-flow`. Directly initializes the 21-file
   governance architecture (AGENTS.md, docs/ guide, devel, assets, design baseline,
-  change/task routing hubs, and zero-sediment buffers). Idempotent: checks for the
-  initialization tag in AGENTS.md and rejects re-initialization if already active.
+  change/task routing hubs, and zero-sediment buffers). Idempotent & upgrade-aware:
+  checks version tag in AGENTS.md and auto-upgrades if newer skill is available.
 ---
 
 # ad-flow
@@ -17,9 +17,8 @@ Autonomous Agent Instruction Specification for Project Development Governance Bo
 This skill has a single, dedicated purpose: **Bootstrap and land the structured, decoupled ad-flow engineering governance framework into the target codebase.**
 
 - **Trigger**: User inputs `$ad-flow` (or `$ad-flow [target_dir]`).
-- **Trigger**: User inputs `$ad-flow` (or `$ad-flow [target_dir]`).
 - **No Subcommands**: Do NOT parse or expect subcommands (`init`, `new-card`, `archive` are retired from this skill). Invoking `$ad-flow` ALWAYS executes the bootstrap or upgrade pipeline.
-- **Version-Aware Idempotency & Upgrade**: Checks for `<!-- @ad-flow: initialized vX.Y.Z -->` (or `"adflow_version"` in `adflow.config.json`). If version matches skill version (`v1.1.0`), safely exits with zero changes. If version is older or updated rules are detected, triggers the **Upgrade & Specification Sync Pipeline** to update constitutions, README matrices, and card templates while 100% preserving user business designs and cards.
+- **Version-Aware Idempotency & Upgrade**: Checks for `<!-- @ad-flow: initialized vX.Y.Z -->` (or `"adflow_version"` in `docs/index.json`). If version matches skill version (`v1.1.0`), safely exits with zero changes. If version is older or updated rules are detected, triggers the **Upgrade & Specification Sync Pipeline** to update constitutions, README matrices, and card templates while 100% preserving user business designs and cards.
 
 ---
 
@@ -28,10 +27,10 @@ This skill has a single, dedicated purpose: **Bootstrap and land the structured,
 ```mermaid
 flowchart TD
     Start["$ad-flow Triggered"] --> ResolvePath["Resolve target_dir (default: .)"]
-    ResolvePath --> CheckTag{"Scan AGENTS.md / adflow.config.json\nfor tag or adflow_version"}
+    ResolvePath --> CheckTag{"Scan AGENTS.md / docs/index.json\nfor tag or adflow_version"}
     
     CheckTag -- "Tag Found: Version == v1.1.0" --> AbortInit["ABORT: Already Up-to-Date\n(Zero Changes)"]
-    CheckTag -- "Tag Found: Version < v1.1.0" --> UpgradeSync["Step 0-U: Upgrade & Sync Pipeline\n1. Update AGENTS.md (preserve custom rules)\n2. Update 9 directory READMEs to latest 4-chapter specs\n3. Update card templates (branch, precheck, callback)\n4. Update adflow.config.json version\n(Keep all design docs & cards 100% intact)"]
+    CheckTag -- "Tag Found: Version < v1.1.0" --> UpgradeSync["Step 0-U: Upgrade & Sync Pipeline\n1. Update AGENTS.md (preserve custom rules)\n2. Update 9 directory READMEs to latest 4-chapter specs\n3. Update card templates (branch, precheck, callback)\n4. Update docs/index.json version\n(Keep all design docs & cards 100% intact)"]
     UpgradeSync --> ReportUpgrade["Report Upgrade to v1.1.0 Complete"]
     
     CheckTag -- "Tag Not Found" --> InspectAssets{"Inspect Code/Docs Assets\n(incl. docs/, openspec, superpower, specs)"}
@@ -52,11 +51,11 @@ flowchart TD
     StandardAgents --> InjectAgents
     
     InjectAgents --> ScaffoldMatrix["Step 5: Scaffold 9 Dirs + 9 dedicated README.md\n(incl. docs/assets/README.md)"]
-    ScaffoldMatrix --> InjectHubs["Step 6: Inject 3 index.json hubs + card templates + guides + configs\n(Base 22 files)"]
+    ScaffoldMatrix --> InjectHubs["Step 6: Inject 3 index.json hubs + card templates + guides + configs\n(Base 21 files)"]
     InjectHubs --> HasLegacyAssets{"Has Legacy Docs/Code in _adflow_backup?"}
     HasLegacyAssets -- "Yes" --> SynthesizeBaselines["Step 7: Synthesize Living Baseline\n(Read _adflow_backup/original_docs/docs & others,\ngenerate 00-系统总体设计.md & 01~NN.md with @topic,\nregister into design/README & index.json)"]
     HasLegacyAssets -- "No" --> DoDCheck
-    SynthesizeBaselines --> DoDCheck{"Step 8: Assert Base Count >= 22\n& Check Backup / Local Invariants"}
+    SynthesizeBaselines --> DoDCheck{"Step 8: Assert Base Count >= 21\n& Check Backup / Local Invariants"}
     
     DoDCheck -- "Pass" --> ReportSuccess["Report entry points & synthesized design docs"]
     DoDCheck -- "Fail" --> ReportError["FATAL: Assertion Failure"]
@@ -69,12 +68,12 @@ flowchart TD
 When `$ad-flow` is received, the Agent MUST execute the steps below in exact sequence using native file inspection and editing tools (refer to `workflow.yaml`):
 
 ### Step 0: Idempotency & Version Upgrade Check (Smart Router)
-1. Read `${target_dir}/AGENTS.md`, `${target_dir}/Agent.md`, or `${target_dir}/adflow.config.json`.
+1. Read `${target_dir}/AGENTS.md`, `${target_dir}/Agent.md`, or `${target_dir}/docs/index.json`.
 2. Check for machine tag:
    ```text
    <!-- @ad-flow: initialized(?: v([0-9.]+))? -->
    ```
-   or check `"adflow_version"` in `adflow.config.json`. Current skill version is `v1.1.0`.
+   or check `"adflow_version"` in `docs/index.json`. Current skill version is `v1.1.0`.
 3. Decision Logic:
    - **If Version Matches `v1.1.0`** (and no `--force` flag):
      Immediately stop and output:
@@ -98,7 +97,7 @@ When `$ad-flow` is received, the Agent MUST execute the steps below in exact seq
    - Refresh `docs/devel/change/template.json` and `docs/devel/task/template.json` with latest standard fields (`branch`, `precheck`, `callback`).
    - **NEVER modify or delete existing change cards (`C*.json`) or task cards (`T*.json`)**.
 5. Update Configuration Version:
-   - In `${target_dir}/adflow.config.json`, set `"adflow_version": "1.1.0"`.
+   - In `${target_dir}/docs/index.json`, set `"adflow_version": "1.1.0"`.
 6. Strict Upgrade Invariants:
    - **NEVER touch or delete**: `docs/devel/design/*.md` (user's living baseline designs), existing `change/C*.json`, `task/T*.json`, `todo/now.md`, `todo/future.md`, or `local/`.
 7. Report upgrade success to the user with summary of refreshed specifications. (Terminate execution).
@@ -173,7 +172,6 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
    - `docs/guide/01-本地部署指南.md` (from `templates/docs/guide/01-本地部署指南.md.tpl`)
 6. Root files:
    - `CHANGELOG.md` (from `templates/docs/changelog.md.tpl`)
-   - `adflow.config.json` (from `templates/adflow.config.json.tpl`)
 
 ### Step 7: Synthesize Living Baseline from Legacy Docs & Source Code
 *Condition: Only executes if `_adflow_backup/original_docs/` has files OR project contains source code.*
@@ -191,7 +189,7 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
    - `docs/devel/index.json` (Register under the design section).
 
 ### Step 8: DoD Assertions Verification & Report
-1. Verify at least 22 base governance files exist.
+1. Verify at least 21 base governance files exist.
 2. If legacy docs existed, assert `00-系统总体设计.md` and domain micro-designs (`01~NN.md`) are synthesized and registered.
 3. Assert generic placeholder file `docs/devel/design/01-系统设计方案.md` does NOT exist.
 4. Assert `_adflow_backup/` is intact (if created).
@@ -206,4 +204,4 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 - **INV_NO_AGENT_DELETE_BACKUP**: AI Agent must NEVER delete or alter `_adflow_backup/`.
 - **INV_NO_AGENT_DELETE_LOCAL**: AI Agent must NEVER delete or reset `local/` or `local/deploy_report.md`. All build outputs (dist/, build/) and runtime data are strictly quarantined in `local/`.
 - **INV_EVIDENCE_BASED_DESIGN**: AI Agent is strictly forbidden from creating hollow placeholder design specs. When legacy docs exist in `_adflow_backup/original_docs/` or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN.md) adhering to ad-flow 4-chapter and @topic standards.
-- **INV_BASE_GOVERNANCE_COUNT**: At least 22 standardized base governance files must be created upon initialization, plus N reconstructed design documents if legacy docs/code exist.
+- **INV_BASE_GOVERNANCE_COUNT**: At least 21 standardized base governance files must be created upon initialization, plus N reconstructed design documents if legacy docs/code exist.

@@ -17,7 +17,7 @@ invariants:
     rule: "AI Agent is strictly forbidden from creating hollow placeholder design docs. When legacy docs exist in '_adflow_backup/original_docs/' or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN-[module].md) adhering to ad-flow 4-chapter and @topic standards."
     severity: "FATAL"
   - id: "INV_BASE_GOVERNANCE_COUNT"
-    rule: "At least 22 standardized base governance files must be created upon initialization (plus N reconstructed living design docs if legacy docs/code exist)"
+    rule: "At least 21 standardized base governance files must be created upon initialization (plus N reconstructed living design docs if legacy docs/code exist)"
     severity: "FATAL"
   - id: "INV_VERSION_AWARE_UPGRADE_GUARD"
     rule: "If target AGENTS.md contains '<!-- @ad-flow: initialized vX.Y.Z -->', re-initialization is blocked if version matches; if older, pipeline automatically branches to UPGRADE_GOVERNANCE_RULES"
@@ -35,7 +35,7 @@ pipeline:
         - "AGENTS.md"
         - "Agent.md"
         - "agents.md"
-        - "adflow.config.json"
+        - "docs/index.json"
       tag_pattern: "<!-- @ad-flow: initialized(?: v(?P<ver>[0-9.]+))? -->"
       current_version: "1.1.0"
       on_version_match:
@@ -228,8 +228,6 @@ pipeline:
         template: "templates/docs/guide/01-本地部署指南.md.tpl"
       - dest: "${target_dir}/CHANGELOG.md"
         template: "templates/docs/changelog.md.tpl"
-      - dest: "${target_dir}/adflow.config.json"
-        template: "templates/adflow.config.json.tpl"
 
   - step: 7
     name: "SYNTHESIZE_LEGACY_DOCS_TO_LIVING_BASELINE"
@@ -254,10 +252,9 @@ pipeline:
     description: "Execute hard assertions and report entry points to human developer"
     action: "ASSERT_AND_REPORT"
     assertions:
-      base_file_count_minimum: 22
+      base_file_count_minimum: 21
       required_files_exist:
         - "AGENTS.md"
-        - "adflow.config.json"
         - "CHANGELOG.md"
         - "docs/README.md"
         - "docs/index.json"
@@ -328,9 +325,9 @@ upgrade_pipeline:
         - dest: "docs/devel/task/template.json"
           template: "templates/docs/task/task-card.json.tpl"
       note: "Inject new fields (branch, precheck, callback) into template.json; NEVER modify existing Cxxx.json or Txx.json cards"
-    - step: "U5_SYNC_CONFIG_VERSION"
+    - step: "U5_SYNC_DOCS_INDEX_VERSION"
       action: "UPDATE_JSON_FIELD"
-      target: "adflow.config.json"
+      target: "docs/index.json"
       field: "adflow_version"
       value: "1.1.0"
     - step: "U6_UPGRADE_REPORT"

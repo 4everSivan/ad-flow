@@ -78,7 +78,7 @@
 ## 七、治理版本感知与平滑升级心智 (Version-Aware Governance Lifecycle)
 
 1. **显式版本锚定**：
-   - 目标项目的 `AGENTS.md`（`<!-- @ad-flow: initialized v1.1.0 -->`）与 `adflow.config.json` 显式记录当前落地的治理版本号；
+   - 目标项目的 `AGENTS.md`（`<!-- @ad-flow: initialized v1.1.0 -->`）与 `docs/index.json`（`"adflow_version": "1.1.0"`）显式记录当前落地的治理版本号；
 2. **平滑升级与业务零破坏**：
    - 当 skill 迭代更新后，在已有项目中重新键入 `$ad-flow`，系统自动比对版本差；
    - 若检测到旧版本，自动触发平滑升级：更新宪法条款（严格保留项目自定义规则）、更新 9 大目录 README 规范、增补卡片模板新字段（如 branch/precheck/callback）；

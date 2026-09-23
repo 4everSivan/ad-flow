@@ -1,6 +1,7 @@
 {
   "$schema": "adflow-docs-index-v1",
   "project": "MyProject",
+  "adflow_version": "1.1.0",
   "created": "YYYY-MM-DD",
   "last_change": "YYYY-MM-DD",
   "status": "active",
