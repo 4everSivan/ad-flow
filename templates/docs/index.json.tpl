@@ -24,7 +24,7 @@
     {
       "name": "devel",
       "path": "docs/devel",
-      "description": "研发内场核心工作区（现行设计基线、变更核验、阶段任务与待办缓冲）",
+      "description": "研发内场核心工作区（现行设计基线、变更核验、阶段任务、待办缓冲与环境治理）",
       "readme": "docs/devel/README.md",
       "index": "docs/devel/index.json"
     },

@@ -35,6 +35,13 @@
       "type": "buffer_pool",
       "description": "未入轨缺陷与需求缓冲池（now.md / future.md，建卡即移出）",
       "readme": "docs/devel/todo/README.md"
+    },
+    {
+      "name": "env",
+      "path": "docs/devel/env",
+      "type": "environment_governance",
+      "description": "开发环境配置、依赖管理、磁盘缓存盘点与环境安全清理规范",
+      "readme": "docs/devel/env/README.md"
     }
   ]
 }

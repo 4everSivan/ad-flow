@@ -17,7 +17,7 @@ invariants:
     rule: "AI Agent is strictly forbidden from creating hollow placeholder design docs. When legacy docs exist in '_adflow_backup/original_docs/' or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN-[module].md) adhering to ad-flow 4-chapter and @topic standards."
     severity: "FATAL"
   - id: "INV_BASE_GOVERNANCE_COUNT"
-    rule: "At least 21 standardized base governance files must be created upon initialization (plus N reconstructed living design docs if legacy docs/code exist)"
+    rule: "At least 23 standardized base governance files must be created upon initialization (plus N reconstructed living design docs if legacy docs/code exist)"
     severity: "FATAL"
   - id: "INV_VERSION_AWARE_UPGRADE_GUARD"
     rule: "If target AGENTS.md contains '<!-- @ad-flow: initialized vX.Y.Z -->', re-initialization is blocked if version matches; if older, pipeline automatically branches to UPGRADE_GOVERNANCE_RULES"
@@ -194,6 +194,9 @@ pipeline:
       - dir: "${target_dir}/docs/devel/todo"
         readme: "${target_dir}/docs/devel/todo/README.md"
         template: "templates/docs/todo/README.md.tpl"
+      - dir: "${target_dir}/docs/devel/env"
+        readme: "${target_dir}/docs/devel/env/README.md"
+        template: "templates/docs/env/README.md.tpl"
       - dir: "${target_dir}/docs/assets"
         readme: "${target_dir}/docs/assets/README.md"
         template: "templates/docs/assets/README.md.tpl"
@@ -227,6 +230,8 @@ pipeline:
         template: "templates/docs/todo/now.md.tpl"
       - dest: "${target_dir}/docs/devel/todo/future.md"
         template: "templates/docs/todo/future.md.tpl"
+      - dest: "${target_dir}/docs/devel/env/01-环境缓存与依赖清理指南.md"
+        template: "templates/docs/env/01-环境缓存与依赖清理指南.md.tpl"
       - dest: "${target_dir}/docs/guide/01-本地部署指南.md"
         template: "templates/docs/guide/01-本地部署指南.md.tpl"
       - dest: "${target_dir}/CHANGELOG.md"
@@ -255,7 +260,7 @@ pipeline:
     description: "Execute hard assertions and report entry points to human developer"
     action: "ASSERT_AND_REPORT"
     assertions:
-      base_file_count_minimum: 21
+      base_file_count_minimum: 23
       required_files_exist:
         - "AGENTS.md"
         - "CHANGELOG.md"
@@ -277,6 +282,8 @@ pipeline:
         - "docs/devel/todo/README.md"
         - "docs/devel/todo/now.md"
         - "docs/devel/todo/future.md"
+        - "docs/devel/env/README.md"
+        - "docs/devel/env/01-环境缓存与依赖清理指南.md"
         - "docs/archive/README.md"
       forbidden_files_not_exist:
         - "docs/devel/design/01-系统设计方案.md"
@@ -292,6 +299,7 @@ pipeline:
         - "docs/README.md"
         - "docs/devel/design/README.md"
         - "docs/guide/01-本地部署指南.md"
+        - "docs/devel/env/README.md"
       synthesized_design_docs: "List all generated 00~NN design docs if reconstructed from legacy assets"
       warning: "若生成了 _adflow_backup/ 或 local/（含打包产物与实况报告），AI 严禁擅自删除，仅由人类手动核验清理。"
 
@@ -317,6 +325,7 @@ upgrade_pipeline:
         - "docs/devel/change/README.md"
         - "docs/devel/task/README.md"
         - "docs/devel/todo/README.md"
+        - "docs/devel/env/README.md"
         - "docs/guide/README.md"
         - "docs/archive/README.md"
       note: "Update 4-chapter rules, metadata headers, and guidelines; preserve user module registrations in design/README.md"

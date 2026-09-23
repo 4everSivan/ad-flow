@@ -2,8 +2,8 @@
 name: ad-flow
 description: >-
   Universal project development and documentation governance bootstrap skill.
-  Invoked in agent conversations via `$ad-flow`. Directly initializes the 21-file
-  governance architecture (AGENTS.md, docs/ guide, devel, assets, design baseline,
+  Invoked in agent conversations via `$ad-flow`. Directly initializes the 23-file
+  governance architecture (AGENTS.md, docs/ guide, devel, assets, env, design baseline,
   change/task routing hubs, and zero-sediment buffers). Idempotent & upgrade-aware:
   checks version tag in AGENTS.md and auto-upgrades if newer skill is available.
 ---
@@ -30,7 +30,7 @@ flowchart TD
     ResolvePath --> CheckTag{"Scan AGENTS.md / docs/index.json\nfor tag or adflow_version"}
     
     CheckTag -- "Tag Found: Version == v1.1.0" --> AbortInit["ABORT: Already Up-to-Date\n(Zero Changes)"]
-    CheckTag -- "Tag Found: Version < v1.1.0" --> UpgradeSync["Step 0-U: Upgrade & Sync Pipeline\n1. Update AGENTS.md (preserve custom rules)\n2. Update 9 directory READMEs to latest 4-chapter specs\n3. Update card templates (branch, precheck, callback)\n4. Update docs/index.json version\n(Keep all design docs & cards 100% intact)"]
+    CheckTag -- "Tag Found: Version < v1.1.0" --> UpgradeSync["Step 0-U: Upgrade & Sync Pipeline\n1. Update AGENTS.md (preserve custom rules)\n2. Update 10 directory READMEs to latest 4-chapter specs\n3. Update card templates (branch, precheck, callback)\n4. Update docs/index.json version\n(Keep all design docs & cards 100% intact)"]
     UpgradeSync --> ReportUpgrade["Report Upgrade to v1.1.0 Complete"]
     
     CheckTag -- "Tag Not Found" --> InspectAssets{"Inspect Code/Docs Assets\n(incl. docs/, openspec, superpower, specs)"}
@@ -149,15 +149,16 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 5. `docs/devel/change/README.md` (from `templates/docs/change/README.md.tpl`)
 6. `docs/devel/task/README.md` (from `templates/docs/task/README.md.tpl`)
 7. `docs/devel/todo/README.md` (from `templates/docs/todo/README.md.tpl`)
-8. `docs/guide/README.md` (from `templates/docs/guide/README.md.tpl`)
-9. `docs/archive/README.md` (from `templates/docs/archive-README.md.tpl`)
+8. `docs/devel/env/README.md` (from `templates/docs/env/README.md.tpl` - dedicated environment, cache inventory & cleanup hub)
+9. `docs/guide/README.md` (from `templates/docs/guide/README.md.tpl`)
+10. `docs/archive/README.md` (from `templates/docs/archive-README.md.tpl`)
 
 *All READMEs strictly follow the unified 4-chapter structure (`1. 简介`, `2. 索引`, `3. 规范`, `4. xxx`) and English metadata headers (`created`, `last-change`, `status`, optional `version`).*
 
-### Step 6: Machine Routing Hubs, Templates & Configs (13 Files)
+### Step 6: Machine Routing Hubs, Templates & Configs (14 Files)
 1. Top/Mid-level index routers:
    - `docs/index.json` (from `templates/docs/index.json.tpl`, includes `assets/` entry)
-   - `docs/devel/index.json` (from `templates/docs/devel-index.json.tpl`)
+   - `docs/devel/index.json` (from `templates/docs/devel-index.json.tpl`, includes `env` subsystem)
    - `docs/guide/index.json` (from `templates/docs/guide/index.json.tpl`)
 2. Change subsystem:
    - `docs/devel/change/index.json` (from `templates/docs/change/index.json.tpl`)
@@ -168,9 +169,11 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 4. Todo zero-sediment buffers:
    - `docs/devel/todo/now.md` (from `templates/docs/todo/now.md.tpl`)
    - `docs/devel/todo/future.md` (from `templates/docs/todo/future.md.tpl`)
-5. Guide baseline:
+5. Environment governance:
+   - `docs/devel/env/01-环境缓存与依赖清理指南.md` (from `templates/docs/env/01-环境缓存与依赖清理指南.md.tpl`)
+6. Guide baseline:
    - `docs/guide/01-本地部署指南.md` (from `templates/docs/guide/01-本地部署指南.md.tpl`)
-6. Root files:
+7. Root files:
    - `CHANGELOG.md` (from `templates/docs/changelog.md.tpl`)
 
 ### Step 7: Synthesize Living Baseline from Legacy Docs & Source Code
@@ -189,12 +192,12 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
    - `docs/devel/index.json` (Register under the design section).
 
 ### Step 8: DoD Assertions Verification & Report
-1. Verify at least 21 base governance files exist.
+1. Verify at least 23 base governance files exist.
 2. If legacy docs existed, assert `00-系统总体设计.md` and domain micro-designs (`01~NN.md`) are synthesized and registered.
 3. Assert generic placeholder file `docs/devel/design/01-系统设计方案.md` does NOT exist.
 4. Assert `_adflow_backup/` is intact (if created).
 5. Assert `local/` (housing build artifacts `local/dist/`, test data, logs, and `local/deploy_report.md`) is NOT modified or deleted by AI.
-6. Report primary entry points (`AGENTS.md`, `docs/README.md`, `docs/devel/design/README.md`, `docs/guide/01-本地部署指南.md`) and list all synthesized design documents to the user.
+6. Report primary entry points (`AGENTS.md`, `docs/README.md`, `docs/devel/design/README.md`, `docs/guide/01-本地部署指南.md`, `docs/devel/env/README.md`) and list all synthesized design documents to the user.
 
 ---
 
@@ -204,5 +207,5 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 - **INV_NO_AGENT_DELETE_BACKUP**: AI Agent must NEVER delete or alter `_adflow_backup/`.
 - **INV_NO_AGENT_DELETE_LOCAL**: AI Agent must NEVER delete or reset `local/` or `local/deploy_report.md`. All build outputs (dist/, build/) and runtime data are strictly quarantined in `local/`.
 - **INV_EVIDENCE_BASED_DESIGN**: AI Agent is strictly forbidden from creating hollow placeholder design specs. When legacy docs exist in `_adflow_backup/original_docs/` or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN.md) adhering to ad-flow 4-chapter and @topic standards.
-- **INV_BASE_GOVERNANCE_COUNT**: At least 21 standardized base governance files must be created upon initialization, plus N reconstructed design documents if legacy docs/code exist.
+- **INV_BASE_GOVERNANCE_COUNT**: At least 23 standardized base governance files must be created upon initialization, plus N reconstructed design documents if legacy docs/code exist.
 - **INV_NO_README_AS_DESIGN_DOC**: AI Agent is strictly forbidden from setting `design_doc` or `doc` in any card (C/T) or index to any `README.md` (including `docs/devel/design/README.md`). It MUST point to a living baseline design doc (`00-系统总体设计.md` or `01~99-[module].md`) containing the matching `<!-- @topic: TopicName -->`. If missing, Agent must follow Doc First to supplement or create the design doc first.
