@@ -43,3 +43,4 @@
 
 - **标准卡片模板**：[template.json](template.json)
 - **全局变更总账**：全量卡片索引与所属 Topic 映射请查阅 [index.json](index.json)。
+- **【设计挂接红线】(INV_NO_README_AS_DESIGN_DOC)**：卡片中的 `target.design_doc` 与 `design.doc` 必须指向 `docs/devel/design/00-系统总体设计.md` 或 `01~99-[模块名].md`，**绝对严禁指向任何 `README.md`**！

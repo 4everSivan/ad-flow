@@ -18,6 +18,10 @@
 
 日常研发分为两大入口，共同遵守“文档先行 → 编码 → 补测 → 人工核验代签 → 基线回写”的闭环，不跨步、不省略：
 
+> ⚠️ **【绝对红线·严禁关联 README】(INV_NO_README_AS_DESIGN_DOC)**：
+> 所有卡片（`Cxxx.json` / `Txx.json`）与索引（`index.json`）中的 `design_doc` / `doc`，**必须且仅能指向现行基线设计文档（`docs/devel/design/00-系统总体设计.md` 或 `01~99-[模块名].md`），且文档内必须包含匹配的 `<!-- @topic: TopicName -->` 锚标**。
+> **绝对严禁将任何 `README.md`（包括 `docs/devel/design/README.md`）作为 `design_doc` 填入！** 若变更涉及全局架构或暂无对应微设计文档，AI Agent 必须遵循“文档先行”，先在 `00-系统总体设计.md` 中补齐对应章节（或立项新微设计文档）并打上 `@topic` 锚标，再建卡挂接。
+
 ### 1. 功能设计入口 (新功能 / 大需求 / 阶段里程碑)
 1. **方向登记**：在 `docs/devel/todo/` 登记方向级灵感与事项；
 2. **设计基线定稿**：在 `docs/devel/design/` 撰写或修订对应微设计文档（`01~99-[功能名].md`，结构参考 `design/README.md`），状态置为 `现行基线`，并标明概念主题锚标 `<!-- @topic: TopicName -->`；完成设计后从 `todo/` 移除对应项；

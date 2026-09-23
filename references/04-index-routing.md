@@ -33,6 +33,10 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
    ```markdown
    > 📌 **变更总账**: 参见 [变更总账 (MarketService)](../change/index.json#MarketService)
    ```
+3. **【绝对红线】设计文档指向约束 (INV_NO_README_AS_DESIGN_DOC)**：
+   - 无论是卡片中的 `target.design_doc` / `design.doc`，还是中枢 `index.json` 中的 `topics[].design_doc`，**绝对严禁指向任何 `README.md`**（包括 `docs/devel/design/README.md`）；
+   - `design_doc` 必须且仅能指向具体的现行设计基线文档（`00-系统总体设计.md` 或 `01~99-[模块名].md`）；
+   - 若改动涉及系统拓扑或工程结构，应挂接在 `00-系统总体设计.md` 中对应的架构章节；若尚未编写对应设计，必须遵循“文档先行”，先补充设计正文并打上 `@topic` 锚标，再行挂接。
 
 ---
 

@@ -41,3 +41,4 @@
 
 - **标准任务模板**：[template.json](template.json)
 - **全局任务总账**：里程碑聚合大盘与任务拓扑图请查阅 [index.json](index.json)。
+- **【设计挂接红线】(INV_NO_README_AS_DESIGN_DOC)**：任务卡中的 `target.design_doc` 必须指向 `docs/devel/design/00-系统总体设计.md` 或 `01~99-[模块名].md`，**绝对严禁指向任何 `README.md`**！

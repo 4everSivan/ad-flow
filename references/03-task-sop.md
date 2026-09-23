@@ -21,6 +21,7 @@
 2. **实例化任务卡**：
    - 从 `templates/docs/task/task-card.json.tpl` 复制并建立 `Txx.json`；
    - 填写 `branch: "feat/Txx-[desc]"`（指定多分支研发的特性分支标签）；
+   - 填写 `target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`）；
    - 填写 `precheck`（能力完成预检命令）与 `callback`（`before / after` 脚本钩子）；
    - **聚焦能力交付**：在 `tasks[]` 中拆解具体的 `capability`（如纯函数、数据结构契约、API 路由），严禁在任务卡中写死具体的代码物理文件路径；
    - **声明拓扑依赖**：显式填写 `depends_on: ["T01", ...]`；

@@ -32,6 +32,13 @@
 - [ ] 检查卡片声明的 `target.design_topic` 是否在对应设计文档中真实存在 `<!-- @topic -->`；
 - [ ] 检查 `CHANGELOG.md` 顶部是否存在对应卡片的双向超链接。
 
+### 6. 设计文档有效性与严禁关联 README (INV_NO_README_AS_DESIGN_DOC)
+- [ ] 检查所有活跃与历史卡片（`Cxxx.json` / `Txx.json`）中的 `target.design_doc` 与 `design.doc`，以及 `index.json` 中 `topics[].design_doc`；
+- [ ] **断言**：
+  - `design_doc` **绝对严禁指向任何 `README.md`**（包括 `docs/devel/design/README.md`，违规直接判定为 Exit Code 4 阻断）；
+  - 必须指向现行基线具体设计文档（`00-系统总体设计.md` 或 `01~99-[模块名].md`）；
+  - 目标设计文档内部必须真实存在与 `target.design_topic` 完全吻合的 `<!-- @topic: TopicName -->` 锚标。
+
 ---
 
 ## 二、对抗性证伪与反向核验 (Adversarial Verification)

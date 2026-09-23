@@ -14,7 +14,7 @@
 3. **实例化变更卡**：
    - 复制 `templates/docs/change/change-card.json.tpl` 至 `docs/devel/change/Cxxx.json`；
    - 填写 `branch: "fix/Cxxx-[desc]"`（指定多分支开发的执行分支标签）；
-   - 填写 `target.module`、`target.component`、`target.design_topic`；
+   - 填写 `target.module`、`target.component`、`target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`！若缺少对应设计，必须遵循“文档先行”先补齐设计正文）；
    - 填写 `why`（现象、根因、危害）与 `changes`（`before / after / impact`）；
    - 填写 `precheck`（缺陷复现嗅探命令）与 `callback`（`before / after` 脚本）；
    - **事前定义验收契约**：在 `verification.checks` 预先写好各核验项的 `true_if` 和 `false_if`。此时 `evidence` 置空，`result: null`；
