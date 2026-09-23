@@ -13,11 +13,11 @@ invariants:
   - id: "INV_NO_AGENT_DELETE_LOCAL"
     rule: "AI Agent is strictly forbidden from deleting or resetting 'local/' directory (housing build outputs, data, logs, and deploy_report.md)"
     severity: "FATAL"
-  - id: "INV_NO_FAKE_DESIGN_DOC"
-    rule: "Never generate 'docs/devel/design/01-系统设计方案.md' or any placeholder design spec"
+  - id: "INV_EVIDENCE_BASED_DESIGN"
+    rule: "AI Agent is strictly forbidden from creating hollow placeholder design docs. When legacy docs exist in '_adflow_backup/original_docs/' or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN-[module].md) adhering to ad-flow 4-chapter and @topic standards."
     severity: "FATAL"
-  - id: "INV_TOTAL_OUTPUT_COUNT"
-    rule: "Exactly 22 standardized governance files must be created upon initialization"
+  - id: "INV_BASE_GOVERNANCE_COUNT"
+    rule: "At least 22 standardized base governance files must be created upon initialization (plus N reconstructed living design docs if legacy docs/code exist)"
     severity: "FATAL"
   - id: "INV_IDEMPOTENCY_GUARD"
     rule: "If target AGENTS.md contains '<!-- @ad-flow: initialized -->', re-initialization is strictly prohibited"
@@ -170,7 +170,7 @@ pipeline:
         template: "templates/docs/design/README.md.tpl"
         constraints:
           - "Embeds 8-section design outline template"
-          - "NEVER create 01-系统设计方案.md"
+          - "Hollow placeholder specs are prohibited; real specs are generated in STEP 7 via legacy doc synthesis"
       - dir: "${target_dir}/docs/devel/change"
         readme: "${target_dir}/docs/devel/change/README.md"
         template: "templates/docs/change/README.md.tpl"
@@ -221,11 +221,29 @@ pipeline:
         template: "templates/adflow.config.json.tpl"
 
   - step: 7
+    name: "SYNTHESIZE_LEGACY_DOCS_TO_LIVING_BASELINE"
+    description: "Read backed up documents and source code, reconstruct living baseline design docs and register them into indexes"
+    action: "SYNTHESIZE_AND_RECONSTRUCT"
+    condition: "target_dir/_adflow_backup/original_docs/ has files OR target_dir has source code"
+    execution_rules:
+      1. "Inspect all files in `_adflow_backup/original_docs/` (e.g. openspec/, superpower/, specs/, legacy docs/, root md files) and project source files (src/, cmd/, app/, etc.)."
+      2. "Extract system macro-architecture and domain breakdown."
+      3. "Generate `docs/devel/design/00-系统总体设计.md`: Global system topology, layer definitions, tech stack, and module matrix."
+      4. "For each identified domain/module, generate `docs/devel/design/01~NN-[模块中文名].md`:
+         - Strict ad-flow 4-chapter structure: 1. 简介, 2. 索引, 3. 规范, 4. xxx (结合目标与非目标/需求分析/架构设计与模型/接口契约/变更记录矩阵)
+         - English metadata headers: created, last-change, status, version
+         - Mandatory topic anchor: `<!-- @topic: TopicName -->`
+         - Direct reference to changelog index: `[变更总账 (TopicName)](../change/index.json#TopicName)`"
+      5. "Automatically register all synthesized design docs and Topics into:
+         - `docs/devel/design/README.md` (Update the 《方案清单索引（功能模块矩阵）》 table)
+         - `docs/devel/index.json` (Register under design entries)"
+
+  - step: 8
     name: "DOD_VERIFICATION_AND_REPORT"
     description: "Execute hard assertions and report entry points to human developer"
     action: "ASSERT_AND_REPORT"
     assertions:
-      file_count_equals: 22
+      base_file_count_minimum: 22
       required_files_exist:
         - "AGENTS.md"
         - "adflow.config.json"
@@ -255,10 +273,13 @@ pipeline:
         rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it"
       local_security_check:
         rule: "local/ must NOT be deleted by AI; build outputs, tests and deploys must refer to local/ and local/deploy_report.md"
+      baseline_synthesis_check:
+        rule: "If legacy docs existed in _adflow_backup/original_docs/, at least 00-系统总体设计.md and corresponding 01~NN design docs must be synthesized"
     report_to_user:
       key_entries:
         - "AGENTS.md"
         - "docs/README.md"
         - "docs/devel/design/README.md"
         - "docs/guide/01-本地部署指南.md"
+      synthesized_design_docs: "List all generated 00~NN design docs if reconstructed from legacy assets"
       warning: "若生成了 _adflow_backup/ 或 local/（含打包产物与实况报告），AI 严禁擅自删除，仅由人类手动核验清理。"

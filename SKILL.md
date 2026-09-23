@@ -48,10 +48,13 @@ flowchart TD
     StandardAgents --> InjectAgents
     
     InjectAgents --> ScaffoldMatrix["Step 5: Scaffold 9 Dirs + 9 dedicated README.md\n(incl. docs/assets/README.md)"]
-    ScaffoldMatrix --> InjectHubs["Step 6: Inject 3 index.json hubs + card templates + guides + configs\n(Total 22 files)"]
-    InjectHubs --> DoDCheck{"Step 7: Assert File Count == 22\n& Check Backup / Local Invariants"}
+    ScaffoldMatrix --> InjectHubs["Step 6: Inject 3 index.json hubs + card templates + guides + configs\n(Base 22 files)"]
+    InjectHubs --> HasLegacyAssets{"Has Legacy Docs/Code in _adflow_backup?"}
+    HasLegacyAssets -- "Yes" --> SynthesizeBaselines["Step 7: Synthesize Living Baseline\n(00-系统总体设计.md & 01~NN.md with @topic,\nregister into design/README & index.json)"]
+    HasLegacyAssets -- "No" --> DoDCheck
+    SynthesizeBaselines --> DoDCheck{"Step 8: Assert Base Count >= 22\n& Check Backup / Local Invariants"}
     
-    DoDCheck -- "Pass" --> ReportSuccess["Report entry points (AGENTS.md, docs/README.md)"]
+    DoDCheck -- "Pass" --> ReportSuccess["Report entry points & synthesized design docs"]
     DoDCheck -- "Fail" --> ReportError["FATAL: Assertion Failure"]
 ```
 
@@ -136,12 +139,28 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
    - `CHANGELOG.md` (from `templates/docs/changelog.md.tpl`)
    - `adflow.config.json` (from `templates/adflow.config.json.tpl`)
 
-### Step 7: DoD Assertions Verification & Report
-1. Verify exactly 22 governance files exist.
-2. Assert forbidden file `docs/devel/design/01-系统设计方案.md` does NOT exist.
-3. Assert `_adflow_backup/` is intact (if created).
-4. Assert `local/` (housing build artifacts `local/dist/`, test data, logs, and `local/deploy_report.md`) is NOT modified or deleted by AI.
-5. Report primary entry points (`AGENTS.md`, `docs/README.md`, `docs/devel/design/README.md`, `docs/guide/01-本地部署指南.md`) to the user.
+### Step 7: Synthesize Living Baseline from Legacy Docs & Source Code
+*Condition: Only executes if `_adflow_backup/original_docs/` has files OR project contains source code.*
+1. Deeply inspect all legacy documentation in `_adflow_backup/original_docs/` (openspec, superpower, specs, legacy docs/, markdown files) and explore existing source code.
+2. Extract the overall system architecture, topology, and functional domain boundaries.
+3. Synthesize and generate `docs/devel/design/00-系统总体设计.md`:
+   - System high-level architecture, module breakdown, domain matrix, tech stack.
+4. For each identified domain/module, synthesize `docs/devel/design/01~NN-[模块中文名].md`:
+   - Enforce unified 4-chapter structure: `1. 简介`, `2. 索引`, `3. 规范`, `4. xxx` (integrating Goals/Non-Goals, Requirements, Architecture, Interfaces/Contracts, Changelog matrix).
+   - Standard English metadata headers: `created`, `last-change`, `status`, `version`.
+   - Mandatory concept anchor: `<!-- @topic: TopicName -->`.
+   - Direct link to changelog hub: `[变更总账 (TopicName)](../change/index.json#TopicName)`.
+5. Register all synthesized topics and documents into:
+   - `docs/devel/design/README.md` (Update the 《方案清单索引（功能模块矩阵）》 table).
+   - `docs/devel/index.json` (Register under the design section).
+
+### Step 8: DoD Assertions Verification & Report
+1. Verify at least 22 base governance files exist.
+2. If legacy docs existed, assert `00-系统总体设计.md` and domain micro-designs (`01~NN.md`) are synthesized and registered.
+3. Assert generic placeholder file `docs/devel/design/01-系统设计方案.md` does NOT exist.
+4. Assert `_adflow_backup/` is intact (if created).
+5. Assert `local/` (housing build artifacts `local/dist/`, test data, logs, and `local/deploy_report.md`) is NOT modified or deleted by AI.
+6. Report primary entry points (`AGENTS.md`, `docs/README.md`, `docs/devel/design/README.md`, `docs/guide/01-本地部署指南.md`) and list all synthesized design documents to the user.
 
 ---
 
@@ -150,5 +169,5 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 - **INV_IDEMPOTENCY_GUARD**: If `AGENTS.md` contains `<!-- @ad-flow: initialized -->`, do NOT execute re-initialization.
 - **INV_NO_AGENT_DELETE_BACKUP**: AI Agent must NEVER delete or alter `_adflow_backup/`.
 - **INV_NO_AGENT_DELETE_LOCAL**: AI Agent must NEVER delete or reset `local/` or `local/deploy_report.md`. All build outputs (dist/, build/) and runtime data are strictly quarantined in `local/`.
-- **INV_NO_FAKE_DESIGN_DOC**: Never generate a fake design specification `01-系统设计方案.md`. Design specifications must only be authored based on actual system architecture.
-- **INV_TOTAL_OUTPUT_COUNT**: Exactly 22 standardized governance files must be created upon initialization.
+- **INV_EVIDENCE_BASED_DESIGN**: AI Agent is strictly forbidden from creating hollow placeholder design specs. When legacy docs exist in `_adflow_backup/original_docs/` or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN.md) adhering to ad-flow 4-chapter and @topic standards.
+- **INV_BASE_GOVERNANCE_COUNT**: At least 22 standardized base governance files must be created upon initialization, plus N reconstructed design documents if legacy docs/code exist.

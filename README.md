@@ -39,7 +39,7 @@
 |---|---|---|
 | **极简单一指令调用** | 对话框输入 `$ad-flow` 即可激活治理落地 | 移除一切碎屑子命令，实现“意图即触发，对话即落地” |
 | **防重复初始化保护** | 目标 `AGENTS.md` 注入 `<!-- @ad-flow: initialized -->` 标签，再次调用主动拦截 | 具备硬性幂等性保护，防止误操作覆盖已有治理基线 |
-| **存量工程安全迁移协议** | 自动勘察工程资产（含 `docs/`、`openspec/`、`superpower/`、`specs/` 等规范目录与根目录 markdown），存量项目强制生成 `_adflow_backup/` 独立快照 | **AI 严禁删除备份**，确保工程原有代码与文档绝对安全 |
+| **存量工程智能迁移与基线重构** | 自动勘察旧资产（`docs/`、`openspec/`、`superpower/` 等）备份至 `_adflow_backup/`，并深度研读旧文档与源码，自动重构为自洽的现行设计基线（`00-系统总体设计.md` + 模块化 `01~NN.md`）并在总账注册 | **存量规范 0 丢失**，系统设计自动无缝升级至 ad-flow 统一标准体系 |
 | **项目自定义规则融合引擎** | 自动提取目标工程已有 `Agent.md` 中的团队业务规约并无缝追加至新宪法 | 100% 继承团队既有开发习惯，不造成规则撕裂 |
 | **22 文件全景标准化脚手架** | 自动生成涵盖文档中心、静态资源库、指引区、内场区、总账路由、双卡模板与归档库的全套资产 | 目录结构高度对齐，每个目录均配有专属 README 与机器索引 |
 | **多分支执行标签原生感知** | 卡片与总账结构原生内嵌 `"branch": "feat/..."` / `"fix/..."` 属性 | 消除分支错乱，原生契合 Git 工作流 |
@@ -177,10 +177,10 @@ flowchart TD
   1. `INV_IDEMPOTENCY_GUARD`：`AGENTS.md` 包含 `<!-- @ad-flow: initialized -->` 时，严禁二次初始化；
   2. `INV_NO_AGENT_DELETE_BACKUP`：AI Agent 严禁擅自删除或篡改 `_adflow_backup/`；
   3. `INV_NO_AGENT_DELETE_LOCAL`：AI Agent 严禁擅自删除或重置 `local/` 及其部署报告；
-  4. `INV_NO_FAKE_DESIGN_DOC`：初始化严禁生成伪造的 `01-系统设计方案.md`，设计大纲内嵌于 `design/README.md`；
-  5. `INV_TOTAL_OUTPUT_COUNT`：必须精确产出 22 个标准化治理文件。
+  4. `INV_EVIDENCE_BASED_DESIGN`：严禁生成空洞的占位符假设计文档；若存在旧文档或源码，**必须研读并重构为现行基线设计方案**；
+  5. `INV_BASE_GOVERNANCE_COUNT`：必须精确产出至少 22 个标准化基础治理文件，并在存在旧资产时输出 N 篇重构的现行基线设计文档。
 - **流水线步骤 (Pipeline)**：
-  `Step 1: 资产勘察与防重入检测` $\rightarrow$ `Step 2: 人工确认守卫` $\rightarrow$ `Step 3: 安全隔离快照` $\rightarrow$ `Step 4: AGENTS.md 规则融合` $\rightarrow$ `Step 5: 9大目录独立 README 矩阵` $\rightarrow$ `Step 6: 中枢总账与模板注入` $\rightarrow$ `Step 7: DoD 22文件完整性硬断言与汇报`。
+  `Step 1: 资产勘察与防重入检测` $\rightarrow$ `Step 2: 人工确认守卫` $\rightarrow$ `Step 3: 安全隔离快照` $\rightarrow$ `Step 4: AGENTS.md 宪法融合` $\rightarrow$ `Step 5: 9大目录独立 README 矩阵` $\rightarrow$ `Step 6: 中枢总账与模板注入` $\rightarrow$ **`Step 7: 旧文档消化与设计基线重构 (Legacy Synthesis)`** $\rightarrow$ `Step 8: DoD 完整性硬断言与交付汇报`。
 
 ---
 
