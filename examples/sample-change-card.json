@@ -1,0 +1,95 @@
+{
+  "$schema": "https://ad-flow.org/schemas/change-card.v1.json",
+  "id": "C001",
+  "title": "修复日K引导入库元组缺code导致klines表永空",
+  "type": "BugFix",
+  "status": "closed",
+  "branch": "fix/C001-tencent-kline-tuple",
+  "is_hotfix": false,
+
+  "target": {
+    "module": "market",
+    "component": "tencent_adapter",
+    "design_doc": "docs/devel/design/02-后端设计方案.md",
+    "design_topic": "MarketService"
+  },
+
+  "why": "前端日K图空白。TencentAdapter 返回 6 元组而 upsert_klines 需要 7 元组，参数不匹配报错被吞，导致数据表永空。",
+
+  "precheck": {
+    "description": "预检日K入库元组长度是否仍存在缺code缺陷",
+    "command": "python -m pytest tests/test_market_adapter.py -k test_kline_tuple_len",
+    "expected": "FAILED",
+    "is_completed": false,
+    "evidence": "AssertionError: Expected 7 elements, got 6"
+  },
+
+  "callback": {
+    "before": [
+      "git checkout fix/C001-tencent-kline-tuple",
+      "sqlite3 local/data/test.db 'DELETE FROM klines;'"
+    ],
+    "after": [
+      "python -m pytest tests/test_market_adapter.py",
+      "flake8 src/market"
+    ]
+  },
+
+  "changes": [
+    {
+      "scope": "接口契约",
+      "before": "返回 6 元组 (date, open, close, high, low, volume)",
+      "after": "返回 7 元组 (code, date, open, close, high, low, volume)",
+      "impact": "行情入库与日K查询"
+    }
+  ],
+
+  "design": {
+    "doc": "docs/devel/design/02-后端设计方案.md",
+    "topic": "MarketService",
+    "modified": true,
+    "rule_diff": {
+      "before": "日K 启动拉取历史数据时，以 6 元组格式处理",
+      "after": "日K 启动拉取历史数据时，以 7 元组格式对齐契约入库（含标的代码 code）"
+    }
+  },
+
+  "verification": {
+    "result": true,
+    "run_id": "89123",
+    "user_quote": "日k显示正常了，同意合入主干",
+    "signoff": "sivan (AI代签)",
+    "checks": [
+      {
+        "item": "自动化测试",
+        "true_if": "模块所属单测全量通过且退出码为 0，含新增回归用例",
+        "false_if": "存在单测失败、报错或未覆盖回归用例",
+        "evidence": "pytest -> 133 passed in 0.72s",
+        "result": true
+      },
+      {
+        "item": "核心行为实测",
+        "true_if": "标的日K查询接口返回非空日K数组",
+        "false_if": "返回空数组 []、超时或抛出异常",
+        "evidence": "请求返回 2026-09-11 至今的多根日K，前端图表正常渲染",
+        "result": true
+      },
+      {
+        "item": "反向影响排查",
+        "true_if": "分钟线拉取与计划引擎注入路径不受影响",
+        "false_if": "相关上下游服务出现数据异常或调用报错",
+        "evidence": "计划与分钟线用例全绿，未引入破坏性改动",
+        "result": true
+      }
+    ]
+  },
+
+  "rejections": [],
+
+  "sync": {
+    "design_pinned": true,
+    "changelog": true,
+    "commit": "14d108e",
+    "tag": "v0.1.0"
+  }
+}

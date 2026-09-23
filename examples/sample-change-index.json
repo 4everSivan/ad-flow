@@ -1,0 +1,55 @@
+{
+  "$schema": "https://ad-flow.org/schemas/change-index.v1.json",
+  "version": "1.0",
+  "updated_at": "2026-09-23",
+
+  "topics": {
+    "MarketService": {
+      "design_doc": "docs/devel/design/02-后端设计方案.md",
+      "changes": ["C001", "C008", "C010", "C027"]
+    },
+    "MatchingEngine": {
+      "design_doc": "docs/devel/design/02-后端设计方案.md",
+      "changes": ["C015", "C020"]
+    }
+  },
+
+  "cards": {
+    "C001": {
+      "title": "修复日K引导入库元组缺code导致klines表永空",
+      "type": "BugFix",
+      "status": "closed",
+      "branch": "fix/C001-tencent-kline-tuple",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C001.json"
+    },
+    "C008": {
+      "title": "行情数据源扩充与降级链增强",
+      "type": "Refactor",
+      "status": "closed",
+      "branch": "refactor/C008-market-sources",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C008.json"
+    },
+    "C010": {
+      "title": "修复腾讯源时间戳致分钟线单桶失真",
+      "type": "BugFix",
+      "status": "closed",
+      "branch": "fix/C010-timestamp-bucket",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C010.json"
+    },
+    "C027": {
+      "title": "修复夜盘时段数据污染",
+      "type": "BugFix",
+      "status": "pending",
+      "branch": "fix/C027-night-market-isolation",
+      "topic": "MarketService",
+      "version": "v0.2.0",
+      "file": "docs/devel/change/C027.json"
+    }
+  }
+}

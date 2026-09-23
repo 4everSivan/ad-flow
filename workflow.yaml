@@ -1,0 +1,264 @@
+# ad-flow Agentic Execution Workflow (Machine-Oriented)
+# Specification for AI Agent initialization execution
+version: "1.0.0"
+workflow_id: "adflow_init"
+target_actor: "AI_AGENT"
+description: "Deterministic step-by-step state machine for initializing ad-flow documentation governance."
+
+# 机器硬性不可变约束 (Invariants)
+invariants:
+  - id: "INV_NO_AGENT_DELETE_BACKUP"
+    rule: "AI Agent is strictly forbidden from deleting, moving, or modifying '_adflow_backup/'"
+    severity: "FATAL"
+  - id: "INV_NO_AGENT_DELETE_LOCAL"
+    rule: "AI Agent is strictly forbidden from deleting or resetting 'local/' directory and local/deploy_report.md"
+    severity: "FATAL"
+  - id: "INV_NO_FAKE_DESIGN_DOC"
+    rule: "Never generate 'docs/devel/design/01-系统设计方案.md' or any placeholder design spec"
+    severity: "FATAL"
+  - id: "INV_TOTAL_OUTPUT_COUNT"
+    rule: "Exactly 22 standardized governance files must be created upon initialization"
+    severity: "FATAL"
+  - id: "INV_IDEMPOTENCY_GUARD"
+    rule: "If target AGENTS.md contains '<!-- @ad-flow: initialized -->', re-initialization is strictly prohibited"
+    severity: "FATAL"
+
+pipeline:
+  - step: 1
+    name: "SURVEY_PROJECT_ASSETS"
+    description: "Inspect target workspace, check idempotency tag, and determine project category"
+    action: "INSPECT"
+    inputs:
+      target_dir: "${TARGET_DIR:-.}"
+    idempotency_check:
+      tag: "<!-- @ad-flow: initialized -->"
+      scan_files:
+        - "AGENTS.md"
+        - "Agent.md"
+        - "agents.md"
+      on_tag_found:
+        state: "ALREADY_INITIALIZED"
+        action: "TERMINATE"
+        message: "项目已完成 ad-flow 文档治理初始化（检测到 AGENTS.md 中已存在 <!-- @ad-flow: initialized --> 标签）。严禁重复初始化，安全退出。"
+    detection_rules:
+      code_indicators:
+        - "package.json"
+        - "Cargo.toml"
+        - "pyproject.toml"
+        - "go.mod"
+        - "pom.xml"
+        - "Makefile"
+        - "src/"
+        - "lib/"
+        - "app/"
+      doc_indicators:
+        - "*.md"
+        - "docs/"
+        - "doc/"
+        - "openspec/"
+        - "openspecs/"
+        - ".openspec/"
+        - "superpower/"
+        - "superpowers/"
+        - ".superpower/"
+        - ".superpowers/"
+        - "specs/"
+        - "spec/"
+        - "specification/"
+        - "specifications/"
+        - "architecture/"
+      agent_rule_files:
+        - "Agent.md"
+        - "AGENTS.md"
+        - "agents.md"
+    outputs:
+      state: "ALREADY_INITIALIZED | EMPTY_PROJECT | ONGOING_CODE_AND_DOCS | ONGOING_CODE_ONLY"
+      existing_agent_file: "path | null"
+
+  - step: 2
+    name: "HUMAN_CONFIRMATION_GATE"
+    description: "Guard against unauthorized modification on existing projects"
+    condition: "state != 'EMPTY_PROJECT' and state != 'ALREADY_INITIALIZED' and not has_flag('--yes')"
+    action: "PROMPT_USER"
+    prompt: |
+      检测到当前项目处于【进行中】（已存在代码/文档资产）。
+      接入 ad-flow 前将自动为您在 `_adflow_backup/` 完整备份现有资产。
+      是否确认按照 ad-flow 规范进行文档治理初始化？[y/N]
+    branches:
+      on_reject:
+        action: "TERMINATE"
+        exit_code: 0
+        message: "用户取消操作，零修改安全退出。"
+      on_confirm:
+        action: "CONTINUE_TO_STEP_3"
+
+  - step: 3
+    name: "CREATE_SAFE_BACKUP"
+    description: "Create isolation snapshot zone _adflow_backup/ before modifying target"
+    condition: "state != 'EMPTY_PROJECT'"
+    action: "CREATE_ISOLATION_SNAPSHOT"
+    sub_tasks:
+      - create_dir: "${target_dir}/_adflow_backup"
+      - write_file:
+          path: "${target_dir}/_adflow_backup/README.md"
+          content: |
+            # ⚠️ ad-flow 安全备份与迁移暂存区 (_adflow_backup/)
+            > **绝对安全红线**：
+            > 1. AI Agent 严禁擅自删除或篡改本目录；
+            > 2. 所有迁移结果已写入 docs/，仅在人类核验无误后由人类在终端手动删除。
+      - branch_backup:
+          if_has_docs:
+            action: "COPY_ALL_DOC_ASSETS"
+            sources:
+              directories:
+                - "docs/"
+                - "doc/"
+                - "openspec/"
+                - "openspecs/"
+                - ".openspec/"
+                - "superpower/"
+                - "superpowers/"
+                - ".superpower/"
+                - ".superpowers/"
+                - "specs/"
+                - "spec/"
+                - "specification/"
+                - "architecture/"
+              files:
+                - "*.md"
+                - "*.txt"
+                - "SPEC.md"
+                - "SPECS.md"
+            dest: "${target_dir}/_adflow_backup/original_docs/"
+            behavior: "Recursively copy all discovered doc directories (including openspec, superpower, specs) and root markdown files into _adflow_backup/original_docs/ preserving structure."
+          if_code_only:
+            action: "ANALYZE_AND_DRAFT"
+            dest: "${target_dir}/_adflow_backup/analyzed_drafts/"
+
+  - step: 4
+    name: "INJECT_AGENTS_MD"
+    description: "Inject project constitution AGENTS.md, merging existing custom rules"
+    action: "TEMPLATE_INJECT_WITH_RULE_MERGE"
+    inputs:
+      template: "templates/AGENTS.md.tpl"
+      target_file: "${target_dir}/AGENTS.md"
+    merge_logic:
+      if_existing_agent_file:
+        extract_section: "## 项目自定义规则"
+        append_to_bottom: |
+          ---
+
+          ## 项目自定义规则 (Project Custom Rules)
+
+          > 本节由 ad-flow 在初始化时自动从原项目的 `{existing_filename}` 保留并迁移，包含本项目特有的业务、架构与团队自定义规则：
+
+          {extracted_rules}
+
+  - step: 5
+    name: "SCAFFOLD_DIRECTORIES_AND_READMES"
+    description: "Create all 8 governance directories with their respective dedicated README.md"
+    action: "WRITE_README_MATRIX"
+    mappings:
+      - dir: "${target_dir}/docs"
+        readme: "${target_dir}/docs/README.md"
+        template: "templates/docs/README.md.tpl"
+      - dir: "${target_dir}/docs/devel"
+        readme: "${target_dir}/docs/devel/README.md"
+        template: "templates/docs/devel-README.md.tpl"
+      - dir: "${target_dir}/docs/devel/design"
+        readme: "${target_dir}/docs/devel/design/README.md"
+        template: "templates/docs/design/README.md.tpl"
+        constraints:
+          - "Embeds 8-section design outline template"
+          - "NEVER create 01-系统设计方案.md"
+      - dir: "${target_dir}/docs/devel/change"
+        readme: "${target_dir}/docs/devel/change/README.md"
+        template: "templates/docs/change/README.md.tpl"
+      - dir: "${target_dir}/docs/devel/task"
+        readme: "${target_dir}/docs/devel/task/README.md"
+        template: "templates/docs/task/README.md.tpl"
+      - dir: "${target_dir}/docs/devel/todo"
+        readme: "${target_dir}/docs/devel/todo/README.md"
+        template: "templates/docs/todo/README.md.tpl"
+      - dir: "${target_dir}/docs/assets"
+        readme: "${target_dir}/docs/assets/README.md"
+        template: "templates/docs/assets/README.md.tpl"
+      - dir: "${target_dir}/docs/guide"
+        readme: "${target_dir}/docs/guide/README.md"
+        template: "templates/docs/guide/README.md.tpl"
+      - dir: "${target_dir}/docs/archive"
+        readme: "${target_dir}/docs/archive/README.md"
+        template: "templates/docs/archive-README.md.tpl"
+
+  - step: 6
+    name: "INJECT_HUBS_AND_CONFIGS"
+    description: "Inject index routing hubs, card templates, todo buffers, guide docs, and root configs"
+    action: "WRITE_FILES"
+    mappings:
+      - dest: "${target_dir}/docs/index.json"
+        template: "templates/docs/index.json.tpl"
+      - dest: "${target_dir}/docs/devel/index.json"
+        template: "templates/docs/devel-index.json.tpl"
+      - dest: "${target_dir}/docs/guide/index.json"
+        template: "templates/docs/guide/index.json.tpl"
+      - dest: "${target_dir}/docs/devel/change/index.json"
+        template: "templates/docs/change/index.json.tpl"
+      - dest: "${target_dir}/docs/devel/change/template.json"
+        template: "templates/docs/change/change-card.json.tpl"
+      - dest: "${target_dir}/docs/devel/task/index.json"
+        template: "templates/docs/task/index.json.tpl"
+      - dest: "${target_dir}/docs/devel/task/template.json"
+        template: "templates/docs/task/task-card.json.tpl"
+      - dest: "${target_dir}/docs/devel/todo/now.md"
+        template: "templates/docs/todo/now.md.tpl"
+      - dest: "${target_dir}/docs/devel/todo/future.md"
+        template: "templates/docs/todo/future.md.tpl"
+      - dest: "${target_dir}/docs/guide/01-本地部署指南.md"
+        template: "templates/docs/guide/01-本地部署指南.md.tpl"
+      - dest: "${target_dir}/CHANGELOG.md"
+        template: "templates/docs/changelog.md.tpl"
+      - dest: "${target_dir}/adflow.config.json"
+        template: "templates/adflow.config.json.tpl"
+
+  - step: 7
+    name: "DOD_VERIFICATION_AND_REPORT"
+    description: "Execute hard assertions and report entry points to human developer"
+    action: "ASSERT_AND_REPORT"
+    assertions:
+      file_count_equals: 22
+      required_files_exist:
+        - "AGENTS.md"
+        - "adflow.config.json"
+        - "CHANGELOG.md"
+        - "docs/README.md"
+        - "docs/index.json"
+        - "docs/assets/README.md"
+        - "docs/guide/README.md"
+        - "docs/guide/index.json"
+        - "docs/guide/01-本地部署指南.md"
+        - "docs/devel/README.md"
+        - "docs/devel/index.json"
+        - "docs/devel/design/README.md"
+        - "docs/devel/change/README.md"
+        - "docs/devel/change/index.json"
+        - "docs/devel/change/template.json"
+        - "docs/devel/task/README.md"
+        - "docs/devel/task/index.json"
+        - "docs/devel/task/template.json"
+        - "docs/devel/todo/README.md"
+        - "docs/devel/todo/now.md"
+        - "docs/devel/todo/future.md"
+        - "docs/archive/README.md"
+      forbidden_files_not_exist:
+        - "docs/devel/design/01-系统设计方案.md"
+      backup_security_check:
+        rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it"
+      local_security_check:
+        rule: "local/ must NOT be deleted by AI; tests must refer to local/deploy_report.md"
+    report_to_user:
+      key_entries:
+        - "AGENTS.md"
+        - "docs/README.md"
+        - "docs/devel/design/README.md"
+        - "docs/guide/01-本地部署指南.md"
+      warning: "若生成了 _adflow_backup/ 或 local/，AI 严禁擅自删除，仅由人类手动核验清理。"

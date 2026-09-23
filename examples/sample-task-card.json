@@ -1,0 +1,72 @@
+{
+  "$schema": "https://ad-flow.org/schemas/task-card.v1.json",
+  "id": "T03",
+  "title": "撮合引擎内核",
+  "milestone": "M2-领域内核",
+  "status": "completed",
+  "branch": "feat/T03-matching-engine",
+  "depends_on": ["T01"],
+
+  "target": {
+    "module": "matching",
+    "design_doc": "docs/devel/design/02-后端设计方案.md",
+    "design_topic": "MatchingEngine"
+  },
+
+  "goal": "以纯函数实现 A 股规则级撮合（市价、限价、涨跌停、过户费与印花税、五档撮合）。",
+
+  "precheck": {
+    "description": "预检撮合引擎核心用例是否已被提前实现",
+    "command": "python -m pytest tests/test_matching.py -k test_limit_order",
+    "expected": "1 passed in",
+    "is_completed": true,
+    "evidence": "PASSED tests/test_matching.py::test_limit_order in 0.12s"
+  },
+
+  "callback": {
+    "before": [
+      "git checkout feat/T03-matching-engine",
+      "python -m pip install -r requirements-dev.txt"
+    ],
+    "after": [
+      "black src/matching tests/test_matching.py",
+      "flake8 src/matching"
+    ]
+  },
+
+  "tasks": [
+    {
+      "id": "T03-1",
+      "title": "数据契约与纯度基线",
+      "capability": "定义输入输出纯数据结构（tick快照、订单状态、成交明细Fills）与架构纯度约束",
+      "done": true
+    },
+    {
+      "id": "T03-2",
+      "title": "费用与价格带纯函数",
+      "capability": "实现佣金、印花税、过户费计算函数，以及主板/双创板涨跌停带纯函数",
+      "done": true
+    }
+  ],
+
+  "acceptance": {
+    "result": true,
+    "run_id": "88201",
+    "checks": [
+      {
+        "item": "架构纯度约束",
+        "true_if": "模块为纯函数，零 I/O，不引入数据库或网络框架依赖",
+        "false_if": "检测到任何外部框架、网络或磁盘 I/O 模块引入",
+        "evidence": "CI 纯度检查通过，仅使用语言标准库数据结构",
+        "result": true
+      },
+      {
+        "item": "规则覆盖度",
+        "true_if": "设计方案约定的 11 类撮合断言在自动化用例中全量显式存在",
+        "false_if": "遗漏任一规则断言或边界用例",
+        "evidence": "自动化测试覆盖全部 11 类规则，断言 100% 通过",
+        "result": true
+      }
+    ]
+  }
+}
