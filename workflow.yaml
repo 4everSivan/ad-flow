@@ -11,7 +11,7 @@ invariants:
     rule: "AI Agent is strictly forbidden from deleting, moving, or modifying '_adflow_backup/'"
     severity: "FATAL"
   - id: "INV_NO_AGENT_DELETE_LOCAL"
-    rule: "AI Agent is strictly forbidden from deleting or resetting 'local/' directory and local/deploy_report.md"
+    rule: "AI Agent is strictly forbidden from deleting or resetting 'local/' directory (housing build outputs, data, logs, and deploy_report.md)"
     severity: "FATAL"
   - id: "INV_NO_FAKE_DESIGN_DOC"
     rule: "Never generate 'docs/devel/design/01-系统设计方案.md' or any placeholder design spec"
@@ -254,11 +254,11 @@ pipeline:
       backup_security_check:
         rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it"
       local_security_check:
-        rule: "local/ must NOT be deleted by AI; tests must refer to local/deploy_report.md"
+        rule: "local/ must NOT be deleted by AI; build outputs, tests and deploys must refer to local/ and local/deploy_report.md"
     report_to_user:
       key_entries:
         - "AGENTS.md"
         - "docs/README.md"
         - "docs/devel/design/README.md"
         - "docs/guide/01-本地部署指南.md"
-      warning: "若生成了 _adflow_backup/ 或 local/，AI 严禁擅自删除，仅由人类手动核验清理。"
+      warning: "若生成了 _adflow_backup/ 或 local/（含打包产物与实况报告），AI 严禁擅自删除，仅由人类手动核验清理。"

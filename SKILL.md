@@ -140,7 +140,7 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 1. Verify exactly 22 governance files exist.
 2. Assert forbidden file `docs/devel/design/01-系统设计方案.md` does NOT exist.
 3. Assert `_adflow_backup/` is intact (if created).
-4. Assert `local/` is NOT modified or deleted by AI.
+4. Assert `local/` (housing build artifacts `local/dist/`, test data, logs, and `local/deploy_report.md`) is NOT modified or deleted by AI.
 5. Report primary entry points (`AGENTS.md`, `docs/README.md`, `docs/devel/design/README.md`, `docs/guide/01-本地部署指南.md`) to the user.
 
 ---
@@ -149,6 +149,6 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 
 - **INV_IDEMPOTENCY_GUARD**: If `AGENTS.md` contains `<!-- @ad-flow: initialized -->`, do NOT execute re-initialization.
 - **INV_NO_AGENT_DELETE_BACKUP**: AI Agent must NEVER delete or alter `_adflow_backup/`.
-- **INV_NO_AGENT_DELETE_LOCAL**: AI Agent must NEVER delete or reset `local/` or `local/deploy_report.md`.
+- **INV_NO_AGENT_DELETE_LOCAL**: AI Agent must NEVER delete or reset `local/` or `local/deploy_report.md`. All build outputs (dist/, build/) and runtime data are strictly quarantined in `local/`.
 - **INV_NO_FAKE_DESIGN_DOC**: Never generate a fake design specification `01-系统设计方案.md`. Design specifications must only be authored based on actual system architecture.
 - **INV_TOTAL_OUTPUT_COUNT**: Exactly 22 standardized governance files must be created upon initialization.

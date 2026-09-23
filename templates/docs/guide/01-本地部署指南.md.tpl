@@ -13,7 +13,7 @@
 
 ### 2. 端口规划与隔离约定
 - 本地调试默认端口：`8080`（或按项目自定义）
-- 隔离目录：所有本地数据、运行时日志、临时文件全量写入 `local/` 目录
+- 隔离目录：所有编译与打包产物（`local/dist/`、`local/bin/`）、本地数据（`local/data/`）、运行时日志（`local/logs/`）全量写入 `local/` 目录
 
 ---
 
@@ -32,7 +32,24 @@ LOG_PATH=local/logs/app.log
 
 ---
 
-## 三、启动与部署步骤
+## 三、构建与打包规约（Build & Package）
+
+所有编译输出与打包分发产物**强制全量收拢至 `local/` 隔离区**，严禁在项目根目录下直接产生未经隔离的构建物：
+
+```bash
+# 示例：前端打包（显式指定输出目录至 local/dist）
+npm run build -- --outDir local/dist
+
+# 示例：Go 语言编译（显式指定二进制输出至 local/bin/）
+go build -o local/bin/app ./cmd/main.go
+
+# 示例：Python 构建分发包输出
+python -m build --outdir local/dist
+```
+
+---
+
+## 四、启动与部署步骤
 
 ### 1. 安装依赖
 ```bash
@@ -48,7 +65,7 @@ npm run dev # 或 python -m app.main
 
 ---
 
-## 四、部署报告产出规范（必填）
+## 五、部署报告产出规范（必填）
 
 部署成功后，**必须在 `local/` 目录下生成 `local/deploy_report.md`**：
 
