@@ -254,15 +254,15 @@ pipeline:
     action: "SYNTHESIZE_AND_RECONSTRUCT"
     condition: "target_dir/_adflow_backup/original_docs/ has files OR target_dir has source code"
     execution_rules:
-      1. "Inspect all files in `_adflow_backup/original_docs/` (e.g. openspec/, superpower/, specs/, legacy docs/, root md files) and project source files (src/, cmd/, app/, etc.)."
-      2. "Extract system macro-architecture and domain breakdown."
-      3. "Generate `docs/devel/design/00-系统总体设计.md`: Global system topology, layer definitions, tech stack, and module matrix."
-      4. "For each identified domain/module, generate `docs/devel/design/01~NN-[模块中文名].md`:
+      - "Inspect all files in `_adflow_backup/original_docs/` (e.g. openspec/, superpower/, specs/, legacy docs/, root md files) and project source files (src/, cmd/, app/, etc.)."
+      - "Extract system macro-architecture and domain breakdown."
+      - "Generate `docs/devel/design/00-系统总体设计.md`: Global system topology, layer definitions, tech stack, and module matrix."
+      - "For each identified domain/module, generate `docs/devel/design/01~NN-[模块中文名].md`:
          - Strict ad-flow 4-chapter structure: 1. 简介, 2. 索引, 3. 规范, 4. xxx (结合目标与非目标/需求分析/架构设计与模型/接口契约/变更记录矩阵)
          - English metadata headers: created, last-change, status, version
          - Mandatory topic anchor: `<!-- @topic: TopicName -->`
          - Direct reference to changelog index: `[变更总账 (TopicName)](../change/index.json#TopicName)`"
-      5. "Automatically register all synthesized design docs and Topics into:
+      - "Automatically register all synthesized design docs and Topics into:
          - `docs/devel/design/README.md` (Update the 《方案清单索引（功能模块矩阵）》 table)
          - `docs/devel/index.json` (Register under design entries)"
 
