@@ -180,6 +180,8 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
    - `docs/guide/01-本地部署指南.md` (from `templates/docs/guide/01-本地部署指南.md.tpl`)
 7. Root files:
    - `CHANGELOG.md` (from `templates/docs/changelog.md.tpl`)
+8. Verification layer (process-discipline gate):
+   - `scripts/adflow_verify.py` + `scripts/adflow-verify` (verbatim copies, stdlib-only; run at Step 8 and at every card closure — see Step 8 item 7 & `INV_ADFLOW_VERIFY_GATE`)
 
 ### Step 7: Synthesize Living Baseline from Legacy Docs & Source Code
 *Condition: Only executes if `_adflow_backup/original_docs/` has files OR project contains source code.*
@@ -203,6 +205,7 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 4. Assert `_adflow_backup/` is intact (if created).
 5. Assert `local/` (housing build artifacts `local/dist/`, test data, logs, and `local/deploy_report.md`) is NOT modified or deleted by AI.
 6. Report primary entry points (`AGENTS.md`, `docs/README.md`, `docs/devel/design/README.md`, `docs/guide/01-本地部署指南.md`, `docs/devel/env/README.md`) and list all synthesized design documents to the user.
+7. Run the process-discipline gate: execute `scripts/adflow-verify --mode init` (23-file skeleton DoD) and `scripts/adflow-verify` (active-card discipline). Exit 4 blocks the success report; fix violations before reporting completion.
 
 ---
 
@@ -214,3 +217,4 @@ Scaffold the 9 standard directories and inject their respective dedicated `READM
 - **INV_EVIDENCE_BASED_DESIGN**: AI Agent is strictly forbidden from creating hollow placeholder design specs. When legacy docs exist in `_adflow_backup/original_docs/` or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN.md) adhering to ad-flow 4-chapter and @topic standards.
 - **INV_BASE_GOVERNANCE_COUNT**: At least 23 standardized base governance files must be created upon initialization, plus N reconstructed design documents if legacy docs/code exist.
 - **INV_NO_README_AS_DESIGN_DOC**: AI Agent is strictly forbidden from setting `design_doc` or `doc` in any card (C/T) or index to any `README.md` (including `docs/devel/design/README.md`). It MUST point to a living baseline design doc (`00-系统总体设计.md` or `01~99-[module].md`) containing the matching `<!-- @topic: TopicName -->`. If missing, Agent must follow Doc First to supplement or create the design doc first.
+- **INV_ADFLOW_VERIFY_GATE**: The process-discipline gate `scripts/adflow-verify` is a versioned, in-repo asset (NOT a git hook or external CI). Before any card reaches a terminal state (`closed`/`completed`), the Agent MUST run it to Exit 0 and record the result in the card's `gate` block via `--record`. Exit 4 (deterministic violation) forbids closure/merge. A claimed `gate.exit_code==0` that contradicts live state is falsified as `GATE_CLAIM_CONTRADICTION`.

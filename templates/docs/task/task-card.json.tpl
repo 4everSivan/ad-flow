@@ -28,7 +28,8 @@
       "# 任务执行前脚本或流程，如环境预热、分支准备、数据预加载等"
     ],
     "after": [
-      "# 任务执行后脚本或流程，如代码格式化、静态检查、构建打包等"
+      "# 任务执行后脚本或流程，如代码格式化、静态检查、构建打包等",
+      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 completed（通过后以 --record 回写本卡 gate 块）"
     ]
   },
 
@@ -60,5 +61,11 @@
         "result": null
       }
     ]
+  },
+  "gate": {
+    "tool": "adflow-verify",
+    "version": "1.1.0",
+    "ran_at": "",
+    "exit_code": null
   }
 }

@@ -29,7 +29,8 @@
       "# 变更执行前脚本或流程，如环境检查、分支检出、现场快照备份等"
     ],
     "after": [
-      "# 变更执行后脚本或流程，如代码格式化、质量门禁、单测覆盖率检查等"
+      "# 变更执行后脚本或流程，如代码格式化、质量门禁、单测覆盖率检查等",
+      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 closed（通过后以 --record 回写本卡 gate 块）"
     ]
   },
 
@@ -89,5 +90,11 @@
     "changelog": false,
     "commit": "",
     "tag": ""
+  },
+  "gate": {
+    "tool": "adflow-verify",
+    "version": "1.1.0",
+    "ran_at": "",
+    "exit_code": null
   }
 }

@@ -46,6 +46,7 @@
 | **卡片预检与前后生命周期钩子** | 卡片内嵌 `precheck`（已完成性嗅探）与 `callback`（`before / after` 脚本钩子） | 防范重复无效劳动，原生支持环境预热、分支准备与质量门禁自动触发 |
 | **构建打包与运行物理双隔离** | 编译构建产物（`local/dist/`、`local/bin/`）与实机报告（`local/deploy_report.md`）全量汇聚 `local/` | 根目录与源码树零污染，杜绝二进制意外入库，运行数据 100% 隔离 |
 | **设计基线挂接严密防偷懒** | 机械硬判严禁将任何 `README.md` 作为 `design_doc` 关联（`INV_NO_README_AS_DESIGN_DOC`） | 杜绝 AI 把目录说明书当业务设计、强制遵循“文档先行”补全基线 |
+| **流程纪律可执行门禁 (`adflow-verify`)** | 把双轨卡片不变量（设计挂接非 README + `@topic`、证据锚、`commit` 祖先、零沉淀、DAG 拓扑闭环、卡号唯一、版本一致）变成可机械判定的校验器，收口/合入/归档前 Exit 0 才放行，`--record` 回写 `gate` 块，声称通过会被证伪 | 从“靠 Agent 自觉的散文 SOP”升级为“可判定、可追责”的门禁；作为仓库内可见资产注入，不引入钩子污染治理流程 |
 
 ---
 
@@ -256,6 +257,10 @@ skills/ad-flow/
 ├── SKILL.md                          # Skill 调度大脑（面向 Agent 的纯英文状态机指令规范）
 ├── workflow.yaml                     # 初始化流水线状态机（定义 21 文件断言与不可变约束）
 ├── README.md                         # 本说明文档（面向工程团队的架构与使用指引）
+│
+├── scripts/                          # 流程纪律可执行校验层（方案 W：仓库内可见资产，无钩子/CI）
+│   ├── adflow_verify.py              # 校验引擎（仅标准库）：P1–P14 状态感知门禁 + --mode init + gate 证伪
+│   └── adflow-verify                 # sh 薄封装（exec python3 …）
 │
 ├── templates/                        # 标准脚手架资产库（供 init 一键注入）
 │   ├── AGENTS.md.tpl                 # 项目宪法模板（含防重入标签、多分支提交规约与部署红线）

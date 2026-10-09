@@ -56,6 +56,9 @@ AI Agent 或开发者无需人工猜测下一步该干什么，通过 `task/inde
    - 比对 `acceptance.checks` 中的 `true_if / false_if`，收集 `evidence` 并置 `result: true`；
    - 记录无害流水号 `run_id`；
    - 所有检查项全绿后，卡片状态置为 `"completed"`，在 `task/index.json` 同步标记。
+6. **运行收口硬门禁（置 `completed` 前，硬阻断）**：
+   - 执行 `scripts/adflow-verify --record`：校验 `completed` 全前置（`acceptance.run_id` 非空、所有 `checks[].result` 已落、`sync.commit` 为 HEAD 祖先、`depends_on` 前置卡均已 `completed`、`gate.exit_code==0`）；
+   - **Exit 4 严禁置 `completed`**；通过后 `--record` 回写本卡 `gate` 块。
 
 ---
 

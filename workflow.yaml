@@ -241,6 +241,12 @@ pipeline:
         template: "templates/docs/guide/01-本地部署指南.md.tpl"
       - dest: "${target_dir}/CHANGELOG.md"
         template: "templates/docs/changelog.md.tpl"
+      - dest: "${target_dir}/scripts/adflow_verify.py"
+        template: "scripts/adflow_verify.py"
+        note: "Verbatim copy of the process-discipline gate (stdlib-only); not a .tpl"
+      - dest: "${target_dir}/scripts/adflow-verify"
+        template: "scripts/adflow-verify"
+        note: "Verbatim copy of the sh wrapper"
 
   - step: 7
     name: "SYNTHESIZE_LEGACY_DOCS_TO_LIVING_BASELINE"
@@ -298,6 +304,8 @@ pipeline:
         rule: "local/ must NOT be deleted by AI; build outputs, tests and deploys must refer to local/ and local/deploy_report.md"
       baseline_synthesis_check:
         rule: "If legacy docs existed in _adflow_backup/original_docs/, at least 00-系统总体设计.md and corresponding 01~NN design docs must be synthesized"
+      process_gate_check:
+        rule: "Run 'scripts/adflow-verify --mode init' (23-file skeleton DoD) and 'scripts/adflow-verify' (active-card discipline). Exit 0 required before reporting success; Exit 4 blocks the success report until violations are fixed."
     report_to_user:
       key_entries:
         - "AGENTS.md"
@@ -341,7 +349,11 @@ upgrade_pipeline:
           template: "templates/docs/change/change-card.json.tpl"
         - dest: "docs/devel/task/template.json"
           template: "templates/docs/task/task-card.json.tpl"
-      note: "Inject new fields (branch, precheck, callback) into template.json; NEVER modify existing Cxxx.json or Txx.json cards"
+        - dest: "scripts/adflow_verify.py"
+          template: "scripts/adflow_verify.py"
+        - dest: "scripts/adflow-verify"
+          template: "scripts/adflow-verify"
+      note: "Inject new fields (branch, precheck, callback, gate) into template.json; refresh the adflow-verify verifier copies; NEVER modify existing Cxxx.json or Txx.json cards"
     - step: "U5_SYNC_DOCS_INDEX_VERSION"
       action: "UPDATE_JSON_FIELD"
       target: "docs/index.json"

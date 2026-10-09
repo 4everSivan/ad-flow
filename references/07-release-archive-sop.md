@@ -10,6 +10,7 @@
 2. 当前阶段内的所有任务卡（`Txx.json`）均已处于 `status: "completed"` 状态；
 3. 全量测试通过，代码已打出对应 Git Tag（如 `git tag v0.1.0`）；
 4. `todo/future.md` 与 `now.md` 已完成例行评审。
+5. **运行 `scripts/adflow-verify` 且 Exit 0**：确认待归档批次内所有卡片均为合规终态、零沉淀无残留、版本一致。Exit 4 禁止归档。
 
 ---
 

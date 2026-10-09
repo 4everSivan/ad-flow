@@ -49,7 +49,10 @@
    - 获取测试流水号（如 `$GITHUB_RUN_ID` 纯数字或本地运行时间戳 `local-YYYYMMDD-HH`），填入 `verification.run_id`；
 3. **人机对齐汇报**：
    - AI 在会话中向人类呈报测试事实、修改前后逻辑与关键验证现象；
-4. **人类口头确认与 AI 代签**：
+4. **运行收口前置门禁（转 `verified` 前）**：
+   - 执行 `scripts/adflow-verify`，确认本卡 `verified` 前置齐全：`run_id`/`user_quote`/`signoff` 非空、所有 `checks[].result` 已落 true/false、二值契约对称、`@topic` 锚标匹配、卡号唯一；
+   - Exit 4 时**禁止进入代签**，按报缺项补齐后重跑。
+5. **人类口头确认与 AI 代签**：
    - 人类在会话中明确回复同意后，AI 摘录人类发言原话填入 `verification.user_quote`；
    - 填写 `signoff`（格式：`用户名 (AI代签)`）；
    - 卡片状态由 `pending` 转为 `verified`。
@@ -58,6 +61,9 @@
 
 ## 阶段四：合入主干与双向闭环 (Merge & Closure)
 
+0. **运行收口硬门禁（置 `closed` 前，硬阻断）**：
+   - 执行 `scripts/adflow-verify --record`：校验本卡 `closed` 全前置（证据锚齐全、`sync.commit` 为 HEAD 祖先、CHANGELOG 互链、索引状态一致、`gate.exit_code==0`）；
+   - **Exit 4 严禁合入主干、严禁置 `closed`**；`--record` 会把本次真实结果回写进本卡 `gate` 块。
 1. **合入主干**：
    - 提交代码并推送主干，获取 Git Commit Hash（如 `14d108e`）；
 2. **设计方案回写**：

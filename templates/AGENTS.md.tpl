@@ -22,6 +22,9 @@
 > 所有卡片（`Cxxx.json` / `Txx.json`）与索引（`index.json`）中的 `design_doc` / `doc`，**必须且仅能指向现行基线设计文档（`docs/devel/design/00-系统总体设计.md` 或 `01~99-[模块名].md`），且文档内必须包含匹配的 `<!-- @topic: TopicName -->` 锚标**。
 > **绝对严禁将任何 `README.md`（包括 `docs/devel/design/README.md`）作为 `design_doc` 填入！** 若变更涉及全局架构或暂无对应微设计文档，AI Agent 必须遵循“文档先行”，先在 `00-系统总体设计.md` 中补齐对应章节（或立项新微设计文档）并打上 `@topic` 锚标，再建卡挂接。
 
+> ⚠️ **【绝对红线·收口门禁】(INV_ADFLOW_VERIFY_GATE)**：
+> 任何卡片置为终态（变更 `closed` / 任务 `completed`）前，**必须运行 `scripts/adflow-verify` 且退出码为 0**，并以 `--record` 将真实结果回写至本卡 `gate` 块。校验器 Exit 4（确定性违规：关联 README、缺 `@topic` 锚标、证据锚缺失、commit 非祖先、零沉淀、拓扑未闭环、版本漂移等）时，**严禁收口/合入**；声称 `gate.exit_code==0` 但实测违规将被判 `GATE_CLAIM_CONTRADICTION`。校验器是仓库内可见、版本化资产，会话内可随时运行（`--warn-only` 供试点期降级为告警）；`$ad-flow` 初始化/升级时以 `--mode init` 跑一次骨架 DoD。
+
 ### 1. 功能设计入口 (新功能 / 大需求 / 阶段里程碑)
 1. **方向登记**：在 `docs/devel/todo/` 登记方向级灵感与事项；
 2. **设计基线定稿**：在 `docs/devel/design/` 撰写或修订对应微设计文档（`01~99-[功能名].md`，结构参考 `design/README.md`），状态置为 `现行基线`，并标明概念主题锚标 `<!-- @topic: TopicName -->`；完成设计后从 `todo/` 移除对应项；

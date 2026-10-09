@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **流程纪律可执行校验层 `scripts/adflow-verify`（方案 W）**：把双轨卡片不变量从散文 SOP 变为可机械判定的门禁。状态感知扫描活跃卡（P1–P14：设计挂接非 README + `@topic` 锚标匹配、证据锚安全真实、`sync.commit` 为 HEAD 祖先、零沉淀、DAG 拓扑闭环、卡号唯一、版本一致等），收口/合入/归档前 Exit 0 才放行；`--record` 将真实结果回写至卡片 `gate` 块，声称 `exit_code==0` 但实测违规被判 `GATE_CLAIM_CONTRADICTION`。`--mode init` 提供 23 文件骨架 DoD；`--json`/`--warn-only` 供消费与试点。作为仓库内可见、版本化资产注入，**不引入 git 钩子或外部 CI**，保持文档治理流程纯净。
+- **卡片 `gate` 块与 `callback.after` 预置**：变更卡/任务卡模板新增 `gate` 字段，并在收尾钩子预置 `scripts/adflow-verify`。
+- **`INV_ADFLOW_VERIFY_GATE` 不变量**：终态前必须过门禁并回写 `gate`，Exit 4 禁止收口/合入。
+
+### Changed
+
+- `workflow.yaml`：Step 6 注入校验器副本、Step 8 增 `process_gate_check` 断言、升级流 U4 刷新校验器副本。
+- `SKILL.md`：Step 6/8 挂接校验器，不变量新增 `INV_ADFLOW_VERIFY_GATE`。
+- `references/02/03/07`：变更/任务/归档 SOP 增加收口门禁步骤；`AGENTS.md` 宪法增加收口门禁硬红线。
+
 ## [1.1.0] - 2026-09-24
 
 ### Added
