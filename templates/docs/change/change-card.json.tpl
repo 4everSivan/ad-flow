@@ -30,7 +30,7 @@
     ],
     "after": [
       "# 变更执行后脚本或流程，如代码格式化、质量门禁、单测覆盖率检查等",
-      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 closed（通过后以 --record 回写本卡 gate 块）"
+      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 closed；目标状态预检使用 --card <本卡号> --to <目标状态> --record，仅回写本卡 gate，Exit 0 后再同步状态"
     ]
   },
 
@@ -93,7 +93,7 @@
   },
   "gate": {
     "tool": "adflow-verify",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "ran_at": "",
     "exit_code": null
   }

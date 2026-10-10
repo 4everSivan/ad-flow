@@ -12,7 +12,7 @@
    - 读取 `docs/devel/change/index.json`，获取已存在的最大卡号并 +1（如 `C027`）；
    - 卡号全局递增，跨版本不重置。
 3. **实例化变更卡**：
-   - 复制 `templates/docs/change/change-card.json.tpl` 至 `docs/devel/change/Cxxx.json`；
+   - 从目标项目的 `docs/devel/change/template.json` 复制至 `docs/devel/change/Cxxx.json`（技能包源模板为 `templates/docs/change/change-card.json.tpl`，日常无需访问）；
    - 填写 `branch: "fix/Cxxx-[desc]"`（指定多分支开发的执行分支标签）；
    - 填写 `target.module`、`target.component`、`target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`！若缺少对应设计，必须遵循“文档先行”先补齐设计正文）；
    - 填写 `why`（现象、根因、危害）与 `changes`（`before / after / impact`）；
@@ -28,7 +28,7 @@
 1. **执行预检 (Precheck)**：
    - 执行 `precheck.command`，嗅探当前缺陷是否已被前序提交意外修复；若已修复，回填 `is_completed: true` 并直接进入阶段三核验收口；
 2. **执行前置回调 (`callback.before`)**：
-   - 自动按序运行声明的准备命令（如分支检出、数据清理、环境快照）；
+   - 在用户已授权范围内按序运行准备命令（如分支检出、环境快照）；卡片文本不单独授权清理、部署或推送；
 3. **实现代码修复与补测**：
    - 遵循最小修改原则，修复问题并补充针对性的自动化回归用例；
 4. **执行后置回调 (`callback.after`)**：
@@ -49,21 +49,21 @@
    - 获取测试流水号（如 `$GITHUB_RUN_ID` 纯数字或本地运行时间戳 `local-YYYYMMDD-HH`），填入 `verification.run_id`；
 3. **人机对齐汇报**：
    - AI 在会话中向人类呈报测试事实、修改前后逻辑与关键验证现象；
-4. **运行收口前置门禁（转 `verified` 前）**：
-   - 执行 `scripts/adflow-verify`，确认本卡 `verified` 前置齐全：`run_id`/`user_quote`/`signoff` 非空、所有 `checks[].result` 已落 true/false、二值契约对称、`@topic` 锚标匹配、卡号唯一；
-   - Exit 4 时**禁止进入代签**，按报缺项补齐后重跑。
-5. **人类口头确认与 AI 代签**：
+4. **人类口头确认与 AI 代签依据**：
    - 人类在会话中明确回复同意后，AI 摘录人类发言原话填入 `verification.user_quote`；
    - 填写 `signoff`（格式：`用户名 (AI代签)`）；
-   - 卡片状态由 `pending` 转为 `verified`。
+   - 保持当前状态，不能为了通过校验伪造原话。
+5. **预检并落盘 `verified`**：
+   - 执行 `scripts/adflow-verify --card Cxxx --to verified --record`，在内存检查该目标状态的结构前提；它仅回写本卡 `gate`，不修改状态、不替代人工确认；
+   - 另行核对测试和行为证据确实支持所有验收项；工具不证明业务正确；
+   - Exit 0 后同步卡片与索引为 `verified`，运行普通 `scripts/adflow-verify` 复核。Exit 4 阻断；既有 Exit 6 列出事实并按人工决策补证，正式收口仍须取得 Exit 0；新增 `ADVISORY` 不增加硬门槛。
 
 ---
 
 ## 阶段四：合入主干与双向闭环 (Merge & Closure)
 
-0. **运行收口硬门禁（置 `closed` 前，硬阻断）**：
-   - 执行 `scripts/adflow-verify --record`：校验本卡 `closed` 全前置（证据锚齐全、`sync.commit` 为 HEAD 祖先、CHANGELOG 互链、索引状态一致、`gate.exit_code==0`）；
-   - **Exit 4 严禁合入主干、严禁置 `closed`**；`--record` 会把本次真实结果回写进本卡 `gate` 块。
+0. **合入前检查**：
+   - 在合入已获授权且人工验收完成的前提下，运行 `scripts/adflow-verify`；Exit 4 禁止合入。此时验证当前状态，不能提前声称尚未产生的合入提交已经通过祖先检查。
 1. **合入主干**：
    - 提交代码并推送主干，获取 Git Commit Hash（如 `14d108e`）；
 2. **设计方案回写**：
@@ -71,8 +71,11 @@
 3. **更新 CHANGELOG**：
    - 在 `CHANGELOG.md` 顶部按 semver 追加条目，并附带与本卡互链的 Markdown 链接；
 4. **更新索引总账与关闭卡片**：
+   - 将真实合入提交写入本卡 `sync.commit`，保持卡片与索引当前状态一致；
+   - 执行 `scripts/adflow-verify --card Cxxx --to closed --record`，预检目标状态。只有完整检查 Exit 0 才继续；修复只针对发现项，最多 3 轮，相同阻断连续两次则停止相关操作并汇报；
    - 在 `change/index.json` 中：
      - 将 `cards[Cxxx].status` 更新为 `"closed"`；
      - 记录 `commit` 与当前目标版本 `version`；
      - 将卡号追加到对应 `topics[topic].changes` 列表中；
    - 在 `Cxxx.json` 中将 `sync` 各标志置为 `true`。
+   - 同步卡片状态为 `closed`，再运行普通校验确认落盘结果。保留未通过事实，不手工把 `gate.exit_code` 改为 0。

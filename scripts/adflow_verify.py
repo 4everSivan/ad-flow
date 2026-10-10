@@ -10,11 +10,14 @@
 设计原则：
   * 仅用标准库，栈无关——可在任意目标工程里运行。
   * 退出码对齐 references/05-audit-checklist：0 干净 / 4 确定性违规 / 6 仅软告警。
-  * 只读；除非 --record（由工具把自己真实的运行结果回写进卡片 gate 块）。
+  * 只读；除非 --record（可用 --card 限定回写范围）。
+  * --card ID --to STATE 仅在内存预检目标状态，不代替人工验收或修改状态。
+  * 新增 ADVISORY 诊断不影响退出码，保持既有门禁标准。
   * gate 证伪：声称 exit_code==0 的终态卡，会被独立复算，矛盾即 GATE_CLAIM_CONTRADICTION。
 
 用法：
-  adflow-verify [target_dir=.] [--json] [--warn-only] [--mode init] [--record]
+  adflow-verify [target_dir=.] [--json] [--warn-only] [--mode init]
+                [--card ID [--to verified|closed|completed]] [--record]
 """
 import argparse
 import json
@@ -24,7 +27,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # ---- 常量 ----
 TOPIC_RE = re.compile(r"<!--\s*@topic:\s*([A-Za-z0-9_]+)\s*-->")
@@ -36,6 +39,7 @@ CANNED_QUOTES = {"已确认", "确认", "已通过", "同意", "ok", "yes", "don
 PATH_KEYS = {"files", "file", "paths", "file_path", "filepath", "sources"}
 TERMINAL = {"verified", "closed", "completed"}
 CLOSED = {"closed", "completed"}
+TRANSITIONS = {"change": {"verified", "closed"}, "task": {"completed"}}
 
 # workflow.yaml Step 8 的 23 个基础治理文件
 BASE_FILES = [
@@ -61,6 +65,7 @@ class Ctx:
         self._json_cache = {}
         self._text_cache = {}
         self._git = None            # None=未知, True/False
+        self.proposed_id = None
 
     # ---- 基础读取 ----
     def read_text(self, rel):
@@ -123,6 +128,9 @@ class Ctx:
 
     def soft(self, code, card, path, msg):
         self.add("WARN", code, card, path, msg)
+
+    def advisory(self, code, card, path, msg):
+        self.add("ADVISORY", code, card, path, msg)
 
 
 def is_readme(rel):
@@ -246,7 +254,7 @@ def check_state(ctx, card, cid, rel, track):
         ctx.soft("HOTFIX_OPEN", cid, rel, "hotfix 卡仍未闭环，需在故障恢复后 24h 内补票")
 
     # P3 gate 追责 + 证伪
-    if status in CLOSED:
+    if status in CLOSED and cid != ctx.proposed_id:
         gate = card.get("gate", {}) or {}
         if gate.get("exit_code") != 0:
             ctx.hard("GATE_EXIT_NONZERO", cid, rel,
@@ -258,7 +266,8 @@ def check_card(ctx, card, cid, rel, track):
     check_structural(ctx, card, cid, rel)
     check_state(ctx, card, cid, rel, track)
     # gate 证伪：声称已过门禁但实测有硬违规 → 追责
-    if card.get("status") in CLOSED and (card.get("gate", {}) or {}).get("exit_code") == 0:
+    if (cid != ctx.proposed_id and card.get("status") in CLOSED
+            and (card.get("gate", {}) or {}).get("exit_code") == 0):
         after = [f for f in ctx.findings if f["card"] == cid and f["sev"] == "ERROR"]
         if len(after) > before:
             ctx.hard("GATE_CLAIM_CONTRADICTION", cid, rel,
@@ -267,14 +276,6 @@ def check_card(ctx, card, cid, rel, track):
 
 # ---- 全局检查 ----
 def check_globals(ctx):
-    # P7 卡号唯一
-    seen = {}
-    for cid in ctx.all_ids:
-        seen[cid] = seen.get(cid, 0) + 1
-    for cid, n in seen.items():
-        if n > 1:
-            ctx.hard("ID_DUPLICATE", cid, "-", "卡号在 change/task 全域重复 %d 次（并行防撞号）" % n)
-
     # P11 零沉淀：todo 行内含已存在卡号
     for todo in ("docs/devel/todo/now.md", "docs/devel/todo/future.md"):
         txt = ctx.read_text(todo)
@@ -319,7 +320,9 @@ def collect_cards(ctx):
     for sub in ("docs/devel/change", "docs/devel/task"):
         idx_rel = sub + "/index.json"
         idx = ctx.load_json(idx_rel) or {}
-        reg = idx.get("cards", {}) or {}
+        # 任务模板使用 tasks；兼容已经使用 cards 的项目，不迁移其索引结构。
+        reg = idx.get("tasks", idx.get("cards", {})) if sub.endswith("/task") else idx.get("cards", {})
+        reg = reg or {}
         d = ctx.root / sub
         if not d.exists():
             continue
@@ -332,7 +335,10 @@ def collect_cards(ctx):
                 continue
             cid = str(card.get("id", jf.stem))
             cards.append((rel, card, cid))
-            ctx.all_ids[cid] = card
+            if cid in ctx.all_ids:
+                ctx.hard("ID_DUPLICATE", cid, rel, "卡号重复；不可用后一张卡覆盖前一张卡进行依赖判定")
+            else:
+                ctx.all_ids[cid] = card
             # P2 中枢对齐
             ent = reg.get(cid)
             if ent is None:
@@ -345,6 +351,62 @@ def collect_cards(ctx):
                 if f and not ctx.exists(f):
                     ctx.hard("INDEX_FILE_DEAD", cid, idx_rel, "索引 file 路径失效: %s" % f)
     return cards
+
+
+def check_advisories(ctx, cards):
+    """新增覆盖先旁路观察；不提高已有项目的硬门槛。"""
+    task_cards = {}
+    for rel, card, cid in cards:
+        if not (card.get("target", {}) or {}).get("design_topic"):
+            ctx.advisory("DESIGN_TOPIC_MISSING", cid, rel,
+                         "未声明 target.design_topic；现有门禁通过不代表已检查主题挂接")
+        if card.get("status") in TERMINAL:
+            checks = checks_of(card)
+            if not checks or any(c.get("result") is not True for c in checks):
+                ctx.advisory("CHECKS_NOT_ALL_TRUE", cid, rel,
+                             "验收项为空或未全部为 true；结构门禁不能替代业务验收")
+        if "/devel/task/" in rel:
+            task_cards[cid] = (rel, card)
+
+    visited, active, path = set(), set(), []
+
+    def visit(cid):
+        if cid in active:
+            cycle = path[path.index(cid):] + [cid]
+            ctx.advisory("DEP_CYCLE", cid, task_cards[cid][0],
+                         "依赖出现环路: %s（建议修正；本版不新增硬阻断）" % " -> ".join(cycle))
+            return
+        if cid in visited:
+            return
+        active.add(cid)
+        path.append(cid)
+        for dep in task_cards[cid][1].get("depends_on", []) or []:
+            if dep in task_cards:
+                visit(dep)
+        path.pop()
+        active.remove(cid)
+        visited.add(cid)
+
+    for cid in sorted(task_cards):
+        visit(cid)
+
+
+def propose_state(ctx, cards, cid, status):
+    """校验拟转入状态；原始卡片/索引保持不变，消除先置终态才能校验的循环。"""
+    matches = [(i, rel, card) for i, (rel, card, found) in enumerate(cards) if found == cid]
+    if len(matches) != 1:
+        ctx.hard("TRANSITION_CARD", cid, "-", "目标卡必须唯一且存在于活跃卡池")
+        return
+    i, rel, card = matches[0]
+    track = "change" if "/devel/change/" in rel else "task"
+    if status not in TRANSITIONS[track]:
+        ctx.hard("TRANSITION_STATE", cid, rel, "该轨不支持目标状态 %s" % status)
+        return
+    candidate = dict(card)
+    candidate["status"] = status
+    cards[i] = (rel, candidate, cid)
+    ctx.all_ids[cid] = candidate
+    ctx.proposed_id = cid
 
 
 # ---- 初始化 DoD ----
@@ -360,15 +422,21 @@ def run_init(ctx):
 
 
 # ---- --record：把本次真实结果回写进卡片 gate 块 ----
-def record_gates(ctx, cards):
+def record_gates(ctx, cards, selected=None):
+    # 全局/其他卡违规同样阻断本次完整门禁，不把局部无错误伪装成整体通过。
+    _, _, code = summarize(ctx)
     for rel, card, cid in cards:
-        errs = [f for f in ctx.findings if f["card"] == cid and f["sev"] == "ERROR"]
-        warns = [f for f in ctx.findings if f["card"] == cid and f["sev"] == "WARN"]
-        code = 4 if errs else (6 if warns else 0)
-        card["gate"] = {"tool": "adflow-verify", "version": VERSION,
-                        "ran_at": date.today().isoformat(), "exit_code": code}
+        if selected is not None and cid != selected:
+            continue
         p = ctx.root / rel
-        p.write_text(json.dumps(card, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        # 重新读取实际卡片，候选状态只用于校验，不能随 gate 回写落盘。
+        actual = json.loads(p.read_text(encoding="utf-8"))
+        gate = {"tool": "adflow-verify", "version": VERSION,
+                "ran_at": date.today().isoformat(), "exit_code": code}
+        if cid == ctx.proposed_id:
+            gate["target_status"] = card["status"]
+        actual["gate"] = gate
+        p.write_text(json.dumps(actual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 # ---- 报告 ----
@@ -382,21 +450,24 @@ def summarize(ctx):
 def report(ctx, mode, as_json, warn_only):
     errs, warns, code = summarize(ctx)
     if warn_only:
-        code = 0 if not warns else 6
         for f in ctx.findings:
-            f["sev"] = "WARN"
-        errs, warns = [], ctx.findings
+            if f["sev"] == "ERROR":
+                f["sev"] = "WARN"
+        errs, warns, code = summarize(ctx)
+    advisories = [f for f in ctx.findings if f["sev"] == "ADVISORY"]
     if as_json:
         print(json.dumps({"tool": "adflow-verify", "version": VERSION, "mode": mode,
                           "target": str(ctx.root), "exit_code": code,
-                          "summary": {"errors": len(errs), "warnings": len(warns)},
+                          "summary": {"errors": len(errs), "warnings": len(warns),
+                                      "advisories": len(advisories)},
                           "findings": ctx.findings}, ensure_ascii=False, indent=2))
     else:
         print("adflow-verify v%s  mode=%s  target=%s" % (VERSION, mode, ctx.root))
         for f in ctx.findings:
             loc = f["path"] if f["card"] in (None, "-") else "%s [%s]" % (f["path"], f["card"])
             print("  [%s] %-24s %s: %s" % (f["sev"], f["code"], loc, f["msg"]))
-        print("summary: %d error(s), %d warning(s)" % (len(errs), len(warns)))
+        print("summary: %d error(s), %d warning(s), %d advisory item(s)" %
+              (len(errs), len(warns), len(advisories)))
         print("exit code: %d" % code)
     return code
 
@@ -409,19 +480,33 @@ def main(argv=None):
     ap.add_argument("--mode", choices=["process", "init"], default="process",
                     help="process=流程门禁(默认)；init=初始化 DoD")
     ap.add_argument("--record", action="store_true", help="把本次各卡真实结果回写进卡片 gate 块")
+    ap.add_argument("--card", help="限定 --record 的卡号；搭配 --to 预检该卡拟转入状态")
+    ap.add_argument("--to", choices=["verified", "closed", "completed"], help="仅在内存预检目标状态")
     args = ap.parse_args(argv)
+    if args.to and not args.card:
+        ap.error("--to 需要 --card")
+    if args.mode == "init" and (args.card or args.to or args.record):
+        ap.error("初始化检查不支持 --card/--to/--record")
+    if args.warn_only and args.record:
+        ap.error("--warn-only 不可与 --record 合用；试点降级不得写入正式 gate")
 
     ctx = Ctx(args.target_dir)
     if args.mode == "init":
         run_init(ctx)
     else:
         cards = collect_cards(ctx)
+        if args.card and not any(cid == args.card for _, _, cid in cards):
+            ctx.hard("TRANSITION_CARD", args.card, "-", "目标卡不存在于活跃卡池")
+        if args.to:
+            propose_state(ctx, cards, args.card, args.to)
         for rel, card, cid in cards:
             track = "change" if "/devel/change/" in rel else "task"
             check_card(ctx, card, cid, rel, track)
         check_globals(ctx)
-        if args.record:
-            record_gates(ctx, cards)
+        check_advisories(ctx, cards)
+        if args.record and not any(f["code"] in {"TRANSITION_CARD", "TRANSITION_STATE", "ID_DUPLICATE"}
+                                   for f in ctx.findings):
+            record_gates(ctx, cards, args.card)
 
     code = report(ctx, args.mode, args.json, args.warn_only)
     return code

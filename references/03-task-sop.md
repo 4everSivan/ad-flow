@@ -19,7 +19,7 @@
 1. **里程碑划分**：
    - 确立阶段目标，划分有序里程碑（如 `M1-工程骨架`、`M2-领域内核`、`M3-业务接入`）；
 2. **实例化任务卡**：
-   - 从 `templates/docs/task/task-card.json.tpl` 复制并建立 `Txx.json`；
+   - 从目标项目的 `docs/devel/task/template.json` 复制并建立 `Txx.json`（无需访问技能包源目录）；
    - 填写 `branch: "feat/Txx-[desc]"`（指定多分支研发的特性分支标签）；
    - 填写 `target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`）；
    - 填写 `precheck`（能力完成预检命令）与 `callback`（`before / after` 脚本钩子）；
@@ -55,10 +55,12 @@ AI Agent 或开发者无需人工猜测下一步该干什么，通过 `task/inde
    - 执行自动化测试套件与纯度检测；
    - 比对 `acceptance.checks` 中的 `true_if / false_if`，收集 `evidence` 并置 `result: true`；
    - 记录无害流水号 `run_id`；
-   - 所有检查项全绿后，卡片状态置为 `"completed"`，在 `task/index.json` 同步标记。
+   - 所有检查项全绿后保持当前状态，准备目标状态预检；不得以结构检查替代实测或项目要求的人工验收。
 6. **运行收口硬门禁（置 `completed` 前，硬阻断）**：
-   - 执行 `scripts/adflow-verify --record`：校验 `completed` 全前置（`acceptance.run_id` 非空、所有 `checks[].result` 已落、`sync.commit` 为 HEAD 祖先、`depends_on` 前置卡均已 `completed`、`gate.exit_code==0`）；
-   - **Exit 4 严禁置 `completed`**；通过后 `--record` 回写本卡 `gate` 块。
+   - 先将真实提交写入 `sync.commit`，执行 `scripts/adflow-verify --card Txx --to completed --record`，在内存检查 `completed` 的前提（流水号、结果字段、提交祖先、前置卡闭环等），仅回写本卡真实 `gate`；
+   - **Exit 4 严禁置 `completed`**。既有 Exit 6 按事实补证，正式收口仍须 Exit 0；新增 `ADVISORY` 只汇报、不增加硬门槛；
+   - Exit 0 后同步卡片与 `task/index.json` 状态为 `completed`，再运行普通校验复核；
+   - 根据具体发现局部修复并重验，最多 3 轮；相同阻断连续两次或需要新授权/事实时停止相关操作并汇报。
 
 ---
 

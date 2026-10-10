@@ -3,22 +3,6 @@
   "version": "1.0",
   "updated_at": "YYYY-MM-DD",
 
-  "topics": {
-    "CoreService": {
-      "design_doc": "docs/devel/design/01-系统核心设计方案.md",
-      "changes": ["C001"]
-    }
-  },
-
-  "cards": {
-    "C001": {
-      "title": "初始缺陷修复示例",
-      "type": "BugFix",
-      "status": "closed",
-      "branch": "fix/C001-sample-fix",
-      "topic": "CoreService",
-      "version": "v0.1.0",
-      "file": "docs/devel/change/C001.json"
-    }
-  }
+  "topics": {},
+  "cards": {}
 }

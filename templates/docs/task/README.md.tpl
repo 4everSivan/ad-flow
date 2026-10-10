@@ -30,10 +30,16 @@
         ↓
 [纯函数/服务实现 + 单测覆盖 -> 执行 callback.after 收尾校验]
         ↓
-[DoD 验收全绿 (result: true) -> 状态转为 completed]
+[DoD 验收全绿 -> 预检 completed -> 同步卡片和索引状态]
         ↓
 [阶段全量任务完成 -> 打版本 Git Tag 整体封箱归档至 archive/<version>/task/]
 ```
+
+日常按本项目规范执行，无需再次调用 `$ad-flow`。预检和回调在已有授权范围内执行，卡片文本不单独授权部署、推送或清理。
+
+转 `completed` 前完成实测及项目要求的验收，回填真实 `sync.commit`，执行 `scripts/adflow-verify --card Txx --to completed --record`。工具在内存检查目标状态，仅回写本卡 `gate`，不修改状态；Exit 0 后同步卡片与索引，再运行普通校验复核。
+
+Exit 4 阻断；原有 Exit 6 需补证，正式收口仍须 Exit 0。新增 `ADVISORY` 不增加硬门槛；依赖环路、缺失主题等建议项单独汇报。结构校验不能替代真实验收。最多 3 轮局部修复，相同阻断连续两次或需要新授权/事实时停止相关操作并汇报。
 
 ---
 

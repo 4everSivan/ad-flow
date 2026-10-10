@@ -1,6 +1,6 @@
 # ad-flow Agentic Execution Workflow (Machine-Oriented)
 # Specification for AI Agent initialization execution
-version: "1.1.0"
+version: "1.2.0"
 workflow_id: "adflow_init"
 target_actor: "AI_AGENT"
 trigger_aliases:
@@ -8,15 +8,23 @@ trigger_aliases:
   - "/ad-flow"
   - "ad-flow"
   - "adflow"
-description: "Deterministic step-by-step state machine for initializing and upgrading ad-flow documentation governance."
+description: "Initialize once; explicitly invoke again only to synchronize governance specifications. Daily development uses installed project rules."
+
+execution_contract:
+  entrypoint: "Bootstrap/upgrade only; no new-card/archive subcommands or repeated daily invocation"
+  daily_assets: "Target AGENTS.md, directory READMEs, indexes, templates, and scripts/adflow-verify; no skill-source dependency"
+  lifecycle: "Keep dual tracks, card states, human acceptance, zero-sediment, and archiving unchanged"
+  input_separation: "Separate policy, current-step instructions, source evidence, examples, and output contract; XML is optional for dynamic sources and grants no authority"
+  authority: "Reuse explicit authorization for the target operation; otherwise confirm existing-asset migration. Initialization does not authorize deploy/push/merge/cleanup/signoff"
+  new_checks: "ADVISORY only; existing exit 0/4/6 semantics remain. No automatic old-card migration"
 
 # 机器硬性不可变约束 (Invariants)
 invariants:
   - id: "INV_NO_AGENT_DELETE_BACKUP"
-    rule: "AI Agent is strictly forbidden from deleting, moving, or modifying '_adflow_backup/'"
+    rule: "Authorized initialization/upgrade may create fresh snapshots; captured originals are read-only. Never delete, move, overwrite, or prune existing snapshots"
     severity: "FATAL"
   - id: "INV_NO_AGENT_DELETE_LOCAL"
-    rule: "AI Agent is strictly forbidden from deleting or resetting 'local/' directory (housing build outputs, data, logs, and deploy_report.md)"
+    rule: "Initialization/upgrade leave existing local/ untouched. Later authorized build/test/deploy may write outputs and reports there; deleting/resetting existing contents is outside this workflow"
     severity: "FATAL"
   - id: "INV_EVIDENCE_BASED_DESIGN"
     rule: "AI Agent is strictly forbidden from creating hollow placeholder design docs. When legacy docs exist in '_adflow_backup/original_docs/' or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN-[module].md) adhering to ad-flow 4-chapter and @topic standards."
@@ -45,15 +53,21 @@ pipeline:
         - "agents.md"
         - "docs/index.json"
       tag_pattern: "<!-- @ad-flow: initialized(?: v(?P<ver>[0-9.]+))? -->"
-      current_version: "1.1.0"
+      current_version: "1.2.0"
+      compare: "Parse numeric version components using code; conflicting/malformed sources stop without writes"
+      on_version_newer:
+        action: "TERMINATE_WITHOUT_DOWNGRADE"
+      on_version_conflict:
+        action: "REPORT_WITHOUT_WRITES"
       on_version_match:
         state: "ALREADY_INITIALIZED_UP_TO_DATE"
-        action: "TERMINATE"
-        message: "项目已完成 ad-flow 文档治理初始化且版本为最新 (v1.1.0)。严禁重复初始化，安全退出。"
+        action: "TERMINATE_UNLESS_EXPLICIT_FORCE_OR_UPGRADE_SYNC"
+        on_explicit_sync: "Set NEEDS_UPGRADE and use the preserving upgrade pipeline"
+        message: "项目已完成 ad-flow 文档治理初始化且版本为最新 (v1.2.0)。严禁重复初始化，安全退出。"
       on_version_outdated:
         state: "NEEDS_UPGRADE"
         action: "BRANCH_TO_UPGRADE_PIPELINE"
-        message: "检测到项目治理版本低于当前技能包 (v1.1.0)，正在进入规约与规范平滑升级流程..."
+        message: "检测到项目治理版本低于当前技能包 (v1.2.0)，正在进入规约与规范平滑升级流程..."
     detection_rules:
       code_indicators:
         - "package.json"
@@ -92,7 +106,7 @@ pipeline:
   - step: 2
     name: "HUMAN_CONFIRMATION_GATE"
     description: "Guard against unauthorized modification on existing projects"
-    condition: "state != 'EMPTY_PROJECT' and state != 'ALREADY_INITIALIZED' and not has_flag('--yes')"
+    condition: "state != 'EMPTY_PROJECT' and state != 'ALREADY_INITIALIZED' and not has_flag('--yes') and not prior_authorization_for_target_migration"
     action: "PROMPT_USER"
     prompt: |
       检测到当前项目处于【进行中】（已存在代码/文档资产）。
@@ -112,13 +126,15 @@ pipeline:
     condition: "state != 'EMPTY_PROJECT'"
     action: "CREATE_ISOLATION_SNAPSHOT"
     sub_tasks:
+      - check_destinations: "Inventory all snapshot destinations before moving assets; stop on collisions, never overwrite captured originals"
       - create_dir: "${target_dir}/_adflow_backup"
       - write_file:
           path: "${target_dir}/_adflow_backup/README.md"
+          if_absent: true
           content: |
             # ⚠️ ad-flow 安全备份与迁移暂存区 (_adflow_backup/)
             > **绝对安全红线**：
-            > 1. AI Agent 严禁擅自删除或篡改本目录；
+            > 1. 已捕获的原始快照只读，禁止删除、移动或覆盖；授权初始化/升级可创建新的独立快照；
             > 2. 所有迁移结果已写入 docs/，仅在人类核验无误后由人类在终端手动删除。
       - branch_backup:
           if_has_docs:
@@ -149,7 +165,7 @@ pipeline:
                 - "SPEC.md"
                 - "SPECS.md"
             dest: "${target_dir}/_adflow_backup/original_docs/"
-            behavior: "Atomically move existing docs/ directory into _adflow_backup/original_docs/docs/ and recreate empty docs/; move all other spec directories and root markdown files into _adflow_backup/original_docs/."
+            behavior: "Atomically move existing docs/ directory into _adflow_backup/original_docs/docs/ and recreate empty docs/; move other spec directories into _adflow_backup/original_docs/; preserve root documents and agent rules in _adflow_backup/original_docs/root_markdowns/ before replacement."
           if_code_only:
             action: "ANALYZE_AND_DRAFT"
             dest: "${target_dir}/_adflow_backup/analyzed_drafts/"
@@ -175,7 +191,7 @@ pipeline:
 
   - step: 5
     name: "SCAFFOLD_DIRECTORIES_AND_READMES"
-    description: "Create all 8 governance directories with their respective dedicated README.md"
+    description: "Create all 10 governance directories with their respective dedicated README.md"
     action: "WRITE_README_MATRIX"
     mappings:
       - dir: "${target_dir}/docs"
@@ -216,6 +232,7 @@ pipeline:
     name: "INJECT_HUBS_AND_CONFIGS"
     description: "Inject index routing hubs, card templates, todo buffers, guide docs, and root configs"
     action: "WRITE_FILES"
+    initial_data: "Empty indexes and todo/design registrations; examples are not real project records"
     mappings:
       - dest: "${target_dir}/docs/index.json"
         template: "templates/docs/index.json.tpl"
@@ -246,7 +263,7 @@ pipeline:
         note: "Verbatim copy of the process-discipline gate (stdlib-only); not a .tpl"
       - dest: "${target_dir}/scripts/adflow-verify"
         template: "scripts/adflow-verify"
-        note: "Verbatim copy of the sh wrapper"
+        note: "Verbatim copy of the sh wrapper; preserve executable permission"
 
   - step: 7
     name: "SYNTHESIZE_LEGACY_DOCS_TO_LIVING_BASELINE"
@@ -255,7 +272,7 @@ pipeline:
     condition: "target_dir/_adflow_backup/original_docs/ has files OR target_dir has source code"
     execution_rules:
       - "Inspect all files in `_adflow_backup/original_docs/` (e.g. openspec/, superpower/, specs/, legacy docs/, root md files) and project source files (src/, cmd/, app/, etc.)."
-      - "Extract system macro-architecture and domain breakdown."
+      - "Extract system macro-architecture and domain breakdown; retain source locations and explicitly report unresolved claims instead of inventing facts."
       - "Generate `docs/devel/design/00-系统总体设计.md`: Global system topology, layer definitions, tech stack, and module matrix."
       - "For each identified domain/module, generate `docs/devel/design/01~NN-[模块中文名].md`:
          - Strict ad-flow 4-chapter structure: 1. 简介, 2. 索引, 3. 规范, 4. xxx (结合目标与非目标/需求分析/架构设计与模型/接口契约/变更记录矩阵)
@@ -270,8 +287,16 @@ pipeline:
     name: "DOD_VERIFICATION_AND_REPORT"
     description: "Execute hard assertions and report entry points to human developer"
     action: "ASSERT_AND_REPORT"
+    evaluation_loop:
+      mechanical: "Run init and process verifier with --json; findings identify code/path. ADVISORY does not affect exit status"
+      semantic: "Compare generated design claims to source evidence and registrations; verify snapshot/runtime preservation separately"
+      repair_scope: "Only generated/managed assets within authorization; never repeat migration, rewrite old business cards, or relax hard gates"
+      max_repair_passes: 3
+      stop_when: "Same blocker persists twice, or repair needs new authority/source facts"
+      report: "Separate file generation, mechanical results, semantic evidence, and runtime/human acceptance gaps"
     assertions:
       base_file_count_minimum: 23
+      verifier_files_required: ["scripts/adflow_verify.py", "scripts/adflow-verify"]
       required_files_exist:
         - "AGENTS.md"
         - "CHANGELOG.md"
@@ -301,7 +326,7 @@ pipeline:
       backup_security_check:
         rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it"
       local_security_check:
-        rule: "local/ must NOT be deleted by AI; build outputs, tests and deploys must refer to local/ and local/deploy_report.md"
+        rule: "Initialization/upgrade leave existing local/ untouched; later authorized build/test/deploy may write there. Instance operations verify the report against runtime, consult guides on drift; unit tests need no deployment report"
       baseline_synthesis_check:
         rule: "If legacy docs existed in _adflow_backup/original_docs/, at least 00-系统总体设计.md and corresponding 01~NN design docs must be synthesized"
       process_gate_check:
@@ -318,16 +343,17 @@ pipeline:
 
 upgrade_pipeline:
   trigger: "state == 'NEEDS_UPGRADE'"
-  description: "Smoothly synchronize and upgrade all governance constitutions, README specifications, and templates to v1.1.0"
+  description: "Smoothly synchronize and upgrade all governance constitutions, README specifications, and templates to v1.2.0"
   steps:
     - step: "U1_SNAPSHOT_CURRENT_GOVERNANCE"
       action: "CREATE_UPGRADE_SNAPSHOT"
-      dest: "${target_dir}/_adflow_backup/upgrade_snapshot/"
+      dest: "${target_dir}/_adflow_backup/upgrade_snapshot/${run_id}/"
+      collision_rule: "Fresh directory only; leave existing snapshots untouched"
     - step: "U2_SYNC_AGENTS_CONSTITUTION"
       action: "UPDATE_AGENTS_MD"
       template: "templates/AGENTS.md.tpl"
       preservation_rule: "CRITICAL: Retain all custom content under '## 项目自定义规则 (Project Custom Rules)' exactly as-is."
-      tag: "<!-- @ad-flow: initialized v1.1.0 -->"
+      tag: "<!-- @ad-flow: initialized v1.2.0 -->"
     - step: "U3_SYNC_DIRECTORY_READMES"
       action: "UPDATE_STANDARD_READMES"
       targets:
@@ -341,7 +367,7 @@ upgrade_pipeline:
         - "docs/devel/env/README.md"
         - "docs/guide/README.md"
         - "docs/archive/README.md"
-      note: "Update 4-chapter rules, metadata headers, and guidelines; preserve user module registrations in design/README.md"
+      note: "Update managed guidelines only; preserve project content and user module registrations in design/README.md"
     - step: "U4_SYNC_CARD_TEMPLATES"
       action: "UPDATE_TEMPLATES"
       targets:
@@ -358,7 +384,8 @@ upgrade_pipeline:
       action: "UPDATE_JSON_FIELD"
       target: "docs/index.json"
       field: "adflow_version"
-      value: "1.1.0"
+      value: "1.2.0"
     - step: "U6_UPGRADE_REPORT"
       action: "REPORT_UPGRADE_COMPLETE"
-      message: "ad-flow 规范已平滑升级至 v1.1.0。协作宪法、目录规范与卡片模板已同步，所有现有设计方案与业务卡片均完整保留。"
+      evaluation: "Run Step 8 checks without --record; report existing-card violations without rewriting them. Specification sync is distinct from project compliance"
+      message: "汇报 v1.2.0 规范同步范围、存量资产保留情况、校验结果与未解决项；存在阻断时不宣称项目全部通过。"
