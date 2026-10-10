@@ -31,6 +31,7 @@ Protect existing assets while avoiding unnecessary delay: continue independent, 
 ### Preservation Boundaries
 
 - **Backup snapshots:** creating a new snapshot is allowed during authorized initialization/upgrade. Once captured, its contents are read-only. Never delete, move, overwrite, or prune existing snapshots. If a destination already exists, stop before moving assets into it; upgrades use a fresh `upgrade_snapshot/<run_id>/` directory.
+- **Backup Git exclusion:** before creating any backup, ensure the target root `.gitignore` effectively ignores `/_adflow_backup/`. Create it if absent; otherwise preserve existing contents and append the rule only when no effective equivalent exists, adding a separating newline if needed. Place the appended rule after any conflicting negation. Report already tracked backup paths; do not remove them from Git's index automatically.
 - **`local/`:** initialization and governance upgrade leave existing runtime data and reports untouched. Later authorized builds, tests, and deployments may write their outputs/reports there. Deleting or resetting existing contents remains outside this workflow.
 - **Business assets on upgrade:** preserve design documents, existing C/T cards, todo buffers, index registrations, and project custom rules. Update managed specification sections and templates only; do not retroactively migrate old cards or run `--record` during upgrade.
 - **Evidence:** report actual commands, exit codes, and remaining uncertainty. A structural gate does not prove source/design agreement, application behavior, or human acceptance. Do not invent design facts or signoff.
@@ -83,7 +84,7 @@ On rejection, exit without edits. Empty projects proceed directly.
 
 ### Step 3: Capture an Isolation Snapshot
 
-For existing assets, create `_adflow_backup/README.md` if absent, documenting snapshot protection. Inventory destinations before moving anything.
+For existing assets, apply the backup Git exclusion above before creating `_adflow_backup/README.md` if absent, documenting snapshot protection. Inventory destinations before moving anything.
 
 - Move an existing `docs/` atomically to `_adflow_backup/original_docs/docs/`, then recreate `docs/`. Preserve other legacy documentation/spec directories under `original_docs/` as mapped by `workflow.yaml`.
 - Preserve root documents and agent rules in `original_docs/root_markdowns/` before replacement. Retain source code unchanged.
@@ -113,6 +114,7 @@ When legacy documents or source code exist, inspect them to generate `docs/devel
 ### Step 8: Check, Repair, and Report
 
 1. **Mechanical evaluation:** run `scripts/adflow-verify --mode init --json` and `scripts/adflow-verify --json` in the target. Use the findings' codes and paths to locate defects. Formal gate success requires Exit 0; Exit 4 blocks success, and unresolved existing Exit 6 items are reported for human disposition rather than called passed. `ADVISORY` findings are nonblocking observations, not new closure requirements.
+   When a backup exists in a target Git repository, separately use `git check-ignore --no-index` to verify coverage of the backup README and nested snapshot paths, and `git ls-files -- _adflow_backup/` to detect already tracked backups. Outside Git, inspect the root ignore rule without initializing a repository for validation.
 2. **Semantic evaluation:** check synthesized claims against source evidence, design registrations, backup preservation, and untouched runtime assets. The verifier does not perform these checks for the model.
 3. **Bounded repair:** fix only generated/managed assets within the authorized scope, then re-run affected checks. Allow at most 3 repair passes; stop earlier if the same blocker persists twice or repair needs new authority/facts. Preserve partial work and report the exact blocker; never restart migration or relax a hard gate to obtain success.
 4. **Report:** separate generated files, mechanical results, semantic evidence, and unverified runtime/human acceptance. List primary entrypoints and synthesized designs. Do not promise token/latency savings without measurements.
@@ -121,7 +123,7 @@ When legacy documents or source code exist, inspect them to generate `docs/devel
 
 Upgrade runs only when this skill is invoked for the target; it is not a background service.
 
-1. Snapshot managed governance files into a fresh `_adflow_backup/upgrade_snapshot/<run_id>/` directory.
+1. Apply the backup Git exclusion above, then snapshot managed governance files into a fresh `_adflow_backup/upgrade_snapshot/<run_id>/` directory.
 2. Refresh managed `AGENTS.md` rules from the template and preserve the custom-rules section exactly.
 3. Refresh the 10 directory README guidelines while preserving project content, especially the design module matrix.
 4. Refresh C/T templates and the two verifier copies. Leave existing business cards and their `gate` blocks unchanged.

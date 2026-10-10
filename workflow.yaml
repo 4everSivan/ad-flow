@@ -18,6 +18,13 @@ execution_contract:
   authority: "Reuse explicit authorization for the target operation; otherwise confirm existing-asset migration. Initialization does not authorize deploy/push/merge/cleanup/signoff"
   new_checks: "ADVISORY only; existing exit 0/4/6 semantics remain. No automatic old-card migration"
 
+backup_gitignore:
+  target_file: "${target_dir}/.gitignore"
+  pattern: "/_adflow_backup/"
+  update_rule: "Before creating any backup, create .gitignore if absent; otherwise preserve existing contents and append the rule only if no effective equivalent exists. Add a separating newline if needed and append after conflicting negations; repeated execution must not duplicate effective rules"
+  verification: "In a target Git repository, use git check-ignore --no-index on the backup README and nested snapshot paths; outside Git, inspect the root rule without initializing a repository"
+  tracked_files: "Use git ls-files -- _adflow_backup/ to detect tracked backups. Report these separately: .gitignore does not untrack them; never remove index entries automatically"
+
 # 机器硬性不可变约束 (Invariants)
 invariants:
   - id: "INV_NO_AGENT_DELETE_BACKUP"
@@ -127,6 +134,7 @@ pipeline:
     action: "CREATE_ISOLATION_SNAPSHOT"
     sub_tasks:
       - check_destinations: "Inventory all snapshot destinations before moving assets; stop on collisions, never overwrite captured originals"
+      - ensure_gitignore: "Apply backup_gitignore before creating _adflow_backup/"
       - create_dir: "${target_dir}/_adflow_backup"
       - write_file:
           path: "${target_dir}/_adflow_backup/README.md"
@@ -324,7 +332,7 @@ pipeline:
       forbidden_files_not_exist:
         - "docs/devel/design/01-系统设计方案.md"
       backup_security_check:
-        rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it"
+        rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it. Verify backup_gitignore coverage separately from adflow-verify and report already tracked backup paths"
       local_security_check:
         rule: "Initialization/upgrade leave existing local/ untouched; later authorized build/test/deploy may write there. Instance operations verify the report against runtime, consult guides on drift; unit tests need no deployment report"
       baseline_synthesis_check:
@@ -347,6 +355,7 @@ upgrade_pipeline:
   steps:
     - step: "U1_SNAPSHOT_CURRENT_GOVERNANCE"
       action: "CREATE_UPGRADE_SNAPSHOT"
+      before_snapshot: "Apply backup_gitignore before creating the upgrade snapshot"
       dest: "${target_dir}/_adflow_backup/upgrade_snapshot/${run_id}/"
       collision_rule: "Fresh directory only; leave existing snapshots untouched"
     - step: "U2_SYNC_AGENTS_CONSTITUTION"
