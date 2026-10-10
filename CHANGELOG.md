@@ -6,7 +6,7 @@
 
 ## [Unreleased]
 
-以下为治理规范 **1.2.0** 的未发布变化；当前已发布版本仍为 **1.1.0**。
+## [1.2.0] - 2026-10-10
 
 ### Added
 
@@ -50,5 +50,6 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/4everSivan/ad-flow/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/4everSivan/ad-flow/releases/tag/v1.1.0
