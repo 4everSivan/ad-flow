@@ -1,52 +1,66 @@
 # ad-flow: Agentic Documentation Governance Flow
 
-> **面向 AI 时代人机协作的结构化、解耦型“文档驱动开发”（Doc-Driven Engineering）治理框架与通用工程脚手架**
+面向 AI Agent 与开发者的文档驱动开发治理技能：在项目中安装设计基线、双轨卡片、索引、操作规范和流程校验器。
+
+当前治理规范版本：**1.2.0**。发布情况见 [CHANGELOG](CHANGELOG.md)。
+
+**首次调用完成初始化；日常直接提出开发需求；希望同步新版规范时才再次调用。** 项目内的规则、模板和校验器可独立使用，更新技能包不会后台修改已有项目。
+
+快速导航：[首次初始化](#61-首次初始化) · [日常开发](#62-一次初始化后的日常使用) · [按需升级](#63-按需升级) · [校验命令](#64-在项目终端运行校验)
 
 ---
 
 ## 1. 简介 (Introduction)
 
-在大型语言模型与自主代码 Agent 深度融入软件工程研发的当下，传统的“代码先行、事后补文档”或“纯线性敏捷任务池”开发模式在人机协同中迅速暴露出深层次的失控：
-- **文档光速漂移**：代码频繁演进，设计文档与真实实现严重脱节，沦为“失真死文档”；
-- **上下文污染与阻断**：缺少清晰的文档分层契约，Agent 检索时要么因信息过载撑爆 Context 窗口，要么因缺乏结构漏看核心业务约束；
-- **路径强耦合导致断链**：任务卡与变更卡直接硬编码引用设计文档物理路径，一旦版本发版归档或目录重构，全库链接大面积失效；
-- **部署施工与实机现实断层**：部署指南写的是静态默认端口与理想配置，实际机器运行常遇端口冲突、实例复用或参数变更，导致后续自动化测试与重新部署频频撞车甚至误删数据库。
+`ad-flow` 用现行设计基线描述业务规则，以任务卡（T）推进阶段能力，以变更卡（C）记录缺陷修复和规则差异。索引管理卡片路径与状态，待办池只暂存尚未建卡的事项，部署报告记录实际运行情况。
 
-`ad-flow`（Agentic Documentation Governance Flow）源自工业级人机协作实战提炼，是一套**以“现行基线真理、中枢路由解耦、双轨闭环流转、零沉淀待办、部署实机真理”为核心支柱的通用工程文档治理框架**。它通过极简的单一技能指令 `$ad-flow`，在目标项目中一键落地 23 个相互咬合、严密自洽的标准化工程治理脚手架。
+初始化和升级由 Agent 按 [SKILL.md](SKILL.md) 与 [workflow.yaml](workflow.yaml) 执行；目标项目获得 **23 个治理文件（含 10 个目录 README）及 2 个校验器文件**。已有源码或文档的项目还需依据真实来源重构设计基线，不能把示例登记成项目事实。
+
+首次使用时，让 Agent 能发现本技能，并在目标项目对话中输入 `$ad-flow`。校验器需要 Python 3，使用标准库；`scripts/adflow-verify` 是调用 Python 的 Shell 入口。技能调用写在对话中，校验命令在项目终端执行。
 
 ---
 
 ## 2. 目标 (Goals)
 
-`ad-flow` 致力于解决 AI 辅助研发中的“失真、漂移、耦合、失控”四大痛点，达成以下工程治理目标：
+核心目标是让设计、执行记录、代码证据与运行事实保持可追溯：
 
 1. **确立现行基线真理源（Living Baseline）**：
    系统只有一套代表当下最新规则的现行设计基线（`docs/devel/design/`），不搞孤立的文档小版本号，以 `@topic` 概念锚点保持全文自洽，杜绝多版本混淆。
-2. **实现执行卡片与物理路径彻底解耦（Decoupled Hubs）**：
+2. **集中管理卡片路由（Index Hubs）**：
    任务卡（`Txx`）与变更卡（`Cxxx`）以 `target.design_doc` 和 `target.design_topic` 明确挂接设计基线；中枢总账（`index.json`）负责卡片的物理路径映射。历史版本封箱归档仅需调整总账指向，设计文档零修改、零断链。
 3. **践行待办缓冲零沉淀纪律（Zero Sediment）**：
    零散缺陷、临时微调与远期技术债在待办池（`now.md` / `future.md`）中暂存。一旦立项建卡，**必须立即物理删除**，彻底消灭“已办事项长期堆积成文档垃圾”的慢性沉淀。
 4. **统一施工蓝图与物理运行现实，双重隔离构建与运行（Deployment & Build Reality）**：
    部署指南（`docs/guide/`）是设计蓝图，实测报告（`local/deploy_report.md`）是物理运行现实。涉及已有实例的测试、联调与重启优先参考实机报告，并用当前运行态核实；报告缺失或漂移时结合指南排查；同时将所有**编译构建打包产物（`local/dist/`、`local/bin/`）与运行时数据（`local/data/`、`local/logs/`）强制全量收拢在 `local/` 隔离区**中，严禁向源码树扩散。
-5. **原生适配多分支并行研发（Multi-Branch Isolation）**：
-   在任务卡与变更卡中原生注入执行分支标签（`branch`），总账实时索引，确保多分支、多人机并行开发时上下文清晰对齐。
+5. **记录执行分支（Branch Tracking）**：
+   任务卡与变更卡通过 `branch` 声明执行分支，索引汇总状态。分支创建、切换和合入由实际 Git 操作完成，字段本身不提供工作区隔离。
 
 ---
 
 ## 3. 功能 (Features)
 
-| 功能模块 | 说明 | 核心价值 |
+| 功能 | 实际行为 | 使用边界 |
 |---|---|---|
-| **极简单一指令调用** | 对话框输入 `$ad-flow` 即可激活治理落地 | 移除一切碎屑子命令，实现“意图即触发，对话即落地” |
-| **版本感知与平滑升级引擎** | 目标 `AGENTS.md` 注入 `<!-- @ad-flow: initialized v1.2.0 -->`，重新调用 `$ad-flow` 自动感知 skill 版本并平滑升级协作宪法、README 矩阵与卡片模板 | 规则升级零手工，100% 保护存量业务设计与卡片数据 |
-| **存量工程智能迁移与基线重构** | 自动勘察旧资产（`docs/` 先原子移入 `_adflow_backup/original_docs/docs/` 并清空重建，连同 `openspec/`、`superpower/` 等备份），深度研读旧文档与源码，自动重构为自洽的现行设计基线（`00-系统总体设计.md` + 模块化 `01~NN.md`）并在总账注册 | **存量规范 0 丢失**，杜绝原地同名污染，无缝升级至 ad-flow 统一标准体系 |
-| **项目自定义规则融合引擎** | 自动提取目标工程已有 `Agent.md` 中的团队业务规约并无缝追加至新宪法 | 100% 继承团队既有开发习惯，不造成规则撕裂 |
-| **23 文件全景标准化脚手架** | 自动生成涵盖文档中心、静态资源库、指引区、内场区、总账路由、双卡模板、环境治理与归档库的全套资产 | 目录结构高度对齐，每个目录均配有专属 README 与机器索引 |
-| **多分支执行标签原生感知** | 卡片与总账结构原生内嵌 `"branch": "feat/..."` / `"fix/..."` 属性 | 消除分支错乱，原生契合 Git 工作流 |
-| **卡片预检与前后生命周期钩子** | 卡片内嵌 `precheck`（已完成性嗅探）与 `callback`（`before / after` 脚本钩子） | 防范重复无效劳动，原生支持环境预热、分支准备与质量门禁自动触发 |
-| **构建打包与运行物理双隔离** | 编译构建产物（`local/dist/`、`local/bin/`）与实机报告（`local/deploy_report.md`）全量汇聚 `local/` | 根目录与源码树零污染，杜绝二进制意外入库，运行数据 100% 隔离 |
-| **设计基线挂接严密防偷懒** | 机械硬判严禁将任何 `README.md` 作为 `design_doc` 关联（`INV_NO_README_AS_DESIGN_DOC`） | 杜绝 AI 把目录说明书当业务设计、强制遵循“文档先行”补全基线 |
-| **流程纪律可执行门禁 (`adflow-verify`)** | 把双轨卡片不变量（设计挂接非 README + `@topic`、证据锚、`commit` 祖先、零沉淀、依赖完成前提、卡号唯一、版本一致）变成可机械判定的校验器，收口/合入/归档前 Exit 0 才放行，`--record` 回写 `gate` 块，声称通过会被证伪 | 从“靠 Agent 自觉的散文 SOP”升级为“可判定、可追责”的门禁；作为仓库内可见资产注入，不引入钩子污染治理流程 |
+| 一次初始化 | 安装项目规则、索引、模板、指南和校验器 | 日常研发无需再次调用技能或访问技能源目录 |
+| 版本感知升级 | 比对目标版本，刷新受管理的规范和模板 | 保留设计正文、业务卡片、待办、索引登记和自定义规则 |
+| 存量资产迁移 | 授权后隔离旧文档，依据旧文档及源码重构设计 | 快照目的地冲突时停止；来源不确定时显式记录 |
+| 双轨执行 | C 卡记录修复及前后差异，T 卡记录阶段目标及依赖 | 保留现有卡片状态、人工验收和发版归档流程 |
+| 预检与回调 | 用 `precheck` 避免重复开发，按 `callback` 准备环境和检查产物 | 命令文本不能自行授权部署、推送或清理 |
+| 流程校验 | 检查设计挂接、证据字段、提交祖先、索引和依赖等结构条件 | 不证明应用行为正确、原话真实或人工验收完成 |
+| 目标状态预检 | 在内存检查拟转入状态，可仅回写指定卡的 `gate` | 不自动改变卡片或索引状态；`--card` 不缩小全项目检查范围 |
+| 旁路诊断 | 报告缺失主题、依赖环路和终态验收项未全为 true | `ADVISORY` 不改变退出码，不自动迁移旧卡 |
+
+### 3.1 v1.2.0 的执行改进
+
+| 原则 | 在本项目中的落地 |
+|---|---|
+| 隔离语义块 | 静态规则使用章节及 YAML/JSON 字段；动态资料按需用 XML 分块，来源资料不授予权限 |
+| 清理历史防御性限制 | 按阶段明确快照、`local/` 和部署报告的规则，允许在已授权范围内继续推进 |
+| 确定性任务交给代码 | 版本数值比较、结构校验、提交祖先和索引一致性使用工具核对；设计语义另行审查 |
+| 同时考虑操作与延迟成本 | 保护资产、证据和验收，同时继续独立且可逆的已授权工作；紧急性不扩大权限 |
+| 生成、评估、修复 | 在既有节点内完成机械检查、语义核对和局部修复，最多 3 轮；相同阻断连续两次则汇报 |
+
+这些改进不增加技能子命令、卡片状态或审批阶段。Token 消耗和延迟收益需实测，不预设固定降幅。
 
 ---
 
@@ -59,7 +73,7 @@
 ```mermaid
 flowchart TD
     subgraph BaselineLayer["现行基线层 (Living Baseline)"]
-        D["docs/devel/design/*.md\n(以 @topic 为业务主题锚标，系统唯一事实源)"]
+        D["docs/devel/design/*.md\n(以 @topic 为业务主题锚标，描述现行设计规则)"]
     end
 
     subgraph HubLayer["中枢路由层 (Index Hubs)"]
@@ -75,9 +89,11 @@ flowchart TD
 
     D <-->|"@topic 概念挂接"| HubLayer
     HubLayer <-->|"分发、拓扑与归档路由"| ItemLayer
+    ItemLayer -->|"target.design_doc / design_topic"| D
 ```
 
 - **基线与卡片脱钩**：卡片明确挂接设计文档及其 `@topic`，源码影响范围用领域能力描述；卡片归档路径由索引管理；
+- **设计挂接**：`target.design_doc` 指向真实设计正文，正文包含与 `target.design_topic` 匹配的 `<!-- @topic: TopicName -->`；目录 `README.md` 不能代替设计文档；
 - **版本封箱只读归档**：发版打 Tag 时，整批卡片移动到 `docs/archive/<version>/`，只需在 `index.json` 更新物理路径，设计文档保持 0 改动、0 断链。
 
 ---
@@ -93,11 +109,11 @@ flowchart TD
 
 【通道 A：变更修复流 (BugFix Track)】 
   now.md 登记 ──► change/ 建 Cxxx.json (声明 branch/precheck/callback) ★ 建卡即从 todo 物理移出
-        └─► 声明 target.topic 与 rule_diff (修改前规则 vs 修改后规则)
+        └─► 声明 target.design_doc / design_topic 与 design.rule_diff
              └─► 执行 precheck 嗅探已修复性 ──► 执行 callback.before 准备环境
                   └─► 切分支编码 + 补回归测试 ──► 执行 callback.after 质量门禁
-                       └─► 采集 evidence + run_id，人机对齐代签 (verified)
-                            └─► 合入主干 ──► 回写 design + CHANGELOG + index.json 闭环
+                       └─► 采集证据及真实人工确认 ──► 预检 verified ──► 同步状态
+                            └─► 授权合入、回写基线与日志 ──► 预检 closed ──► 同步状态
 
 【通道 B：阶段任务流 (Feature Track)】
   future.md 登记 ──► design/ 撰写或修订现行设计方案 (@topic)
@@ -105,7 +121,8 @@ flowchart TD
              └─► 按 depends_on DAG 拓扑顺序推进
                   └─► 执行 precheck 嗅探已完成性 ──► 执行 callback.before 准备环境
                        └─► 纯函数/服务实现 + 单测 ──► 执行 callback.after 收尾校验
-                            └─► DoD 验收全绿 ──► 阶段封箱归档至 archive/<version>/
+                            └─► DoD 验收全绿 ──► 预检 completed ──► 同步状态
+                                 └─► 阶段封箱归档至 archive/<version>/
 ```
 
 ---
@@ -119,7 +136,7 @@ flowchart TD
 ├── AGENTS.md                         # 【1/23 项目协作宪法】含 <!-- @ad-flow: initialized v1.2.0 --> 标签与 8 大规范
 ├── CHANGELOG.md                      # 【2/23 版本更新日志】SemVer 规范，[Unreleased] 挂接变更与任务卡
 │
-├── local/                            # 【本地隔离运行与产物区】（已加入 .gitignore，AI 严禁删除）
+├── local/                            # 【本地隔离运行与产物区】（应加入 .gitignore，AI 严禁擅自删除）
 │   ├── dist/                         # 打包与编译产物输出目录（所有构建包一律强制收拢于此）
 │   ├── build/                        # 构建临时与中间产物目录
 │   ├── data/                         # 本地数据库与持久化数据存储目录
@@ -160,10 +177,10 @@ flowchart TD
 │   │   │   ├── now.md                # 【19/23 缺陷待办缓冲】当前缺陷、回调与微调暂存表
 │   │   │   └── future.md             # 【20/23 特性待办缓冲】远期特性与技术债暂存表
 │   │   │
-│   │   ├── env/                      # 【环境治理】开发环境配置、缓存盘点与安全清理
-│   │   │   ├── README.md             # 【21/23 环境治理索引】环境规范与常用分级清理命令速查
-│   │   │   └── 01-环境缓存与依赖清理指南.md # 【22/23 缓存与依赖清理指南】磁盘盘点、分级清理场景与快速重建 SOP
-│   │   │
+│   │   └── env/                      # 【环境治理】开发环境配置、缓存盘点与安全清理
+│   │       ├── README.md             # 【21/23 环境治理索引】环境规范与常用分级清理命令速查
+│   │       └── 01-环境缓存与依赖清理指南.md # 【22/23 缓存与依赖清理指南】磁盘盘点、分级清理场景与快速重建 SOP
+│   │
 │   └── archive/                      # 【历史归档区】版本封箱后只读
 │       └── README.md                 # 【23/23 历史归档索引】
 │
@@ -171,27 +188,32 @@ flowchart TD
 │   ├── adflow_verify.py              # 标准库校验器（不计入 23 个治理文件）
 │   └── adflow-verify                 # 可执行入口
 │
-└── _adflow_backup/                   # 【安全备份区】仅进行中项目接入时生成（AI 严禁删除，仅人类核验后清理）
+└── _adflow_backup/                   # 【安全备份区】存量初始化或升级时生成；已捕获快照只读
     ├── README.md                     # 备份安全声明
-    └── original_docs/                # 原有文档完整备份（原子移走旧 docs/、openspec/、superpower/、specs/ 及根目录 md）
+    ├── original_docs/                # 原有文档备份；根文档及 Agent 规则保存在 root_markdowns/
+    └── upgrade_snapshot/             # 每次升级使用独立的 run_id 子目录，禁止覆盖旧快照
 ```
 
 ---
 
 ### 4.4 状态机流水线设计 (workflow.yaml)
 
-治理落地过程由确定性状态机 [workflow.yaml](workflow.yaml) 驱动，包含 **6 大机器硬性约束** 与 **7 步流水线**：
+初始化由 Agent 按 [workflow.yaml](workflow.yaml) 的 **8 步流水线**执行；该文件描述执行规范，并非独立的初始化命令。
 
-- **硬性约束 (Invariants)**：
-  1. `INV_VERSION_AWARE_UPGRADE_GUARD`：`AGENTS.md` 包含 `<!-- @ad-flow: initialized vX.Y.Z -->` 时，版本一致时安全退出；版本陈旧时自动进入平滑升级流程；
-  2. `INV_NO_AGENT_DELETE_BACKUP`：AI Agent 严禁擅自删除或篡改 `_adflow_backup/`；
-  3. `INV_NO_AGENT_DELETE_LOCAL`：AI Agent 严禁擅自删除或重置 `local/` 及其部署报告；
-  4. `INV_EVIDENCE_BASED_DESIGN`：严禁生成空洞的占位符假设计文档；若存在旧文档或源码，**必须研读并重构为现行基线设计方案**；
-  5. `INV_BASE_GOVERNANCE_COUNT`：必须精确产出至少 23 个标准化基础治理文件，并在存在旧资产时输出 N 篇重构的现行基线设计文档；
-  6. `INV_NO_README_AS_DESIGN_DOC`：严禁将任何 `README.md` 作为 `design_doc` 进行关联，卡片必须且仅能挂接现行设计基线文档。
-- **流水线步骤 (Pipeline)**：
-  - **初次初始化流**：`Step 1: 资产勘察与版本检测` $\rightarrow$ `Step 2: 人工确认守卫` $\rightarrow$ `Step 3: docs/ 原子移走与安全快照` $\rightarrow$ `Step 4: AGENTS.md 宪法融合 (v1.2.0)` $\rightarrow$ `Step 5: 10大目录独立 README 矩阵` $\rightarrow$ `Step 6: 中枢总账与模板注入` $\rightarrow$ **`Step 7: 旧文档消化与设计基线重构 (Legacy Synthesis)`** $\rightarrow$ `Step 8: DoD 完整性硬断言与交付汇报`。
-  - **版本升级流 (Upgrade Pipeline)**：检测到旧版本时自动执行 `U1 备份快照` $\rightarrow$ `U2 宪法同步(100%保留自定义规则)` $\rightarrow$ `U3 10大 README 规范同步` $\rightarrow$ `U4 卡片模板同步(不碰业务卡片)` $\rightarrow$ `U5 配置版本号提升` $\rightarrow$ `U6 升级汇报`。
+| 步骤 | 工作 | 交付或检查 |
+|---|---|---|
+| 1 | 资产勘察与版本路由 | 判断初始化、规范升级、同版退出或版本冲突 |
+| 2 | 确认存量迁移授权 | 已有明确授权可复用；缺少授权时说明迁移范围并确认 |
+| 3 | 创建隔离快照 | 迁移旧文档前核对目标路径，不覆盖已捕获快照 |
+| 4 | 安装项目规则 | 写入版本标签，保留项目自定义规则 |
+| 5 | 安装目录规范 | 生成 10 个目录 README |
+| 6 | 安装索引、模板和工具 | 合计 23 个治理文件加 2 个校验器文件 |
+| 7 | 重构现行设计基线 | 有源码或旧文档时按来源生成设计并登记，保留未决问题 |
+| 8 | 评估、局部修复和汇报 | 执行初始化与流程校验，另行核对语义、快照和运行资产 |
+
+升级按 U1–U6 完成：新建独立快照、同步项目规则、同步 10 个目录 README、更新 C/T 模板及工具、更新治理版本、检查并汇报。只刷新受管理的规范，保留业务设计、已有卡片及 `gate`、待办、索引登记和项目自定义内容；升级检查不使用 `--record`。
+
+每次评估都区分机械结果与语义证据。修复限定在已授权的生成或管理资产内，最多 3 轮；相同阻断连续两次或需要新事实、授权时停止相关操作并报告。规范已同步与项目已通过全部门禁应分别汇报。
 
 ---
 
@@ -223,39 +245,105 @@ flowchart TD
 
 ## 6. 快速开始 (Quick Start)
 
-### 6.1 调用方式 (Multi-Protocol Triggers)
+### 6.1 首次初始化
 
-`ad-flow` 原生自适应多平台 AI Agent 生态（Antigravity、Claude Code、Cursor、Windsurf、GitHub Copilot 等），完全兼容 `$` 与 `/` 两种主流触发协议：
+让 Agent 加载本技能后，在目标项目的对话中输入：
 
-- **美元符前缀（Antigravity / Gemini CLI 体系）**：
-  ```text
-  $ad-flow                  # 在当前项目工作区执行规范落地初始化/平滑升级
-  $ad-flow /path/to/project # 在指定工程根目录执行规范落地初始化
-  $ad-flow --yes            # 免确认快速执行初始化（适合空项目或脚本化场景）
-  ```
-- **斜杠前缀（Claude Code / Cursor / Windsurf / Slash Command 体系）**：
-  ```text
-  /ad-flow                  # 斜杠指令等价触发
-  /ad-flow /path/to/project # 支持目标路径传参
-  ```
-- **无前缀指令与自然语言意图**：
-  直接输入 `ad-flow`、`adflow`，或对 Agent 发起自然语言请求（如“按 ad-flow 规范初始化当前工程文档治理”），Agent 均能自动识别意图并精准激活。
+```text
+$ad-flow
+```
+
+技能接受 `$ad-flow`、`/ad-flow`、`ad-flow`、`adflow` 和明确的初始化或升级意图。具体触发入口取决于客户端配置。可在调用后指定目标项目路径，默认当前项目；`init`、`new-card`、`archive` 不是技能子命令。
+
+存量项目接入时，Agent 先展示迁移范围，再复用本次已有授权或请求确认；`--yes` 表示授权所述初始化范围。它不授权部署、合入、推送、清理或人工验收。
 
 ### 6.2 一次初始化后的日常使用
 
 首次初始化后，直接提出功能或缺陷需求，Agent 使用项目内的 `AGENTS.md`、目录 README、模板、索引和校验器执行既有双轨流程。无需再次调用 `$ad-flow`，也无需访问技能源目录。希望同步新版规范时才再次调用；更新技能包不会后台更新已有项目。
 
-v1.2.0 保留目录布局、卡片状态、人工验收与归档流程。规则按授权、硬约束、阶段步骤、来源资料与验收条件分层；XML 仅用于需要分块的动态资料。现有节点内部采用“生成—检查—局部修复—重验”，最多 3 轮，相同阻断连续两次则汇报，不增加用户命令或审批环节。
+例如，初始化后的日常对话可以直接写：
 
-`adflow-verify --card <卡号> --to <目标状态> --record` 可在内存预检 `verified`/`closed`/`completed` 并仅回写本卡 gate；不自动修改卡片和索引状态。Exit 0 后同步状态，再运行普通检查。新 `ADVISORY` 诊断不改变退出码；旧 Exit 4/6 门槛保留。结构通过不代表业务正确、运行通过或人工验收完成。
+```text
+修复登录失败时缺少错误提示的问题，按本项目规范完成变更与验证。
+```
 
-### 6.3 初始化交互流程
+日常从目标项目的 `docs/devel/change/template.json` 或 `docs/devel/task/template.json` 建卡，按其目录 README 推进。C 卡保留人工确认、核验、合入及闭环；T 卡保留依赖推进、DoD 和归档。具体语义见 [变更 SOP](references/02-change-sop.md) 与 [任务 SOP](references/03-task-sop.md)；这些手册供查阅，日常必需规则已落在目标项目内。
 
-1. **版本路由**：版本相同默认零修改退出，较旧或无版本标签进入保留业务资产的升级流；较新版本不降级，版本来源冲突时先报告、不写入；
-2. **存量确认**：若项目已包含源码或文档且没有本次迁移授权或 `--yes`，Agent 发起确认提示：
-   > “检测到当前项目处于【进行中】（已存在代码/文档资产）。接入 ad-flow 前将自动为您在 `_adflow_backup/` 完整备份现有资产。是否确认初始化？[y/N]”
-3. **安全注入与脚手架**：确认后自动备份原有文档，提取并保留旧版自定义规约，生成 23 个标准化文件；
-4. **终验报告**：Agent 校验 23 个文件全部就绪后，呈报核心导航入口（`AGENTS.md`、`docs/README.md`、`docs/devel/design/README.md`、`docs/guide/01-本地部署指南.md`、`docs/devel/env/README.md`）。
+### 6.3 按需升级
+
+先更新技能包，再在需要同步规范的目标项目对话中调用：
+
+```text
+$ad-flow --upgrade
+```
+
+| 目标版本状态 | 本次行为 |
+|---|---|
+| 无 ad-flow 标签且无版本记录 | 勘察后执行首次初始化 |
+| 低于 1.2.0，或已有无版本的初始化标签 | 进入保留业务资产的升级流 |
+| 等于 1.2.0 | 默认零修改退出；显式 `--upgrade` 或 `--force` 才同步规范 |
+| 高于 1.2.0 | 不降级，含 `--force` 情况 |
+| 版本来源冲突或格式无效 | 报告冲突，不写入 |
+
+版本使用代码按数值分段比较。升级保留现有业务记录，不批量迁移旧卡，不把新增 `ADVISORY` 追溯升级为硬门槛。
+
+### 6.4 在项目终端运行校验
+
+以下命令在**已经初始化的目标项目根目录**执行。默认只读，可选的第一个位置参数指定其他目标目录。
+
+```bash
+# 骨架检查：23 个治理文件、禁用占位设计和初始化标签
+scripts/adflow-verify --mode init --json
+
+# 流程检查：按所有活跃卡的状态核对已覆盖前提
+scripts/adflow-verify --json
+```
+
+也可直接运行 Python 入口：
+
+```bash
+python3 scripts/adflow_verify.py --json
+```
+
+下例假设项目中已有 `C001` 和 `T01`，使用时选择本次实际卡号与目标状态。仅预检，不回写：
+
+```bash
+scripts/adflow-verify --card C001 --to verified --json
+```
+
+完成真实测试和所需人工验收后，按本次目标选择一条命令，将真实校验结果记录到指定卡的 `gate`：
+
+```bash
+# C 卡：已记录真实 user_quote/signoff，预检 verified
+scripts/adflow-verify --card C001 --to verified --record
+
+# C 卡：已回填真实 sync.commit、基线与 CHANGELOG，预检 closed
+scripts/adflow-verify --card C001 --to closed --record
+
+# T 卡：已满足 DoD、完成前置依赖并回填 sync.commit，预检 completed
+scripts/adflow-verify --card T01 --to completed --record
+```
+
+**预检不改变卡片或索引状态。** Exit 0 后，由执行者同步该卡及索引状态，再运行普通 `scripts/adflow-verify` 复核。`--card` 仅限定回写及目标状态预检，所有活跃卡与全局问题仍参与检查；因此全局或其他卡的违规也会计入本卡记录结果。
+
+| 参数 | 用途 | 写入行为 |
+|---|---|---|
+| `--json` | 输出工具版本、摘要和问题清单 | 无 |
+| `--mode init` | 初始化骨架检查 | 无；不能搭配 `--card`、`--to`、`--record` |
+| `--card ID --to STATE` | 在内存检查拟转入状态；`--to` 必须带 `--card` | 默认无；C 卡支持 verified/closed，T 卡支持 completed |
+| `--card ID --record` | 记录当前完整检查的结果 | 仅回写指定卡的 `gate` |
+| `--record` | 兼容旧用法 | 回写全部活跃卡的 `gate`；升级不用此参数 |
+| `--warn-only` | 将 ERROR 降为 WARN，供观察 | 不写入，不能与 `--record` 合用；存在违规时返回 6 |
+
+| 退出码或诊断 | 含义 | 后续处理 |
+|---|---|---|
+| `0` | 未发现已覆盖的基线门禁问题 | 仍需核对业务证据、授权与人工验收，单独报告 ADVISORY |
+| `2` | 参数组合或取值无效 | 按命令帮助修正参数 |
+| `4` | 存在确定性治理违规 | 阻断收口，按问题代码和路径修复后重验 |
+| `6` | 存在软告警或降级观察结果 | 列出事实供人工研判；正式收口仍需 Exit 0 |
+| `ADVISORY` | 缺失主题、依赖环路或终态验收项未全为 true | 旁路汇报，不影响退出码、不新增硬门槛 |
+
+校验器不替代应用测试、源码与设计一致性审查或人工验收，也不自动审计全部历史归档卡。`sync.commit` 检查的是当前 HEAD 的祖先关系，是否已合入主干需另行核对；证据字段齐全也不能证明原话真实或业务结论成立。覆盖边界见 [审计清单](references/05-audit-checklist.md)。
 
 ---
 
@@ -286,6 +374,7 @@ skills/ad-flow/
 │       ├── task/                     # 任务卡与总账模板 (含 README.md, index.json, task-card)
 │       ├── todo/                     # 零沉淀待办缓冲池模板 (含 README.md, now.md, future.md)
 │       ├── guide/                    # 本地部署与运行指南 (含 README.md, index.json, 01-部署指南)
+│       ├── env/                      # 环境治理 README 与环境缓存、依赖清理指南
 │       └── archive-README.md.tpl     # 发版封箱归档 SOP
 │
 ├── references/                       # 渐进披露手册（Agent 按需查阅）
@@ -297,13 +386,19 @@ skills/ad-flow/
 │   ├── 06-exception-and-hotfix.md    # 驳回回流、Hotfix 与防撞号
 │   └── 07-release-archive-sop.md     # 发版与阶段封箱归档 SOP
 │
-└── examples/                         # 工业级真实脱敏样本库
-    ├── sample-change-card.json       # 变更卡真实范例 (含 branch 标签)
-    ├── sample-task-card.json         # 任务卡真实范例 (含 branch 标签)
-    ├── sample-change-index.json      # 变更总账真实范例
-    ├── sample-task-index.json        # 任务总账真实范例
-    └── sample-design-doc.md          # 现行设计文档真实范例
+└── examples/                         # 阅读样例；不会预登记到新项目的索引
+    ├── sample-change-card.json       # 变更卡范例
+    ├── sample-task-card.json         # 任务卡范例
+    ├── sample-change-index.json      # 变更总账范例
+    ├── sample-task-index.json        # 任务总账范例
+    └── sample-design-doc.md          # 现行设计文档范例
 ```
 
 
-校验本技能包：`PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`。测试在临时工程中执行，不初始化或改写已有业务项目。
+维护本技能包时，在本仓库根目录运行 CLI 回归测试：
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+```
+
+测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录及项目内工具独立运行；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。
