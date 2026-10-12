@@ -1,43 +1,43 @@
-# Documentation Assets
+# 文档资源库 (assets/)
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
 
-## 1. Purpose
+## 1. 简介
 
-Store architecture diagrams, flows, prototypes, screenshots and reusable demonstration media referenced by documentation. Maintain media together with its explanation and reachable links.
+本目录保存文档引用的架构图、流程图、原型、界面截图和可长期复用的演示素材。资源与说明文档一同维护，保证引用可达、含义明确。
 
-Runtime-loaded assets retain their actual build-contract locations. Build outputs, temporary debugging captures, raw logs and one-run reports belong in the project's `local/` output area.
+项目运行时加载的资源按实际构建契约放置，不因文档治理迁移其加载路径。构建产物、临时调试截图、原始运行日志与单次测试报告存于 `local/` 等项目约定的产物位置。
 
-## 2. Index
+## 2. 索引
 
-| Category | Example prefix | Contents | Preferred formats |
+| 类别 | 命名前缀示例 | 内容 | 推荐格式 |
 |---|---|---|---|
-| Architecture/flow | `arch-` / `flow-` | Relationships, sequences, data flow and topology | SVG, PNG |
-| Prototype/interface | `ui-` / `app-` | Interaction designs and observed interfaces | PNG, WebP, JPG |
-| Documentation branding | `logo-` / `icon-` | Documentation identifiers and icons | SVG, PNG |
-| Reusable demos/evidence | `demo-` / `evidence-` | Selected explanatory or inspectable media | PNG, WebP, GIF |
+| 架构与流程 | `arch-` / `flow-` | 模块关系、时序、数据流与拓扑 | SVG、PNG |
+| 原型与界面 | `ui-` / `app-` | 交互设计、真实界面与操作示例 | PNG、WebP、JPG |
+| 文档品牌素材 | `logo-` / `icon-` | 文档中使用的标识与图标 | SVG、PNG |
+| 长期演示与证据 | `demo-` / `evidence-` | 经筛选的说明素材或可复核图像 | PNG、WebP、GIF |
 
-These categories aid naming; they do not require pre-created directories or another machine index.
+分类用于命名与查找，不要求预建所有子目录或另设机器索引。
 
-## 3. Asset Rules
+## 3. 资源规则
 
-- Use descriptive lowercase hyphenated names, such as `arch-system-overview.svg` or `ui-login-error.png`, rather than generic screenshot names.
-- Prefer vectors for diagrams/icons; compress raster images and normally keep each image below 2 MB. Use project-approved external storage for large videos or design source files.
-- Check source and applicability, redact secrets/personal data and label mocks/prototypes/illustrations. They cannot substitute for observed runtime evidence.
-- Resolve Markdown media relative to the current document and provide meaningful alternative text. Update captions when media or behavior changes.
+- 文件采用有语义的小写连字符命名，如 `arch-system-overview.svg`、`ui-login-error.png`，避免 `image.png` 或默认截图名。
+- 架构图、图标优先矢量格式；位图合理压缩，单张原则上不超过 2MB。大型视频和设计工程源文件采用项目认可的外部存储链接，不直接堆入 Git。
+- 截图和证据入库前核对内容、来源与适用范围，移除密钥、个人信息及无关敏感数据；Mock、原型或示意图在引用处注明，不能当作真实运行证据。
+- Markdown 相对当前文档引用资源，并使用说明内容的替代文本；图文实质更新时同步校正引用说明。
 
-Syntax examples only; replace with actual assets:
+以下仅演示引用语法，使用时替换为真实存在的资源：
 
 ```markdown
-<!-- In docs/README.md -->
-![System modules](assets/arch-system-overview.svg)
+<!-- docs/README.md 中 -->
+![系统模块关系](assets/arch-system-overview.svg)
 
-<!-- In docs/devel/design/01-module.md -->
-![Module call flow](../../assets/flow-module-call.svg)
+<!-- docs/devel/design/01-模块设计.md 中 -->
+![模块调用流程](../../assets/flow-module-call.svg)
 ```
 
-## 4. Updates and Cleanup
+## 4. 更新与清理
 
-1. Identify the consuming document, use a semantic name and add a real reference. Keep the actual drawing source or source link when reproduction is needed.
-2. Before moving/replacing assets, inspect current and historical references. Preserve media still referenced by frozen archives; do not rewrite archived cards to hide broken links.
-3. Before release, confirm whether unreferenced media is obsolete. Delete only within authorized scope; temporary/runtime evidence follows the protection rules of its output location.
+1. 新增资源时确认它服务于哪篇文档，使用语义化命名并在文档中建立引用；需要再现图稿时保留实际使用的源稿或来源链接。
+2. 替换或移动资源前检查当前文档、指南和历史引用，更新允许修改的引用；历史归档仍引用的资源应保留可达，不通过改写归档消除断链。
+3. 发版前检查无引用资源是否确实废弃。只有确认用途和已获授权的清理范围后才删除；临时素材和运行证据按其产物位置的保护规则处理。

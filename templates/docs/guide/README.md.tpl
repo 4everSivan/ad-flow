@@ -1,42 +1,42 @@
-# Usage and Deployment Guides
+# 使用与部署指南 (guide/)
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
 
-## 1. Purpose
+## 1. 简介
 
-Explain usage, setup, integration, deployment and troubleshooting through prerequisites, commands and observable results. Architecture belongs in [Design](../devel/design/README.md); cache maintenance follows [Environment](../devel/env/README.md).
+本目录面向使用、环境准备、联调、部署与运行排障，说明操作条件、命令和预期结果。架构规则见 [设计中心](../devel/design/README.md)，缓存维护见 [环境治理](../devel/env/README.md)。
 
-Guides describe methods; `local/deploy_report.md` records an actual operation. Current runtime verifies whether the report remains valid. Isolated unit tests require neither deployment nor a report.
+指南描述可执行的方法，`local/deploy_report.md` 记录实际部署结果；当前运行态用于核实报告是否仍有效。纯单元测试不要求先部署或生成报告。
 
-## 2. Index
+## 2. 索引
 
-| Document | ID | Purpose | Applicable environment | Actual artifact |
+| 文档 | 文档 ID | 用途 | 适用环境 | 实际产物 |
 |---|---|---|---|---|
-| [Local deployment](01-local-deployment.md) | GUIDE-DEPLOY | Local setup, usage/service lifecycle and health checks | Actual platform and dependencies | `local/deploy_report.md` after real deployment; non-service projects describe actual usage |
+| [01-本地部署指南.md](01-本地部署指南.md) | GUIDE-DEPLOY | 本地准备、使用或服务启停、健康检查 | 按项目实际平台与依赖填写 | 实际部署后生成 `local/deploy_report.md`；无服务项目按实际使用方式说明 |
 
-The [machine index](index.json) resolves `guides[].file` relative to this directory. Register actual guides and applicability; do not invent databases or services to fill a template.
+机器入口为 [index.json](index.json)，`guides[].file` 相对于本目录解析。仅登记真实指南与适用环境；项目不涉及数据库、服务或部署时，不能为了套模板编造依赖。
 
-## 3. Writing Rules
+## 3. 指南编写规则
 
-Follow [shared metadata and paths](../README.md). Include applicable details without another approval/report template:
+遵循 [共同元数据与路径约定](../README.md)。每个操作按需写清以下内容，不额外引入审批或报告模板：
 
-| Content | Required information | Evidence |
+| 内容 | 必须说明什么 | 完成依据 |
 |---|---|---|
-| Prerequisites | Platforms, versions, dependencies, working directory and configuration | Source, project scripts and actual environment |
-| Commands | Exact parameters, sources, sequence and scope | Distinguish examples from real operations; explain substitutions |
-| Success | Exits, expected output, health or observable behavior | Label expectations; attribute actual output to a run |
-| Failure handling | Known errors, diagnosis, stop/recovery procedure | Actual supported capabilities, not an invented rollback |
+| 前置条件 | 适用平台、版本、依赖、工作目录和必要配置 | 以项目源码、脚本及实际环境为准 |
+| 操作命令 | 精确命令、参数来源、执行顺序与作用范围 | 示例和真实操作明确区分，变量注明替换方法 |
+| 成功判断 | 退出码、关键输出、健康状态或可观测行为 | 标准输出标注为预期，实测输出注明对应运行 |
+| 失败处理 | 已知错误、自检、停止或恢复方法 | 与实际支持能力相符，不虚构通用回滚能力 |
 
-- Exclude secrets and sensitive addresses; explain injection while retaining reproducible non-sensitive parameters.
-- Keep generated outputs/logs/data under `local/`; do not overwrite data or delete evidence to retry.
-- Commands grant no authority. Continue existing authorized work; deployment, push and cleanup retain their actual scope boundaries.
-- Update routing/applicability when a guide changes and label untested platforms/steps explicitly.
+- 命令与配置不含真实密钥或敏感地址；注明注入方式，保留可复现所需的非敏感参数。
+- 编译、打包、日志和运行数据按项目规则输出到 `local/`；不覆盖现有数据或删除部署证据来重试。
+- 指南不是操作授权。已有授权内继续执行，部署、推送和清理仍按实际授权范围处理。
+- 指南改变时同步索引和适用范围；尚未实测的平台或步骤明确标注，不宣称跨平台全部可用。
 
-## 4. Execution and Runtime Evidence
+## 4. 执行与实况维护
 
-1. Read the relevant guide. For existing instances, locate them through the deployment report and verify processes, listeners, configuration and data paths; investigate absent/stale reports.
-2. Run applicable authorized commands in sequence and retain real failures. Pause instance changes dependent on unknown parameters while continuing independent checks.
-3. After actual deployment/restart/configuration changes, record time, version/commit, launch command, process management, ports/data paths, logs and health results in `local/deploy_report.md`. Redact secrets and mark inapplicable fields.
-4. Verify runtime and update the guide/index or C/T evidence when needed. A report describes one operation and does not replace later runtime checks or human acceptance.
+1. **核对目标**：读取当前操作对应指南。涉及已有实例时先参考部署报告，再核对当前进程、端口、配置和数据位置；报告缺失或漂移时依据实际环境排查。
+2. **执行已授权操作**：依次运行适用命令，保留真实输出和失败事实。必要参数未知时暂停实例变更，继续不依赖该参数的检查。
+3. **生成或刷新实况**：实际部署、重启或配置变更后，在 `local/deploy_report.md` 记录时间、版本或提交、启动命令、进程管理方式、实际端口与数据路径、日志和健康检查结果；敏感值脱敏。无相关能力的字段注明不适用。
+4. **核验与回写**：验证实际运行状态，必要时更新指南、索引及对应 C/T 卡证据。报告是某次操作的记录，不能替代后续运行态核对或人类验收。
 
-AI must not delete/reset existing `local/`. Service shutdown, data reset and cache maintenance retain their distinct authorization and [environment rules](../devel/env/README.md).
+AI 不擅自删除或重置既有 `local/`；停止服务、数据重置和缓存清理分别按项目规则与 [环境治理](../devel/env/README.md) 处理。

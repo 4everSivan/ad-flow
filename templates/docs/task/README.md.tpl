@@ -1,62 +1,62 @@
-# Task Pool
+# 阶段任务卡池 (task/)
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
 
-## 1. Purpose
+## 1. 简介
 
-T cards turn approved designs into executable, verifiable capabilities; `depends_on` defines prerequisites. Cards distinguish approved plans from delivered capabilities. Concrete defect repairs follow the [C track](../change/README.md).
+T 卡把已批准设计拆成可执行、可验收的能力单元，用 `depends_on` 表达先后依赖。卡片记录尚未交付与已完成能力，避免把设计批准误当成实现完成；具体缺陷修复按 [C 变更轨](../change/README.md) 执行。
 
-Shared paths, authority, gates and repair limits are in [Documentation](../../README.md). Daily work does not require the skill source directory.
+共同路径、授权、校验结果与修复边界见 [文档中心](../../README.md)。日常无需访问 ad-flow 技能源目录。
 
-## 2. Index
+## 2. 索引
 
-| Entry | Purpose | Maintenance |
+| 入口 | 用途 | 维护时机 |
 |---|---|---|
-| [Task template](../../standards/task-template.json) | Copy to create a real T card | Milestone breakdown and registration |
-| [index.json](index.json) | `tasks` routes, `milestones` and `topics` | Registration, transitions and archiving |
-| [Design center](../design/README.md) | Design/topic and delivery boundaries | Before task breakdown |
-| [Todo](../todo/README.md) | Directions not yet registered | Remove its row after registration |
-| [Archive](../../archive/README.md) | Completed historical dependencies | Dependency inspection or batch release |
+| [任务卡模板](../../standards/task-template.json) | 复制生成真实 T 卡 | 阶段拆解与建卡时 |
+| [index.json](index.json) | `tasks` 保存卡片路由，`milestones` 和 `topics` 聚合事项 | 建卡、转状态和归档时 |
+| [设计中心](../design/README.md) | 明确设计正文、主题及能力边界 | 任务拆解前 |
+| [待办池](../todo/README.md) | 暂存尚未入轨的需求方向 | 建卡登记后移出对应行 |
+| [归档库](../../archive/README.md) | 查询历史完成任务、发布封箱 | 依赖核对或阶段发版时 |
 
-If an existing task index uses `cards`, preserve that structure; specification synchronization does not migrate historical records.
+已有项目若使用 `cards` 作为任务登记字段，沿用现有结构，不为本次规范同步迁移历史数据。
 
-## 3. Registration and Dependencies
+## 3. 建卡与依赖规则
 
-Allocate the next ID, such as `T01`, from the index including historical registrations; do not reset per release. IDs are not atomic reservations. Before merging parallel work check duplicates and Git conflicts; update subtask IDs, index entries and dependency references together without overwriting another item.
+卡号按总账已有最大编号递增，如 `T01`；包含历史归档登记，跨版本不重置。最大号 +1 不提供原子预占，并行合入须核对重复号与 Git 冲突；改号时同步卡内子任务编号、索引和依赖引用，不覆盖已有事项。
 
-| Fields | At registration | At completion |
+| 字段组 | 建卡时写什么 | 完成时补什么 |
 |---|---|---|
-| Identity/plan | `id`, `title`, real batch `version`, `milestone`, `branch` | Match the index |
-| `target` / `goal` | Concrete design/topic and capability boundary | Correct to actual delivery |
-| `tasks[]` / `depends_on` | Capability units, `done: false`, prerequisite IDs | Truthful completion state |
-| `precheck` / `callback` | Applicable completion check and authorized commands | Actual results |
-| `acceptance` | Defined `true_if`/`false_if`, results initially `null` | Evidence, run ID and acceptance results |
-| `sync` / `gate` | Template defaults | Actual ancestor `sync.commit` and tool-recorded gate |
+| 身份与计划 | `id`、`title`、真实发布批次 `version`、`milestone`、`branch` | 与总账保持一致 |
+| `target` / `goal` | 具体设计正文、匹配主题及交付边界 | 按实际交付校正描述 |
+| `tasks[]` / `depends_on` | 能力单元、初始 `done: false` 及前置任务 | 如实记录各项完成情况 |
+| `precheck` / `callback` | 实际适用的完成性预检与前后回调 | 保存结果，按授权执行回调 |
+| `acceptance` | 预定义各项 `true_if` / `false_if`，结果先留 `null` | 真实 `evidence`、`run_id` 及验收结果 |
+| `sync` / `gate` | 保留模板默认值 | 真实 `sync.commit` 及工具记录的门禁结果 |
 
-`target.design_doc` is project-root relative and targets concrete text with the matching `@topic`, never a README/standard/template. `tasks[].capability` describes behavior, data contracts or interfaces, not a source-file checklist.
+`target.design_doc` 使用项目根目录相对路径，指向含匹配 `<!-- @topic: TopicName -->` 的具体设计正文，不能指向 README。`tasks[].capability` 描述能力、数据契约或接口，不用源码文件清单代替交付目标。
 
-| State | Meaning | Prerequisite |
+| 状态 | 含义 | 执行条件 |
 |---|---|---|
-| `pending` | Waiting | Goal, design and acceptance registered |
-| `in_progress` | Delivering | All prerequisites `completed`; scope clear |
-| `completed` | Accepted and preflight passed | Business acceptance, traceable commit and synchronized index |
+| `pending` | 等待开工 | 目标、设计与验收定义已登记 |
+| `in_progress` | 正在交付 | 所有前置任务已 `completed`，执行范围已明确 |
+| `completed` | 能力验收及完成预检通过 | 业务验收满足、提交可追溯，卡片与索引同步 |
 
-Resolve dependencies through current index `file` routes, checking existence, ID and status. Completed archived tasks are valid prerequisites. Read archived cards without reaccepting or rewriting them. Clarify missing, incomplete or cyclic dependencies before treating a task as ready.
+由总账 `file` 定位依赖卡，核对文件、卡号和状态；归档依赖同样可用。归档卡只读解析身份与状态，不按当前规则重新验收或回写 `gate`。依赖缺失、未完成或成环时应先澄清，不假定任务已就绪。
 
-## 4. Execution and Completion
+## 4. 执行与完成
 
-1. **Design and register:** break the design into capability/milestone cards and register them. Remove matching todo rows after registration, not merely after design approval.
-2. **Choose ready work:** select `pending` tasks whose prerequisites are all `completed`; synchronize card/index to `in_progress`.
-3. **Check and implement:** run authorized prechecks/callbacks. An already implemented capability may skip duplicate coding with evidence, while retaining acceptance. Otherwise implement and test the capability.
-4. **Accept:** verify `tasks[].done` and every business acceptance check with actual commands, outputs and a run ID. Complete project-required human acceptance. `ADVISORY` neither replaces business judgment nor introduces a new hard gate.
-5. **Preflight completion:** record the actual ancestor `sync.commit`; retain current states while running the command below. After Exit 0 synchronize both to `completed`, then run ordinary verification.
+1. **设计与建卡**：确认对应设计，按阶段或里程碑拆解 T 卡，在总账登记。来自 todo 的事项在建卡登记后同步删除原行，不因仅完成设计就丢失执行事项。
+2. **选择就绪任务**：从 `pending` 卡中筛选所有依赖均已 `completed` 的任务，同步卡片与索引为 `in_progress`；不跨过未完成依赖。
+3. **预检与实现**：运行授权范围内的 `precheck.command`。已实现时记录证据并跳过重复编码，仍做验收；否则执行适用回调、能力实现与对应测试。
+4. **逐项验收**：核对 `tasks[].done` 与 `acceptance.checks`，保存真实命令、输出和 `run_id`。业务验收项须全部满足，完成项目要求的人工验收；工具的 `ADVISORY` 不代替业务判断，也不新增硬门槛。
+5. **完成预检**：回填真实 `sync.commit`，核对其为当前 HEAD 祖先；保持当前状态，运行以下命令。Exit 0 后同步卡片与索引为 `completed`，再普通复核。
 
-Examples use `T01`; substitute the actual ID and run from the project root:
+以下以 `T01` 为例，执行时使用真实卡号；命令均在项目根目录运行：
 
 ```bash
 scripts/adflow-verify --card T01 --to completed --record
 ```
 
-After a successful preflight and state update run `scripts/adflow-verify --json`. Recording writes only the real gate, not states or proof of delivery. Follow [shared verification rules](../../README.md#4-verification-and-closure); do not rewrite evidence, conditions or dependencies to bypass failure.
+预检 Exit 0 后，同步状态再运行 `scripts/adflow-verify --json`。`--record` 仅记录本卡真实门禁结果，不更新状态，也不证明能力已交付。失败时按 [共同校验规则](../../README.md#4-校验与收口) 补证或修复，不手改 gate、验收条件或依赖来绕过失败。
 
-6. **Release a batch:** complete required integration/build/release acceptance and update root CHANGELOG. When release is authorized, follow [Archive operations](../../archive/README.md). A completed task does not automatically authorize release, deployment or push.
+6. **阶段发布**：本阶段任务完成后，按项目要求完成集成、构建和发布验收，更新根目录 CHANGELOG；在发布已获授权时按 [归档操作](../../archive/README.md) 封箱本批次卡片。任务 `completed` 不自动触发发版、部署或推送。

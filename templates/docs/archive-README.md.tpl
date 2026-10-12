@@ -1,50 +1,50 @@
-# Release and Milestone Archive
+# 版本与阶段归档库 (archive/)
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
 
-## 1. Purpose
+## 1. 简介
 
-Archive C/T cards from released batches or closed milestones. Freeze card contents and states; current indexes continue to route historical IDs and dependencies. Current designs remain under `docs/devel/design/`.
+本目录封存已发布版本或已收口阶段的 C/T 卡片。按真实发布批次归档，卡片内容和状态保持冻结，现行总账负责历史路由与依赖查询。
 
-Archiving belongs to an authorized release/closure operation. Card completion does not authorize tagging, push or deployment.
+归档属于已授权的发版或阶段收口操作；卡片完成不会自动授权打 Tag、推送或部署。现行设计继续在 `docs/devel/design/` 维护。
 
-## 2. Index
+## 2. 索引
 
-| Entry or location | Contents | Maintenance |
+| 入口或位置 | 保存内容 | 维护方式 |
 |---|---|---|
-| [Current change index](../devel/change/index.json) | Active/historical C cards and topic routes | Keep registrations; update `file` when archived |
-| [Current task index](../devel/task/index.json) | Active/historical T cards, milestones and dependencies | Keep registrations; update `file` when archived |
-| `<version>/change/` | This batch's `closed` C cards and optional index snapshot | Read-only after archiving |
-| `<version>/task/` | This batch's `completed` T cards and optional index snapshot | Read-only after archiving |
+| [变更现行总账](../devel/change/index.json) | 活跃及历史 C 卡、Topic 路由 | 保留登记，归档时更新 `file` |
+| [任务现行总账](../devel/task/index.json) | 活跃及历史 T 卡、阶段与依赖 | 保留登记，归档时更新 `file` |
+| `<version>/change/` | 本批次 `closed` C 卡及可选总账快照 | 归档后只读 |
+| `<version>/task/` | 本批次 `completed` T 卡及可选总账快照 | 归档后只读 |
 
-### Archived Batches
+### 归档批次清单
 
-| Release or milestone | Path | Archived on | Scope |
+| 项目版本或阶段 | 归档路径 | 归档日期 | 范围说明 |
 |---|---|---|---|
 
-Register only actual archived batches. Do not pre-create sample releases or cards.
+完成实际归档后登记本表；空项目不预建示例版本或填入示例卡片。
 
-## 3. Archiving Rules
+## 3. 归档规则
 
-- Select cards by their real `version` and release scope: C cards must be `closed`, T cards `completed`. Leave other batches and unfinished work active.
-- Complete required build/test/release acceptance, todo review and CHANGELOG/version alignment. Ordinary verification must return Exit 0 before archiving.
-- Moving a card must not rewrite its state, acceptance, commit or gate. Later corrections use current designs/new cards rather than changing historical evidence.
-- Retain IDs, topics and dependencies in current indexes; update actual routes only. Archived index snapshots never replace current routing.
-- Inspect every destination before moving. Resolve existing-name collisions without overwriting; archiving does not itself require design edits or renumbering.
+- **范围明确**：按卡片 `version` 和本次发布范围选择卡片，确认本批次 C 卡均 `closed`、T 卡均 `completed`；其他批次卡和未完成事项留在活跃区。
+- **前提齐备**：相关构建、测试及项目要求的发布验收完成，todo 已评审，项目发布版本与 CHANGELOG 对应；归档前普通校验须 Exit 0。
+- **冻结内容**：移动卡片不改写其状态、验收、提交或 `gate`；后续补充与修正使用现行设计或新卡表达，不重写历史卡。
+- **保留路由**：现行 C/T 总账中的卡号、主题与依赖登记继续保留，仅按实际变动更新路径等路由信息。归档 `index.json` 是历史快照，不能代替现行总账。
+- **保护目的地**：移动前核对每个目的路径；已有同名文件时先查明冲突，禁止覆盖。归档动作本身不要求改动设计正文或重编号。
 
-## 4. Archive a Batch
+## 4. 发版归档四步
 
-All paths are project-root relative; replace `<version>` with the real batch.
+所有路径相对于项目根目录；`<version>` 替换为真实发布批次。
 
-1. **Confirm scope and destinations:** list selected IDs and original paths, inspect destinations, then create `docs/archive/<version>/change/` and `task/`. Exclude other batches.
-2. **Move terminal cards:** move only selected cards, preserving bytes and checking counts. Never overwrite a destination.
-3. **Update current routes:** change `cards[Cxxx].file` or `tasks[Txx].file`, for example to `docs/archive/<version>/task/T01.json`. Preserve an existing `cards` task-index structure. Save optional index snapshots in the batch directory, then register the batch above.
-4. **Verify and freeze:** run ordinary verification, trace design topic to current index to archived card, and check ID/status/dependency reachability. Confirm card bytes and baseline text did not change.
+1. **核定范围并建立目录**：列明本次卡号与原路径，检查目的路径后建立 `docs/archive/<version>/change/` 和 `task/`；不移动其他批次内容。
+2. **移动终态卡片**：将核定的 C/T 卡移动到对应轨道目录，核对文件数量与内容完整性，不覆盖现有文件。
+3. **更新现行总账**：将 `cards[Cxxx].file` 或 `tasks[Txx].file` 改为实际归档路径，例如 `docs/archive/<version>/task/T01.json`。沿用已有项目的登记字段；需要保存总账快照时新建于本批次目录，完成后登记批次清单。
+4. **复核并冻结**：运行普通校验，从设计主题查总账、再定位归档卡，核对路径、卡号、状态与依赖可达；确认本次归档未改变设计正文或卡片内容。
 
 ```bash
 scripts/adflow-verify --json
 ```
 
-Future tasks may use an archived prerequisite's `completed` status through current routing. The tool checks existence, identity and status without reaccepting or rewriting archived cards. Post-archive Exit 0 does not replace pre-archive business acceptance.
+后续任务可通过现行索引只读使用归档依赖的 `completed` 状态。校验器核对归档文件存在、身份和状态，不按当前业务规则重验或回写归档卡；归档后的 Exit 0 也不能替代归档前的业务验收。
 
-If interrupted, retain completed moves and repair remaining routes to actual paths rather than repeating all moves. Build outputs, runtime data and reports stay in `local/`; archiving does not authorize cleanup of `local/` or `_adflow_backup/`.
+中断时保留已完成移动及现有记录，按实际路径修复剩余路由，不批量重复移动。构建产物、运行数据和临时报告仍留在 `local/`，不以归档名义清理 `local/` 或 `_adflow_backup/`。

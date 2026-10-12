@@ -5,33 +5,33 @@
   "created": "YYYY-MM-DD",
   "last_change": "YYYY-MM-DD",
   "status": "active",
-  "description": "Project documentation routes and responsibilities.",
+  "description": "工程顶层文档中枢路由表，定义各子系统的边界与机器访问入口",
   "directories": [
     {
       "name": "assets",
       "path": "docs/assets",
-      "description": "Documentation diagrams, screenshots and reusable media.",
+      "description": "文档与工程静态资源库（架构图、App 截图、UI 视觉稿）",
       "readme": "docs/assets/README.md",
       "index": null
     },
     {
       "name": "guide",
       "path": "docs/guide",
-      "description": "Usage, local deployment and troubleshooting instructions.",
+      "description": "系统使用、本地部署与联调环境指引",
       "readme": "docs/guide/README.md",
       "index": "docs/guide/index.json"
     },
     {
       "name": "devel",
       "path": "docs/devel",
-      "description": "Design baselines, change cards, task cards, todo buffers and environment guidance.",
+      "description": "研发内场核心工作区（现行设计基线、变更核验、阶段任务、待办缓冲与环境治理）",
       "readme": "docs/devel/README.md",
       "index": "docs/devel/index.json"
     },
     {
       "name": "archive",
       "path": "docs/archive",
-      "description": "Read-only cards and snapshots from released batches.",
+      "description": "历史版本发版封箱归档库（只读冻结）",
       "readme": "docs/archive/README.md",
       "index": null
     }

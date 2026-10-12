@@ -1,57 +1,63 @@
 {
   "$schema": "https://ad-flow.org/schemas/task-card.v1.json",
   "id": "T[01~99]",
-  "title": "Describe the task goal",
+  "title": "简述任务目标",
   "version": "",
-  "milestone": "M[1~99]-MilestoneName",
+  "milestone": "M[1~99]-里程碑名",
   "status": "pending",
   "branch": "feat/T[01~99]-[short-desc]",
   "depends_on": [],
+
   "target": {
-    "module": "ModuleName",
-    "design_doc": "docs/devel/design/01-core-service.md",
+    "module": "模块名",
+    "design_doc": "docs/devel/design/01-系统核心设计方案.md",
     "design_topic": "CoreService"
   },
-  "goal": "Describe the domain capability and business outcome to deliver.",
+
+  "goal": "说明本任务需要实现的领域能力与核心业务诉求。",
+
   "precheck": {
-    "description": "Check whether the capability is already implemented and satisfies the completion criteria.",
+    "description": "预检当前任务是否已在代码库中实现或已满足完成条件",
     "command": "",
     "expected": "",
     "is_completed": false,
     "evidence": ""
   },
+
   "callback": {
     "before": [
-      "# Replace with authorized environment checks, branch preparation or fixture setup."
+      "# 任务执行前脚本或流程，如环境预热、分支准备、数据预加载等"
     ],
     "after": [
-      "# Replace with applicable formatting, static analysis, tests or build checks.",
-      "scripts/adflow-verify  # Completion preflight: use --card <id> --to completed --record; sync states only after Exit 0."
+      "# 任务执行后脚本或流程，如代码格式化、静态检查、构建打包等",
+      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 completed；目标状态预检使用 --card <本卡号> --to <目标状态> --record，仅回写本卡 gate，Exit 0 后再同步状态"
     ]
   },
+
   "tasks": [
     {
       "id": "T01-1",
-      "title": "Subtask title",
-      "capability": "Describe a capability, data contract or interface to deliver.",
+      "title": "子任务标题",
+      "capability": "说明交付的具体能力、纯数据结构或接口签名",
       "done": false
     }
   ],
+
   "acceptance": {
     "result": null,
     "run_id": "",
     "checks": [
       {
-        "item": "Architecture boundaries",
-        "true_if": "The implementation follows the declared layering and dependency direction.",
-        "false_if": "The implementation introduces a prohibited cross-layer dependency.",
+        "item": "架构纯度与边界",
+        "true_if": "模块遵循分层设计，零不当反向依赖与架构污染",
+        "false_if": "检测到跨层耦合或违规调用",
         "evidence": "",
         "result": null
       },
       {
-        "item": "Business rule coverage",
-        "true_if": "All required business scenarios are covered by meaningful checks.",
-        "false_if": "A required scenario or boundary lacks a meaningful check.",
+        "item": "规则覆盖度",
+        "true_if": "设计方案定义的所有业务场景在用例中全量覆盖",
+        "false_if": "遗漏任一核心分支或断言",
         "evidence": "",
         "result": null
       }

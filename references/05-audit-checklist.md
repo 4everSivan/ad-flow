@@ -38,7 +38,7 @@
 - [ ] 检查活跃卡片（`Cxxx.json` / `Txx.json`）中的 `target.design_doc` 与 `design.doc`，以及 `index.json` 中 `topics[].design_doc`；历史卡按归档时适用规范另行抽查，不因升级追溯改写；
 - [ ] **断言**：
   - `design_doc` **绝对严禁指向任何 `README.md`**（包括 `docs/devel/design/README.md`，违规直接判定为 Exit Code 4 阻断）；
-  - 必须指向现行基线具体设计文档（`00-system-overview.md` 或 `01~99-[模块名].md`）；
+  - 必须指向现行基线具体设计文档（`00-系统总体设计.md` 或 `01~99-[模块名].md`）；
   - 目标设计文档内部必须真实存在与 `target.design_topic` 完全吻合的 `<!-- @topic: TopicName -->` 锚标。
 
 ---

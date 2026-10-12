@@ -1,79 +1,83 @@
-# Documentation
+# 文档中心 (docs/)
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
 
-## 1. Purpose
+## 1. 简介
 
-This is the documentation entrypoint and the home of shared conventions. Designs describe approved business rules; C/T cards record execution and acceptance; guides explain operations; archives preserve history.
+本目录提供项目文档入口与共同规则。设计正文描述已批准的业务规则，C/T 卡片记录执行和验收，指南说明操作方法，归档保留历史事实。
 
-After initialization, use this project's [AGENTS.md](../AGENTS.md), READMEs, indexes, templates and verifier. Invoke `$ad-flow` again only to synchronize governance specifications.
+首次初始化后，日常工作直接使用本项目的 [AGENTS.md](../AGENTS.md)、目录 README、索引、模板和校验器；仅在同步治理规范时再次调用 `$ad-flow`。本文负责共同约定，各目录 README 负责对应操作。
 
-## 2. Index
+## 2. 索引
 
-| Goal | Entry | Route or record | Deliverable |
+| 要做的事 | 阅读入口 | 路由或记录 | 交付内容 |
 |---|---|---|---|
-| Write or review code | [Coding standards](standards/coding.json) | Common and selected language requirements | Code, comments and API documentation consistent with project conventions |
-| Create a change card | [Change template](standards/change-template.json) / [Change pool](devel/change/README.md) | [Change index](devel/change/index.json) | C card, evidence and applicable design updates |
-| Create a task card | [Task template](standards/task-template.json) / [Task pool](devel/task/README.md) | [Task index](devel/task/index.json) | T card, dependencies and capability acceptance |
-| Understand or revise design | [Design center](devel/design/README.md) | [Development index](devel/index.json) | Concrete design text and matching `@topic` |
-| Buffer unregistered work | [Todo pool](devel/todo/README.md) | `now.md` / `future.md` | Brief problem or direction |
-| Prepare or troubleshoot an environment | [Guides](guide/README.md) / [Environment](devel/env/README.md) | [Guide index](guide/index.json) | Applicable procedures and observed results |
-| Store documentation media | [Assets](assets/README.md) | Relative document links | Reusable media |
-| Release or trace history | [Archive](archive/README.md) | Current C/T index routes | Batch cards and optional index snapshots |
+| 编写或审查代码 | [代码编写规范](standards/coding.json) | 通用规则及所选语言规则 | 符合项目约定的本次变动 |
+| 理解或修订设计 | [设计中心](devel/design/README.md) | [研发索引](devel/index.json) | 具体设计正文及 `@topic` |
+| 修复缺陷、调整规则或重构 | [变更卡池](devel/change/README.md) | [变更总账](devel/change/index.json) | C 卡、验证证据及必要的设计回写 |
+| 推进新能力或阶段目标 | [任务卡池](devel/task/README.md) | [任务总账](devel/task/index.json) | T 卡、依赖及能力验收 |
+| 暂存尚未建卡的事项 | [待办池](devel/todo/README.md) | `now.md` / `future.md` | 简短问题或方向记录 |
+| 准备、启动或排查环境 | [操作指南](guide/README.md) / [环境治理](devel/env/README.md) | [指南索引](guide/index.json) | 可复现操作及实际结果 |
+| 存放文档图片与图稿 | [资源库](assets/README.md) | 文档中的相对链接 | 可复用的静态资源 |
+| 发布归档或追溯历史 | [归档库](archive/README.md) | C/T 现行总账中的归档路径 | 本批次卡片及总账快照 |
 
-The machine entrypoint is [index.json](index.json). Its `standards` object routes the three reusable standards/template files. `standards/` needs no separate README or index. Actual designs and cards remain under `devel/`.
+机器入口为 [index.json](index.json)。其中 `standards` 登记 [代码编写规范](standards/coding.json)、[变更卡模板](standards/change-template.json) 和 [任务卡模板](standards/task-template.json)。`standards/` 无需另建 README 或索引；真实设计、卡片和研发记录仍在 `devel/`。
 
-## 3. Shared Conventions
+## 3. 共同规则
 
-### 3.1 Metadata and Versions
+### 3.1 文档元数据与项目版本
 
-Use English for newly generated template content and lowercase metadata keys. Preserve user quotations, custom rules and historical evidence verbatim. Dates are real `YYYY-MM-DD` values:
+代码编写规范及其语言片段使用英文，`workflow.yaml` 的执行说明使用英文；README、AGENTS、设计、指南、待办及卡片说明沿用中文正文。JSON 字段键、状态、命令与文档元数据保持原有英文形式；自定义规则、历史记录和人工原话原样保留。
+
+README、设计正文与指南采用小写英文元数据，日期填写真实的 `YYYY-MM-DD`：
 
 ```markdown
-# Document title
+# 文档标题
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: draft
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: draft
 ```
 
-Keep `created` stable and update `last-change` for substantive edits. Use one status such as `draft`, `active`, `baseline` or `deprecated`; explain approval and applicability in the body. Todo files use their shorter headers.
+`created` 保持初次创建日期，实质更新时修改 `last-change`。`status` 使用单一值，如 `draft`、`active`、`baseline`、`deprecated`；正文说明批准和适用范围。待办文件沿用其简短头部。
 
-Project releases use Git tags and [CHANGELOG.md](../CHANGELOG.md). C/T `version` is the real release batch. Designs do not increment isolated document versions. `docs/index.json.adflow_version` tracks governance separately.
+项目发布版本由 Git Tag 和根目录 [CHANGELOG.md](../CHANGELOG.md) 表达。C/T 卡的 `version` 填写真实发布批次；设计不独立递增小版本，必要时在正文注明适用项目版本。`docs/index.json.adflow_version` 是治理规范版本，与项目发布版本分开维护。
 
-### 3.2 Paths, Topics and Indexes
+### 3.2 路径、主题与索引
 
-- Resolve Markdown navigation and media relative to the containing document.
-- Card design paths, current index `file` routes, `topics[TopicName].design_doc` and top-level `standards` paths are project-root relative. Guide `guides[].file` paths are relative to `docs/guide/`.
-- Design links must target concrete design text with a matching `<!-- @topic: TopicName -->`, never a README, coding standard or card template.
-- Cards describe source impact with `module`, `component` and `capability`; commits trace changed source files. Necessary paths in commands, design references and evidence are allowed.
-- Synchronize cards and index states/routes on registration, transition and archiving. Keep historical IDs and increment across releases.
+- Markdown 导航、图片链接相对于当前文档解析。
+- C/T 卡的 `target.design_doc`、C 卡的 `design.doc` 及 C/T 总账的 `file`、`topics[TopicName].design_doc`、顶层 `standards` 路由 使用项目根目录相对路径；指南索引的 `guides[].file` 按现有模板相对于 `docs/guide/` 解析。
+- 设计挂接必须指向具体设计正文，包含匹配的 `<!-- @topic: TopicName -->`；任何 README 均不能作为设计正文。
+- 卡片以 `module`、`component`、`capability` 描述源码影响范围，源码变动由提交追溯。此约束不禁止设计引用、证据位置和实际执行命令中的必要路径。
+- 建卡、转状态和归档时同步对应总账，核对路径、卡号和状态；现行总账保留历史登记，编号按轨递增且跨版本不重置。
 
-### 3.3 Facts, Authority and Protection
+### 3.3 事实、授权与资产保护
 
-An approved design does not prove implemented capability. T cards track unfinished delivery; actual code and acceptance evidence support completion claims. Unapproved designs remain `draft`.
+设计已批准不等于能力已实现；未实现能力由 T 卡记录，完成结论以代码和验收证据为准。草稿设计保留 `draft`，不能仅因生成文件而标成已批准。
 
-Continue authorized work. A card or guide does not itself authorize deployment, push, merge, cleanup or signoff. Verify existing instances against the deployment report and current runtime. Keep outputs under `local/`; AI must not delete/reset its existing contents. Captured backup snapshots remain read-only.
+继续执行已授权工作；卡片或指南中的命令文本不单独授权部署、推送、合入、清理或人工代签。涉及现有实例时，按指南核对部署报告与当前运行态。构建、测试和运行产物收拢至 `local/`；既有 `local/` 不由 AI 擅自删除或重置，已捕获的 `_adflow_backup/` 快照保持只读。
 
-## 4. Verification and Closure
+## 4. 校验与收口
 
-Run from the project root:
+以下命令均在项目根目录执行：
 
 ```bash
-# Initialization/synchronization: files, registered standards, JSON and versions
+# 初始化或治理升级时检查基础文件、已登记的代码规范、2 个工具及版本一致性
 scripts/adflow-verify --mode init --json
 
-# Daily discipline: active cards and global prerequisites
+# 日常收口、合入和归档前检查活跃卡及全局约束
 scripts/adflow-verify --json
 ```
 
-| Result | Meaning | Required response |
+| 结果 | 含义 | 处理 |
 |---|---|---|
-| Exit 0 | Covered structural/process checks passed | Still verify business acceptance and operation authority |
-| Exit 4 | Deterministic governance violation | Repair and recheck; blocks affected closure/merge/archive |
-| Exit 6 | Existing warning or evidence gap needs disposition | Resolve the facts; formal closure still needs Exit 0 |
-| `ADVISORY` | Nonblocking observation | Report separately without inventing a new gate |
+| Exit 0 | 已覆盖的结构和流程检查通过 | 仍须核对业务验收与操作授权 |
+| Exit 4 | 确定性治理违规 | 修复后重验，阻断相关收口、合入或归档 |
+| Exit 6 | 存在需研判的告警或证据缺口 | 按事实补证，正式收口仍需 Exit 0 |
+| `ADVISORY` | 旁路建议，不改变退出码 | 单独汇报，沿用既有业务验收标准 |
 
-For transitions, follow the C/T README's `--card ... --to ... --record` command. It preflights the state in memory and records only the selected card's real `gate`; after Exit 0, synchronize card/index states and run ordinary verification. Unscoped recording writes all active gates; specification upgrades never use it.
+C/T 转入收口状态时，按对应卡池 README 运行 `--card ... --to ... --record`。工具在内存预检目标状态，仅回写目标卡的真实 `gate`；Exit 0 后同步卡片与索引状态，再运行普通检查复核。未限定卡号的 `--record` 会回写所有活跃卡，治理升级不用它。
 
-Recording re-evaluates the selected card's actual prerequisites rather than failing solely on its old receipt. Other cards and global violations still apply. Do not manually change `gate.exit_code` to zero, or use `--warn-only` as formal success.
+记录时重新评估目标卡当前前提，不把其旧失败回执当作本轮失败原因；其他卡与全局实际违规仍参与检查。禁止手工把 `gate.exit_code` 改成 0，`--warn-only` 也不能作为正式通过证据。
 
-Repair locally within authorized scope, at most three passes; stop dependent work if the same blocker persists twice or facts/authority are missing. Report structure, business tests, runtime and human acceptance separately. The verifier checks standard-file routing/readability, not source style or comment quality.
+按具体发现局部修复，最多 3 轮；同一阻断连续两次或缺少必要事实、授权时停止相关操作并汇报。汇报区分结构检查、业务实测、运行态和人工验收，不把其中一项通过写成全部完成。
+
+代码规范的路径与 JSON 可读性由初始化检查覆盖；注释质量和代码风格仍需结合本次改动审查，不新增审批或样式门禁。

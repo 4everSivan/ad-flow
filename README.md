@@ -154,7 +154,7 @@ flowchart TD
 │   ├── guide/                        # 【操作指引区】标准操作手册（部署、运维、联调）
 │   │   ├── README.md                 # 【6/24 指南目录索引】指南编写四要素与实机部署事实依据原则
 │   │   ├── index.json                # 【7/24 指南机器索引】操作指南结构化清单与产物映射
-│   │   └── 01-local-deployment.md     # 【8/24 本地部署指南】标准本地环境搭建与服务启动手册（施工蓝图）
+│   │   └── 01-本地部署指南.md     # 【8/24 本地部署指南】标准本地环境搭建与服务启动手册（施工蓝图）
 │   │
 │   ├── standards/                    # 【规范与模板】固定入口，无独立 README 或索引
 │   │   ├── coding.json               # 【11/24 代码规范】通用规则、所选语言及官方来源
@@ -183,7 +183,7 @@ flowchart TD
 │   │   │
 │   │   └── env/                      # 【环境治理】开发环境配置、缓存盘点与安全清理
 │   │       ├── README.md             # 【22/24 环境治理索引】环境盘点、分级处理与恢复验证
-│   │       └── 01-cache-and-dependency-cleanup.md # 【23/24 缓存与依赖清理指南】磁盘盘点、分级清理场景与快速重建 SOP
+│   │       └── 01-环境缓存与依赖清理指南.md # 【23/24 缓存与依赖清理指南】磁盘盘点、分级清理场景与快速重建 SOP
 │   │
 │   └── archive/                      # 【历史归档区】版本封箱后只读
 │       └── README.md                 # 【24/24 历史归档索引】
@@ -233,7 +233,7 @@ flowchart TD
 - **工具链适配规约**：若工具链默认输出到根目录（如 Vite/Webpack 默认 `./dist`、Go 默认当前目录、Python 默认 `./dist`），必须在构建命令传参指定输出路径（如 `--outDir local/dist`、`-o local/bin/app`、`--outdir local/dist`）或通过构建脚本自动重定向收拢到 `local/`。
 
 ### 2. 施工蓝图 vs 实机运行现实
-- **标准施工方案 (`docs/guide/01-local-deployment.md`)**：
+- **标准施工方案 (`docs/guide/01-本地部署指南.md`)**：
   定义系统技术栈版本、环境变量全表（`.env`）、前后端标准启动命令、健康检查端点及卸载清理步骤（静态标准）；
 - **物理运行实况 (`local/deploy_report.md`)**：
   真实部署完成后，开发者或 Agent 必须在 `local/` 产出实况报告，记录本次实际分配的监听端口、实际数据库路径、实时进程 PID、日志路径以及健康检查回执（动态现实）。
@@ -271,7 +271,7 @@ $ad-flow，代码规范选择 Python 和 Go，沿用项目已有格式化配置�
 
 Agent 在初始化对话中提供技术栈建议；未明确选择时，采用自有源码与项目清单支持的默认语言，空项目或技术栈不明确时只安装通用规则。结果写入 `docs/standards/coding.json`，由 README、`AGENTS.md` 和 `docs/index.json.standards` 关联。`common` 按设计、命名、注释、接口文档、错误处理和测试分组；`languages` 只包含所选语言，各自包含格式、命名、文档和实现规则，保留官方来源，日常可离线读取。
 
-所有模板内容与新生成的设计标题、文件名使用英文；既有业务记录、自定义规则和人工验收原话原样保留。注释规范要求说明复杂逻辑、并发约束、TODO 归属和检查抑制原因；API 文档明确参数、返回、失败条件及适用的所有权、单位、空值和副作用，不重复显然的代码。语言模板分别规定 docstring、Go doc、JSDoc、Javadoc、Shell 函数头及 Rustdoc 的格式。卡片模板也集中在 `docs/standards/`，真实 C/T 卡片继续放在 `docs/devel/`，不新增目录级 README 或日常步骤。
+代码编写规范及语言片段使用英文，`workflow.yaml` 的执行说明使用英文；其他模板恢复既有语言约定：README、AGENTS、设计、指南、待办与卡片说明采用中文正文，元数据、JSON 字段键、状态和命令保持原有英文形式。代码注释与 API 文档沿用项目约定，未指定时使用中文；既有业务记录、自定义规则和人工验收原话原样保留。注释规范要求说明复杂逻辑、并发约束、TODO 归属和检查抑制原因；API 文档明确参数、返回、失败条件及适用的所有权、单位、空值和副作用，不重复显然的代码。语言模板分别规定 docstring、Go doc、JSDoc、Javadoc、Shell 函数头及 Rustdoc 的格式。卡片模板也集中在 `docs/standards/`，真实 C/T 卡片继续放在 `docs/devel/`，不新增目录级 README 或日常步骤。
 
 模板精简参考 [Google Engineering Practices](https://google.github.io/eng-practices/review/reviewer/looking-for.html) 与 [Google Style Guides](https://google.github.io/styleguide/)，Rust 使用 [Rust 官方风格指南](https://doc.rust-lang.org/style-guide/)及官方错误处理说明。JavaScript 来源已停止更新，模板中已标注。规则只用于新增和修改的自有代码，项目约定及已有 formatter/linter 配置优先；不自动安装工具、改写配置或批量格式化。选择语言不新增审批或卡片状态。
 
@@ -401,7 +401,7 @@ skills/ad-flow/
 │       ├── change/                   # 变更目录与总账模板 (README.md, index.json)
 │       ├── task/                     # 任务目录与总账模板 (README.md, index.json)
 │       ├── todo/                     # 零沉淀待办缓冲池模板 (含 README.md, now.md, future.md)
-│       ├── guide/                    # 本地部署与运行指南 (含 README.md, index.json, 01-local-deployment.md)
+│       ├── guide/                    # 本地部署与运行指南 (含 README.md, index.json, 01-本地部署指南.md)
 │       ├── env/                      # 环境治理 README 与环境缓存、依赖清理指南
 │       └── archive-README.md.tpl     # 发版封箱归档 SOP
 │

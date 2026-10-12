@@ -7,7 +7,7 @@
     "Selected language requirements",
     "Common requirements"
   ],
-  "documentation_language": "Use English for new comments and API documentation unless the project explicitly requires another language. Preserve verbatim evidence and quotations.",
+  "documentation_language": "Use the project's established language for code comments and API documentation; default to Chinese when unspecified. The English language of this specification does not require English comments. Preserve verbatim evidence and quotations.",
   "sources": [
     {
       "title": "Google Engineering Practices: Code Review",

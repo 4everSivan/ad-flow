@@ -4,20 +4,20 @@
   "created": "YYYY-MM-DD",
   "last_change": "YYYY-MM-DD",
   "status": "active",
-  "description": "Routes for current design baselines and development records.",
+  "description": "研发内场核心工作区总账路由，聚合现行设计基线与执行卡池",
   "subsystems": [
     {
       "name": "design",
       "path": "docs/devel/design",
       "type": "living_baseline",
-      "description": "Current design baselines and stable topic anchors.",
+      "description": "现行系统设计基线真理源（以 @topic 锚点保持全文自洽）",
       "readme": "docs/devel/design/README.md"
     },
     {
       "name": "change",
       "path": "docs/devel/change",
       "type": "bugfix_and_change_pool",
-      "description": "Defect fixes, behavior changes and verification records.",
+      "description": "变更核验卡池与变更中枢总账（日常 Bug 修复与回调流）",
       "readme": "docs/devel/change/README.md",
       "index": "docs/devel/change/index.json"
     },
@@ -25,7 +25,7 @@
       "name": "task",
       "path": "docs/devel/task",
       "type": "milestone_task_pool",
-      "description": "Milestone capabilities, dependencies and acceptance records.",
+      "description": "阶段研发任务卡池与 DAG 依赖总账（Phase/Milestone 拆解流）",
       "readme": "docs/devel/task/README.md",
       "index": "docs/devel/task/index.json"
     },
@@ -33,14 +33,14 @@
       "name": "todo",
       "path": "docs/devel/todo",
       "type": "buffer_pool",
-      "description": "Unregistered current and future work; remove items after card registration.",
+      "description": "未入轨缺陷与需求缓冲池（now.md / future.md，建卡即移出）",
       "readme": "docs/devel/todo/README.md"
     },
     {
       "name": "env",
       "path": "docs/devel/env",
       "type": "environment_governance",
-      "description": "Environment inventory, dependency recovery and scoped maintenance.",
+      "description": "开发环境配置、依赖管理、磁盘缓存盘点与环境安全清理规范",
       "readme": "docs/devel/env/README.md"
     }
   ]

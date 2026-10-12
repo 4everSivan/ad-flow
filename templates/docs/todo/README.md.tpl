@@ -1,30 +1,30 @@
-# Todo Buffer
+# 待办缓冲池 (todo/)
 
-> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
+> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
 
-## 1. Purpose
+## 1. 简介
 
-This directory buffers defects, ideas and technical debt that have no registered card. Existing-card progress, blockers and acceptance remain on that card rather than being duplicated here.
+本目录暂存尚未建卡的缺陷、需求与技术债。已有卡片的进度、阻断和验收继续记在原卡，不在 todo 复制一份执行账本。
 
-## 2. Index
+## 2. 索引
 
-| Entry | Input | Destination |
+| 文件或入口 | 接收内容 | 后续去向 |
 |---|---|---|
-| [now.md](now.md) | Current defects, experience or parameter adjustments | C card or current-stage T card |
-| [future.md](future.md) | Future capabilities, debt and unclear directions | Register, defer or discard after review |
-| [C track](../change/README.md) | Concrete repairs and rule differences | C card and change index |
-| [T track](../task/README.md) | Capabilities and dependencies | T card and task index |
+| [now.md](now.md) | 当前版本待处理的缺陷、体验或参数调整 | 明确后转 C 卡或当前阶段 T 卡 |
+| [future.md](future.md) | 远期特性、技术债与待明确方向 | 评审后立项、延期或废弃 |
+| [C 变更轨](../change/README.md) | 具体修复与规则差异 | C 卡及变更总账 |
+| [T 任务轨](../task/README.md) | 阶段能力及依赖 | T 卡及任务总账 |
 
-## 3. Buffer Rules
+## 3. 待办规则
 
-- Record only unregistered work: symptom/direction, module, date and necessary context. Keep unknown causes or target versions explicit.
-- When a real C/T card is created and registered, physically remove the matching todo row in the same operation. Do not remove the row before its card is registered.
-- Do not retain rows marked completed or registered. Cards, indexes and Git preserve history. Rejection/rework continues on the existing C card.
-- Drafting or approving a design alone does not register execution; keep the item until its card exists in the index.
+- **只记尚未入轨事项**：按现有表格填写现象或方向、所属模块、日期及必要背景；信息不足时如实保留，不虚构根因或期望版本。
+- **建卡即移出**：创建真实 C/T 卡并完成总账登记时，在同一操作中物理删除对应 todo 行。不要先删除待办再留下未登记的卡片。
+- **不保留完成行**：不以“已完成”“已建卡”占位；历史由卡片、总账和 Git 追溯。驳回与返工留在原 C 卡，不退回 todo。
+- **设计与执行相接**：仅形成设计草稿或批准设计、尚未建卡时，执行事项仍留在待办；建卡登记后再移出。
 
-## 4. Review and Routing
+## 4. 流转与评审
 
-1. Check existing todo and C/T indexes before recording an item; continue its existing card if one exists.
-2. Once execution conditions are clear, complete the design, create/register the proper card and remove the original row.
-3. Before release, review both buffers: registered items must be absent; unregistered items may be registered, deferred or discarded. Zero sediment does not require every unregistered item to disappear.
-4. Run `scripts/adflow-verify --json` from the project root and inspect semantic duplicates manually; the tool cannot recognize every reworded item.
+1. 发现事项时查阅现有待办和 C/T 总账，避免重复记录；已有卡片则继续原卡。
+2. 目标与执行条件明确后，按对应轨道补齐设计、建卡并登记；同步移除原行。
+3. 发版前评审 `now.md` 与 `future.md`：已入轨事项不得残留；未入轨事项明确本次立项、延期或废弃的处置。延期事项可继续保留，零沉淀不要求待办表一律为空。
+4. 在项目根目录运行 `scripts/adflow-verify --json`，并人工核对同一事项是否换了措辞重复留存；结构检查不负责理解所有待办语义。

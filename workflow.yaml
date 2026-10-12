@@ -33,7 +33,7 @@ coding_standards:
   selection: "Offer multiple languages or common-only during initialization. Explicit choices win; otherwise use stated defaults from manifests and authored sources, excluding dependencies/generated files/backups. Empty or uncertain stacks use common-only. No additional approval gate"
   composition: "Parse base and selected fragments as JSON; put each whole fragment under languages[language]. Preserve common, precedence and sources. Serialize valid UTF-8 JSON; copy only selected profiles, with no skill-source paths or profile inheritance"
   preservation: "Preserve an existing document byte-for-byte, restoring its saved original after migration if needed, including docs/devel/coding-standards.json; stop on differing legacy/canonical copies; change its rules only on explicit user request. Merge the three canonical paths into docs/index.json.standards without replacing other fields"
-  output_language: "English for all generated templates and new design headings/filenames; preserve existing project facts, custom rules and human quotations verbatim"
+  output_language: "English for coding specifications and language profiles. Workflow execution instructions are English; other generated bodies, design headings/filenames, guides and card descriptions retain established Chinese. Keep metadata/JSON keys, identifiers and commands unchanged; preserve custom rules and quotations verbatim"
   tools: "Existing project conventions and formatter/linter configs take priority. No tool installation, config rewrite or bulk source formatting"
   compatibility: "Same-version checks accept legacy guide names, C/T template paths and optional docs/devel/coding-standards.json read-only. Fresh initialization or requested specification sync installs canonical standards; preserve custom rules and historical records"
 
@@ -46,7 +46,7 @@ invariants:
     rule: "Initialization/upgrade leave existing local/ untouched. Later authorized build/test/deploy may write outputs and reports there; deleting/resetting existing contents is outside this workflow"
     severity: "FATAL"
   - id: "INV_EVIDENCE_BASED_DESIGN"
-    rule: "AI Agent is strictly forbidden from creating hollow placeholder design docs. When legacy docs exist in '_adflow_backup/original_docs/' or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-system-overview.md, 01~NN-[module].md) adhering to ad-flow 4-chapter and @topic standards."
+    rule: "AI Agent is strictly forbidden from creating hollow placeholder design docs. When legacy docs exist in '_adflow_backup/original_docs/' or source code exists, Agent MUST synthesize and reconstruct Living Baseline design docs (00-系统总体设计.md, 01~NN-[module].md) adhering to ad-flow 4-chapter and @topic standards."
     severity: "FATAL"
   - id: "INV_BASE_GOVERNANCE_COUNT"
     rule: "Fresh initialization creates 24 standardized governance files including coding standards (plus N reconstructed living design docs if legacy docs/code exist); older installations follow coding_standards.compatibility"
@@ -55,7 +55,7 @@ invariants:
     rule: "Matching version requires read-only installation integrity checks before an unchanged exit; incomplete initialization resumes unfinished steps without repeating migration. Older versions use the preserving upgrade pipeline"
     severity: "FATAL"
   - id: "INV_NO_README_AS_DESIGN_DOC"
-    rule: "AI Agent is strictly forbidden from setting 'design_doc' or 'doc' in any C/T card or index.json to any README.md (including 'docs/devel/design/README.md'). It MUST point to a living baseline design doc ('00-system-overview.md' or '01~99-[module].md') containing the matching '<!-- @topic: TopicName -->'. If missing, Agent must follow Doc First to create/update the design doc first."
+    rule: "AI Agent is strictly forbidden from setting 'design_doc' or 'doc' in any C/T card or index.json to any README.md (including 'docs/devel/design/README.md'). It MUST point to a living baseline design doc ('00-系统总体设计.md' or '01~99-[module].md') containing the matching '<!-- @topic: TopicName -->'. If missing, Agent must follow Doc First to create/update the design doc first."
     severity: "FATAL"
 
 pipeline:
@@ -133,9 +133,9 @@ pipeline:
     condition: "state != 'EMPTY_PROJECT' and state != 'ALREADY_INITIALIZED' and not has_flag('--yes') and not prior_authorization_for_target_migration"
     action: "PROMPT_USER"
     prompt: |
-      Existing code/documentation assets were found.
-      ad-flow will first preserve the documentation under `_adflow_backup/`.
-      Initialize this project with ad-flow governance? [y/N]
+      检测到当前项目已有代码或文档资产。
+      接入 ad-flow 前将先在 `_adflow_backup/` 完整备份现有文档。
+      是否确认初始化？[y/N]
     branches:
       on_reject:
         action: "TERMINATE"
@@ -157,10 +157,9 @@ pipeline:
           path: "${target_dir}/_adflow_backup/README.md"
           if_absent: true
           content: |
-            # ad-flow Protected Snapshots (_adflow_backup/)
-            > Captured originals are read-only: never delete, move or overwrite them.
-            > Authorized initialization/upgrades may create new independent snapshots.
-            > Humans own eventual cleanup after verifying the migration into docs/.
+            # ad-flow 安全备份与迁移暂存区 (_adflow_backup/)
+            > 已捕获的原始快照只读，禁止删除、移动或覆盖。
+            > 授权初始化或升级可创建新的独立快照；确认迁移结果后由人类负责最终清理。
       - branch_backup:
           if_has_docs:
             action: "SNAPSHOT_CLASSIFIED_DOC_ASSETS"
@@ -204,16 +203,16 @@ pipeline:
     merge_logic:
       if_existing_agent_file:
         collect_rules: "Collect project-specific rules from every distinct agent file before replacement; retain source attribution and all original snapshots"
-        extract_section: "## Project Custom Rules"
-        legacy_section: "## 项目自定义规则"
+        extract_section: "## 项目自定义规则"
+        legacy_section: "## Project Custom Rules"
         if_section_absent: "For untagged originals retain all rules. For previously managed files retain project-specific text outside identifiable managed sections, excluding old initialization markers and identifiable old managed rules; retain uncertain text and report conflicts"
         legacy_aliases: "After snapshotting and collecting every distinct file's project rules, make distinct Agent.md/agents.md aliases pointers to AGENTS.md without stale ad-flow tags; detect case-insensitive aliases before writing so the canonical file is not overwritten"
         append_to_bottom: |
           ---
 
-          ## Project Custom Rules
+          ## 项目自定义规则 (Project Custom Rules)
 
-          > Preserved from `{existing_filename}`: project-specific business, architecture and team rules.
+          > 从原项目的 `{existing_filename}` 原样保留本项目特有的业务、架构与团队规则：
 
           {extracted_rules}
 
@@ -283,10 +282,10 @@ pipeline:
         template: "templates/docs/todo/now.md.tpl"
       - dest: "${target_dir}/docs/devel/todo/future.md"
         template: "templates/docs/todo/future.md.tpl"
-      - dest: "${target_dir}/docs/devel/env/01-cache-and-dependency-cleanup.md"
-        template: "templates/docs/env/01-cache-and-dependency-cleanup.md.tpl"
-      - dest: "${target_dir}/docs/guide/01-local-deployment.md"
-        template: "templates/docs/guide/01-local-deployment.md.tpl"
+      - dest: "${target_dir}/docs/devel/env/01-环境缓存与依赖清理指南.md"
+        template: "templates/docs/env/01-环境缓存与依赖清理指南.md.tpl"
+      - dest: "${target_dir}/docs/guide/01-本地部署指南.md"
+        template: "templates/docs/guide/01-本地部署指南.md.tpl"
       - dest: "${target_dir}/CHANGELOG.md"
         template: "templates/docs/changelog.md.tpl"
       - dest: "${target_dir}/scripts/adflow_verify.py"
@@ -304,15 +303,15 @@ pipeline:
     execution_rules:
       - "Inspect all files in `_adflow_backup/original_docs/` (e.g. openspec/, superpower/, specs/, legacy docs/, root md files) and project source files (src/, cmd/, app/, etc.)."
       - "Extract system macro-architecture and domain breakdown; retain source locations and explicitly report unresolved claims instead of inventing facts."
-      - "Generate `docs/devel/design/00-system-overview.md`: Global system topology, layer definitions, tech stack, and module matrix."
-      - "For each identified domain/module, generate `docs/devel/design/01~NN-[module-name].md`:
-         - Strict ad-flow 4-chapter structure: 1. Purpose, 2. Index, 3. Requirements and Contracts, 4. Design Details (expand goals/non-goals, requirements, architecture, contracts and change links as needed)
+      - "Generate `docs/devel/design/00-系统总体设计.md`: Global system topology, layer definitions, tech stack, and module matrix."
+      - "For each identified domain/module, generate `docs/devel/design/01~NN-[模块中文名].md`:
+         - Follow the four-chapter Chinese outline in the design README; expand goals/non-goals, requirements, architecture, contracts and change links as needed
          - English metadata headers: created, last-change, status; project release version only where applicable
          - Mandatory topic anchor: `<!-- @topic: TopicName -->`
-         - Direct reference to changelog index: `[Change ledger (TopicName)](../change/index.json#TopicName)`"
-      - "Preserve established design filenames and links during resume/synchronization; English defaults do not rename historical designs."
+         - Direct reference to changelog index: `[变更总账 (TopicName)](../change/index.json#TopicName)`"
+      - "Preserve established design filenames and links during resume/synchronization; Language defaults do not rename historical designs."
       - "Automatically register all synthesized design docs and Topics into:
-         - `docs/devel/design/README.md` (Update the Module Matrix table)
+         - `docs/devel/design/README.md` (Update the Chinese module-matrix table from the README template)
          - `docs/devel/index.json` (Register under design entries)"
 
   - step: 8
@@ -337,7 +336,7 @@ pipeline:
         - "docs/assets/README.md"
         - "docs/guide/README.md"
         - "docs/guide/index.json"
-        - "docs/guide/01-local-deployment.md"
+        - "docs/guide/01-本地部署指南.md"
         - "docs/devel/README.md"
         - "docs/devel/index.json"
         - "docs/standards/coding.json"
@@ -352,7 +351,7 @@ pipeline:
         - "docs/devel/todo/now.md"
         - "docs/devel/todo/future.md"
         - "docs/devel/env/README.md"
-        - "docs/devel/env/01-cache-and-dependency-cleanup.md"
+        - "docs/devel/env/01-环境缓存与依赖清理指南.md"
         - "docs/archive/README.md"
       forbidden_files_not_exist:
         - "docs/devel/design/01-系统设计方案.md"
@@ -361,7 +360,7 @@ pipeline:
       local_security_check:
         rule: "Initialization/upgrade leave existing local/ untouched; later authorized build/test/deploy may write there. Instance operations verify the report against runtime, consult guides on drift; unit tests need no deployment report"
       baseline_synthesis_check:
-        rule: "If legacy docs existed in _adflow_backup/original_docs/, at least 00-system-overview.md and corresponding 01~NN design docs must be synthesized"
+        rule: "If legacy docs existed in _adflow_backup/original_docs/, at least 00-系统总体设计.md and corresponding 01~NN design docs must be synthesized"
       coding_standards_check:
         rule: "For newly composed JSON, common contains nonempty English rule arrays grouped by concern and languages contains exactly selected profiles, each with format, naming, documentation, rules and official sources. For preserved JSON, compare bytes with the saved original. Verify local README/AGENTS links and index pointer. Report choices; do not claim style compliance from the process verifier"
       process_gate_check:
@@ -372,7 +371,7 @@ pipeline:
         - "docs/README.md"
         - "docs/standards/coding.json"
         - "docs/devel/design/README.md"
-        - "docs/guide/01-local-deployment.md"
+        - "docs/guide/01-本地部署指南.md"
         - "docs/devel/env/README.md"
       synthesized_design_docs: "List all generated 00~NN design docs if reconstructed from legacy assets"
       warning: "AI must not delete captured backups or existing local/ data. Humans own cleanup after verification."

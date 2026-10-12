@@ -1,8 +1,8 @@
-# Changelog
+# 变更日志 (CHANGELOG)
 
-Record notable project changes using [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
+记录项目的显著变更，分类参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [Unreleased] - 待发布
 
 ### Added
 
@@ -10,9 +10,9 @@ Record notable project changes using [Keep a Changelog](https://keepachangelog.c
 
 ### Fixed
 
-<!-- Add only actual changes, linking real C/T cards. Do not pre-register sample cards or releases.
-Example syntax after a real card exists:
-- [T01](docs/devel/task/T01.json): Capability delivered.
-- [C001](docs/devel/change/C001.json): Defect repaired.
-Use actual release dates and batches; update card routes after archiving.
+<!-- 只添加真实变更并关联真实 C/T 卡，不预登记示例卡或发布版本。
+真实卡片建立后的链接语法示例：
+- [T01](docs/devel/task/T01.json)：交付的能力。
+- [C001](docs/devel/change/C001.json)：修复的缺陷。
+填写实际发布日期和批次，归档后同步卡片路由。
 -->

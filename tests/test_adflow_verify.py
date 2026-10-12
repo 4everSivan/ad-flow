@@ -91,7 +91,7 @@ class VerifyTests(unittest.TestCase):
             "docs/assets/README.md": "docs/assets/README.md.tpl",
             "docs/guide/README.md": "docs/guide/README.md.tpl",
             "docs/guide/index.json": "docs/guide/index.json.tpl",
-            "docs/guide/01-local-deployment.md": "docs/guide/01-local-deployment.md.tpl",
+            "docs/guide/01-本地部署指南.md": "docs/guide/01-本地部署指南.md.tpl",
             "docs/devel/README.md": "docs/devel-README.md.tpl",
             "docs/devel/index.json": "docs/devel-index.json.tpl",
             "docs/standards/coding.json": "docs/standards/coding.json.tpl",
@@ -106,7 +106,7 @@ class VerifyTests(unittest.TestCase):
             "docs/devel/todo/now.md": "docs/todo/now.md.tpl",
             "docs/devel/todo/future.md": "docs/todo/future.md.tpl",
             "docs/devel/env/README.md": "docs/env/README.md.tpl",
-            "docs/devel/env/01-cache-and-dependency-cleanup.md": "docs/env/01-cache-and-dependency-cleanup.md.tpl",
+            "docs/devel/env/01-环境缓存与依赖清理指南.md": "docs/env/01-环境缓存与依赖清理指南.md.tpl",
             "docs/archive/README.md": "docs/archive-README.md.tpl",
         }
         for dest, source in sources.items():
@@ -483,9 +483,9 @@ class VerifyTests(unittest.TestCase):
         for current, legacy in (
             ("docs/standards/task-template.json", "docs/devel/task/template.json"),
             ("docs/standards/change-template.json", "docs/devel/change/template.json"),
-            ("docs/guide/01-local-deployment.md", "docs/guide/01-本地部署指南.md"),
-            ("docs/devel/env/01-cache-and-dependency-cleanup.md",
-             "docs/devel/env/01-环境缓存与依赖清理指南.md"),
+            ("docs/guide/01-本地部署指南.md", "docs/guide/01-local-deployment.md"),
+            ("docs/devel/env/01-环境缓存与依赖清理指南.md",
+             "docs/devel/env/01-cache-and-dependency-cleanup.md"),
         ):
             (self.root / current).rename(self.root / legacy)
         (self.root / "docs/standards/coding.json").unlink()

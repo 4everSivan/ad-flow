@@ -47,12 +47,12 @@ STATUSES = {"change": {"draft", "pending", "in_progress", "rejected", "verified"
 BASE_FILES = [
     "AGENTS.md", "CHANGELOG.md",
     "docs/README.md", "docs/index.json", "docs/assets/README.md",
-    "docs/guide/README.md", "docs/guide/index.json", "docs/guide/01-local-deployment.md",
+    "docs/guide/README.md", "docs/guide/index.json", "docs/guide/01-本地部署指南.md",
     "docs/devel/README.md", "docs/devel/index.json", "docs/devel/design/README.md",
     "docs/devel/change/README.md", "docs/devel/change/index.json",
     "docs/devel/task/README.md", "docs/devel/task/index.json",
     "docs/devel/todo/README.md", "docs/devel/todo/now.md", "docs/devel/todo/future.md",
-    "docs/devel/env/README.md", "docs/devel/env/01-cache-and-dependency-cleanup.md",
+    "docs/devel/env/README.md", "docs/devel/env/01-环境缓存与依赖清理指南.md",
     "docs/archive/README.md",
 ]
 PLACEHOLDER = "docs/devel/design/01-系统设计方案.md"
@@ -63,8 +63,8 @@ STANDARD_FILES = {
     "change_template": "docs/standards/change-template.json",
 }
 LEGACY_FILES = {
-    "docs/guide/01-local-deployment.md": "docs/guide/01-本地部署指南.md",
-    "docs/devel/env/01-cache-and-dependency-cleanup.md": "docs/devel/env/01-环境缓存与依赖清理指南.md",
+    "docs/guide/01-本地部署指南.md": "docs/guide/01-local-deployment.md",
+    "docs/devel/env/01-环境缓存与依赖清理指南.md": "docs/devel/env/01-cache-and-dependency-cleanup.md",
     "docs/standards/task-template.json": "docs/devel/task/template.json",
     "docs/standards/change-template.json": "docs/devel/change/template.json",
     "docs/standards/coding.json": "docs/devel/coding-standards.json",

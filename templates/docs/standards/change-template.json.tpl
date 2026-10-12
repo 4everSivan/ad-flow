@@ -1,52 +1,59 @@
 {
   "$schema": "https://ad-flow.org/schemas/change-card.v1.json",
   "id": "C[001~999]",
-  "title": "Describe the change",
+  "title": "简述变更核心要义",
   "version": "",
   "type": "BugFix",
   "status": "draft",
   "branch": "fix/C[001~999]-[short-desc]",
   "is_hotfix": false,
+
   "target": {
-    "module": "ModuleName",
-    "component": "ComponentName",
-    "design_doc": "docs/devel/design/01-core-service.md",
+    "module": "模块名",
+    "component": "组件名",
+    "design_doc": "docs/devel/design/01-系统核心设计方案.md",
     "design_topic": "CoreService"
   },
-  "why": "Explain the observed failure, root cause and reason for this change.",
+
+  "why": "清晰说明问题现象、根因及为什么非改不可。",
+
   "precheck": {
-    "description": "Check whether the defect is already fixed or the documented skip condition holds.",
+    "description": "预检当前变更是否已在代码库中被修复或满足跳过条件",
     "command": "",
     "expected": "",
     "is_completed": false,
     "evidence": ""
   },
+
   "callback": {
     "before": [
-      "# Replace with authorized environment checks, branch preparation or snapshots."
+      "# 变更执行前脚本或流程，如环境检查、分支检出、现场快照备份等"
     ],
     "after": [
-      "# Replace with applicable formatting, lint, regression or build checks.",
-      "scripts/adflow-verify  # Closure preflight: use --card <id> --to <state> --record; sync states only after Exit 0."
+      "# 变更执行后脚本或流程，如代码格式化、质量门禁、单测覆盖率检查等",
+      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 closed；目标状态预检使用 --card <本卡号> --to <目标状态> --record，仅回写本卡 gate，Exit 0 后再同步状态"
     ]
   },
+
   "changes": [
     {
-      "scope": "API contract / business rule / failure behavior",
-      "before": "Previous behavior",
-      "after": "New behavior",
-      "impact": "Affected callers or business behavior"
+      "scope": "接口契约 / 业务规则 / 异常流",
+      "before": "改动前的旧逻辑",
+      "after": "改动后的新逻辑",
+      "impact": "受影响的业务或调用方"
     }
   ],
+
   "design": {
-    "doc": "docs/devel/design/01-core-service.md",
+    "doc": "docs/devel/design/01-系统核心设计方案.md",
     "topic": "CoreService",
     "modified": true,
     "rule_diff": {
-      "before": "Previous design rule",
-      "after": "Updated design rule"
+      "before": "设计方案中的旧规则描述",
+      "after": "设计方案中的新规则描述"
     }
   },
+
   "verification": {
     "result": null,
     "run_id": "",
@@ -54,29 +61,31 @@
     "signoff": "",
     "checks": [
       {
-        "item": "Automated regression",
-        "true_if": "Relevant tests, including the targeted regression, pass with exit code 0.",
-        "false_if": "A relevant test fails or the required regression coverage is missing.",
+        "item": "自动化测试",
+        "true_if": "全量单测全绿，退出码为 0，含针对性回归测试",
+        "false_if": "存在任何测试失败、报错或未覆盖回归用例",
         "evidence": "",
         "result": null
       },
       {
-        "item": "Observed behavior",
-        "true_if": "Observed results satisfy the declared behavior and acceptance conditions.",
-        "false_if": "Observed behavior violates a declared acceptance condition.",
+        "item": "行为实测",
+        "true_if": "预期行为正常回执，核心功能指标符合要求",
+        "false_if": "出现报错、非预期返回值或行为失真",
         "evidence": "",
         "result": null
       },
       {
-        "item": "Impact assessment",
-        "true_if": "Checks of affected callers and neighboring behavior detect no regression.",
-        "false_if": "An affected caller or neighboring behavior regresses.",
+        "item": "反向影响排查",
+        "true_if": "未引入副作用，关联模块运行正常",
+        "false_if": "破坏了上下游其他接口或产生连锁反应",
         "evidence": "",
         "result": null
       }
     ]
   },
+
   "rejections": [],
+
   "sync": {
     "design_pinned": false,
     "changelog": false,
