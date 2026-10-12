@@ -7,7 +7,7 @@
 ## 阶段一：阶段立项与基线对齐 (Phase Planning)
 
 1. **需求与设计先行**：
-   - 在 `docs/devel/design/` 撰写或修订现行设计方案，确立业务领域架构；
+   - 在 `docs/devel/design/` 撰写或修订现行设计方案，确立当前已批准的业务领域规则；未实现能力由下一阶段的 T 卡明确记录，实际交付以代码和验收证据为准；
    - 确保每个核心业务小节标注了概念主题 `<!-- @topic: TopicName -->`；
 2. **待办清空**：
    - 若功能方向曾登记在 `todo/future.md` 或 `now.md`，立项后立即将对应行物理删除。
@@ -19,9 +19,9 @@
 1. **里程碑划分**：
    - 确立阶段目标，划分有序里程碑（如 `M1-工程骨架`、`M2-领域内核`、`M3-业务接入`）；
 2. **实例化任务卡**：
-   - 从目标项目的 `docs/devel/task/template.json` 复制并建立 `Txx.json`（无需访问技能包源目录）；
-   - 填写 `branch: "feat/Txx-[desc]"`（指定多分支研发的特性分支标签）；
-   - 填写 `target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`）；
+   - 从目标项目的 `docs/standards/task-template.json` 复制并建立 `Txx.json`（无需访问技能包源目录）；
+   - 填写真实发布批次 `version` 与 `branch: "feat/Txx-[desc]"`（指定多分支研发的特性分支标签）；
+   - 填写 `target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-system-overview.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`）；
    - 填写 `precheck`（能力完成预检命令）与 `callback`（`before / after` 脚本钩子）；
    - **聚焦能力交付**：在 `tasks[]` 中拆解具体的 `capability`（如纯函数、数据结构契约、API 路由），严禁在任务卡中写死具体的代码物理文件路径；
    - **声明拓扑依赖**：显式填写 `depends_on: ["T01", ...]`；
@@ -35,7 +35,7 @@
 AI Agent 或开发者无需人工猜测下一步该干什么，通过 `task/index.json` 执行标准开工算法：
 
 1. **查找待开发任务**：筛选 `tasks` 中 `status == 'pending'` 的卡片；
-2. **检查前置依赖**：检查该任务 `depends_on` 列表中的所有前置卡是否均已是 `'completed'`；
+2. **检查前置依赖**：检查该任务 `depends_on` 列表中的所有前置卡是否均已是 `'completed'`；归档前置卡由索引的 `file` 只读定位，核对文件存在、卡号及状态一致，不按当前业务规则重验或回写归档卡；
 3. **推导可开工清单**：所有依赖已满足的任务即为**当前就绪可开工任务**，推荐开工。
 
 ---
@@ -58,6 +58,7 @@ AI Agent 或开发者无需人工猜测下一步该干什么，通过 `task/inde
    - 所有检查项全绿后保持当前状态，准备目标状态预检；不得以结构检查替代实测或项目要求的人工验收。
 6. **运行收口硬门禁（置 `completed` 前，硬阻断）**：
    - 先将真实提交写入 `sync.commit`，执行 `scripts/adflow-verify --card Txx --to completed --record`，在内存检查 `completed` 的前提（流水号、结果字段、提交祖先、前置卡闭环等），仅回写本卡真实 `gate`；
+   - `--record` 仅忽略本次实际回写卡的旧 `gate.exit_code` 回执，按当前真实结构及全局问题重评；未选卡的旧回执仍参与检查，普通只读校验仍核对旧回执；
    - **Exit 4 严禁置 `completed`**。既有 Exit 6 按事实补证，正式收口仍须 Exit 0；新增 `ADVISORY` 只汇报、不增加硬门槛；
    - Exit 0 后同步卡片与 `task/index.json` 状态为 `completed`，再运行普通校验复核；
    - 根据具体发现局部修复并重验，最多 3 轮；相同阻断连续两次或需要新授权/事实时停止相关操作并汇报。

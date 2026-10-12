@@ -1,0 +1,32 @@
+{
+  "sources": [
+    {
+      "title": "Google Go Style Decisions",
+      "url": "https://google.github.io/styleguide/go/decisions"
+    },
+    {
+      "title": "Go Doc Comments",
+      "url": "https://go.dev/doc/comment"
+    }
+  ],
+  "format": {
+    "formatter": "gofmt",
+    "indentation": "tabs; gofmt controls alignment"
+  },
+  "naming": {
+    "packages": "short lowercase",
+    "identifiers": "MixedCaps with consistent initialisms"
+  },
+  "documentation": [
+    "Document packages and exported declarations; start declaration comments with the declared name.",
+    "State error behavior, ownership, cancellation and concurrency guarantees where relevant.",
+    "Use runnable Example functions for non-obvious public usage when practical."
+  ],
+  "rules": [
+    "Group standard-library and other imports; avoid redundant package-name prefixes.",
+    "Return error last and handle it; do not use panic for expected recoverable failure.",
+    "Pass context.Context first and propagate cancellation along the call chain.",
+    "Define small interfaces at the consumer when needed; avoid interfaces for hypothetical implementations.",
+    "Make goroutine lifetimes explicit and release resources with appropriate cleanup."
+  ]
+}

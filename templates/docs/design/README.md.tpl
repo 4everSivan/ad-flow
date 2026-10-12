@@ -1,111 +1,89 @@
-# 系统设计方案中心 (design/)
+# Design Center
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 架构组织与命名规范
+Overall and module designs describe business rules, boundaries, interfaces and acceptance criteria. Approved designs form the current baseline; T cards track capabilities still to be delivered. Completion requires actual code and acceptance evidence.
 
-本目录采用**“1 篇总体设计 + N 篇独立功能微文档”**的模块化组织结构：
+**This README is navigation and an outline, never a valid `design_doc` or `design.doc`.** Cross-cutting changes target the overall design; module changes target concrete module text.
 
-- **宏观总体设计**：固定命名为 `00-系统总体设计.md`（文档 ID: `DESIGN-SYS`），统领全局分层架构、核心拓扑与《功能模块矩阵》；
-- **微观功能文档**：命名遵循 `[01~99]-[功能中文名].md`（例：`01-行情服务.md`，文档 ID: `DESIGN-[MODULE]`），每个功能独立成篇，与 `Topic` 1:1 强绑定。
+## 2. Index
 
-> ⚠️ **【重要纪律·严禁关联本 README】(INV_NO_README_AS_DESIGN_DOC)**：  
-> 本 `README.md` 仅为设计目录的使用说明与大纲模板规范，**绝对严禁作为任何变更卡（C卡）或任务卡（T卡）的 `target.design_doc` 进行挂接**！  
-> 工程结构、系统拓扑或全局架构改动必须挂接在 `00-系统总体设计.md` 中，具体业务逻辑改动必须挂接在具体的 `01~99-[模块名].md` 中。
+### 2.1 Document Organization
 
-### 方案清单索引（功能模块矩阵）
+| Document | Default naming | Responsibility |
+|---|---|---|
+| Overall design | `00-system-overview.md` | Boundaries, architecture, module matrix and cross-module rules |
+| Module design | `01~99-[module-name].md` | Domain requirements, contracts and business rules |
+| Execution records | [Change index](../change/index.json) / [Task index](../task/index.json) | Rule changes, delivery, evidence and dependencies |
 
-| 文档名称 | 对应 Topic | 文档 ID | 核心职责概述 | 状态 | 最后更新 |
+Preserve established filenames and references in existing projects; English defaults do not rename historical designs automatically.
+
+### Module Matrix
+
+| Document | Topic | Document ID | Responsibility | Status | Last change |
 |---|---|---|---|---|---|
 
-仅登记已经基于实际需求或源码生成的设计文档；空项目保持清单为空，不把示例标为现行基线。
+Register only generated, source-backed designs here and in [Development index](../index.json). Empty projects keep this matrix empty. Distinguish drafts from approved baselines; examples are not delivered capabilities.
 
----
+## 3. Maintenance Rules
 
-## 2. 设计演进与极简版本纪律
+- Use stable `<!-- @topic: TopicName -->` anchors matching `target.design_topic` exactly. The overall design hosts cross-module topics; modules host domain topics.
+- Card design paths are project-root relative. Designs link `[Change index (TopicName)](../change/index.json#TopicName)`; resolve the JSON topic via `topics[TopicName]`.
+- Keep current rules self-consistent. Evolution tables summarize IDs, types and rule differences; indexes locate historical cards. Do not link moving card files directly from baseline history.
+- When a C card changes rules, compare `design.rule_diff` and update the text. A repair restoring an existing rule need not invent a design change. Register a new domain in the overall design before its module design and T cards.
+- Follow [shared metadata](../../README.md). Maintain dates, not isolated design patch versions. Unconfirmed content remains `draft`; record sources and open questions without invented metrics, approvals or acceptance.
 
-1. **文档不设独立版本号**：所有设计文档代表的是系统**“当下的最新真理”**，头部不搞复杂的 `v1.1 / v1.2` 计算，统一标注 `最后更新: YYYY-MM-DD`，版本历史全权由 Git Commit 证明；
-2. **中枢路由解耦**：
-   - 每个独立功能文档正文中必须标注概念主题：`<!-- @topic: TopicName -->`；
-   - 正文不写具体的卡片相对死链，提供统一指向总账的入口：`> 📌 **变更总账**: 参见 [变更总账 (TopicName)](../change/index.json#TopicName)`；
-   - 文档内保留 4 列表格（`编号`、`类型`、`简介`、`规则演进`），记录本功能所属的变更卡；
-3. **大小需求分流**：
-   - **大需求（新领域/子系统）**：在总体设计注册，新建独立功能文档（`0X-xxx.md`），按标准大纲撰写；
-   - **小需求/日常变更**：直接在所属的独立功能文档中增补规则，在表格追加一行 `Cxxx` 记录，其他文档 0 污染。
+## 4. Design Outline
 
----
-
-## 3. 设计方案标准大纲模板 (Design Specification Template)
-
-> 当新建系统设计方案（总体或详细功能）时，**必须参考并遵循以下标准化大纲结构**进行撰写：
+Use four top-level sections. Requirements, architecture, rules, verification, evolution and references fit into relevant subsections. Scale detail to the module; replace bracketed content with real evidence. The overall design omits a link to itself.
 
 ```markdown
-# [功能名称] 设计方案
+# [Module Name] Design
 
-> **文档ID**: DESIGN-[模块] ｜ **状态**: [现行基线 / 讨论中 / 已废弃]
-> **最后更新**: YYYY-MM-DD ｜ **所属总体**: [00-系统总体设计.md](00-系统总体设计.md) ｜ **对应 Topic**: \`TopicName\`
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: draft
 
----
+## 1. Purpose
 
-## 1. 简介 (Introduction)
-- **背景与动因**：为什么要做这个系统/功能？解决什么核心痛点？
-- **系统定位**：在工程全局架构拓扑中处于什么层级？
+Describe context, module role, sources and approval status.
 
----
+## 2. Index
 
-## 2. 目标与非目标 (Goals & Non-Goals)
-- **目标 (Goals)**：本方案必须交付的 3~5 项核心指标与业务诉求；
-- **非目标 (Non-Goals) ★【防 AI 越界核心】**：明确声明本版明确不做的事情、业务边界外的范围（防止 AI 擅自扩充范围或过度设计）。
+- Document ID: DESIGN-[MODULE]
+- Overall design: [System overview](00-system-overview.md)
+- Topic: TopicName
+- Execution history: [Change index (TopicName)](../change/index.json#TopicName)
 
----
+## 3. Requirements and Contracts
 
-## 3. 需求分析 (Requirements)
-- **功能需求清单**：核心业务用例、使用场景（User Stories）与输入输出预期；
-- **非功能需求 (NFR)**：性能基准（QPS/延迟）、并发度、内存/存储限制、可靠性要求。
+State goals/non-goals, functionality, confirmed constraints, inputs, outputs,
+failure conditions and boundaries. Mark unsupported or unresolved targets.
 
----
+## 4. Design Details
 
-## 4. 功能设计 (Functional Design)
-- **业务行为模型**：从用户/调用方视角，系统如何运转（业务流转图、状态机模型）；
-- **交互与契约**：关键操作的前置条件、输入参数、预期反馈与异常流提示。
+### 4.1 Architecture and Behavior
 
----
+Describe relationships, data flow and core operations; use diagrams where useful.
 
-## 5. 总体设计 (High-Level Architecture)
-- **系统分层架构图**：Mermaid 架构图（展示调用层 -> 领域服务层 -> 持久层/外部依赖）；
-- **概念主题划分 (Topics Definition)**：明确本方案绑定的 Topic 名称。
+### 4.2 Business Rules
 
----
-
-## 6. 详细设计 (Detailed Technical Design)
-按各个业务规则小节细化展开，文档天然挂接该功能的演进索引：
-
-### 6.1 核心业务规则 (Core Rules)
 <!-- @topic: TopicName -->
 
-#### 变更演进索引
-| 变更编号 | 类型 | 简介 | 规则演进 |
+Describe domain models, algorithms, interfaces and boundaries.
+Cover storage, networking, security or recovery only where relevant.
+
+### 4.3 Verification and Implementation
+
+Define how to verify rules, related T cards, implemented capabilities and open work.
+Record conflicting sources and unverified conclusions; plans are not facts.
+
+### 4.4 Rule Evolution
+
+| ID | Type | Summary | Rule change |
 |---|---|---|---|
-| 暂无增量变更 | - | 初始基线定稿 | 初始功能落地 |
 
-#### 现行设计规则
-1. **领域模型与数据结构**：纯函数、数据契约、核心结构体；
-2. **核心算法与处理流程**：业务规则计算、时序图（Mermaid sequenceDiagram）；
-3. **边界与约束**：容错、兜底降级处理。
+### 4.5 References
 
----
-
-## 7. 扩展设计 (根据项目类型自定义选填)
-- **7.1 数据存储与持久化**（数据库表 Schema、索引设计、缓存策略）；
-- **7.2 接口契约说明**（REST API 路由、WebSocket 消息定义、统一错误码）；
-- **7.3 异常流与容灾降级**（外部依赖超时/崩溃时的降级路径）；
-- **7.4 权限与安全**（鉴权机制、敏感数据脱敏、审计日志）。
-
----
-
-## 8. 参考资料 (References)
-- 关联的产品原型或设计蓝图；
-- 依赖的第三方行业规范或协议标准。
+List the actual requirements, source locations, protocols or design materials used.
 ```

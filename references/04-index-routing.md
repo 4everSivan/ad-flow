@@ -12,7 +12,7 @@
 $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)} \longleftrightarrow \text{设计方案基线 (Design)}$$
 
 - **设计方案**：仅声明概念主题 `<!-- @topic: TopicName -->` 与统一总账入口；
-- **执行卡片**：仅声明所属主题 `target.topic: "TopicName"`；
+- **执行卡片**：以 `target.design_doc` 挂接具体设计正文，以 `target.design_topic: "TopicName"` 声明所属主题；源码影响范围使用领域能力描述；
 - **索引总账**：唯一掌握每张卡当前的物理路径（是在 `devel/` 还是在 `archive/`）。
 
 ---
@@ -35,8 +35,8 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
    ```
 3. **【绝对红线】设计文档指向约束 (INV_NO_README_AS_DESIGN_DOC)**：
    - 无论是卡片中的 `target.design_doc` / `design.doc`，还是中枢 `index.json` 中的 `topics[].design_doc`，**绝对严禁指向任何 `README.md`**（包括 `docs/devel/design/README.md`）；
-   - `design_doc` 必须且仅能指向具体的现行设计基线文档（`00-系统总体设计.md` 或 `01~99-[模块名].md`）；
-   - 若改动涉及系统拓扑或工程结构，应挂接在 `00-系统总体设计.md` 中对应的架构章节；若尚未编写对应设计，必须遵循“文档先行”，先补充设计正文并打上 `@topic` 锚标，再行挂接。
+   - `design_doc` 必须且仅能指向具体的现行设计基线文档（`00-system-overview.md` 或 `01~99-[模块名].md`）；
+   - 若改动涉及系统拓扑或工程结构，应挂接在 `00-system-overview.md` 中对应的架构章节；若尚未编写对应设计，必须遵循“文档先行”，先补充设计正文并打上 `@topic` 锚标，再行挂接。
 
 ---
 
@@ -89,3 +89,7 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
 2. **从变更卡回写设计方案**：
    - 读取卡片中的 `target.design_doc` 与 `target.design_topic`；
    - 打开该设计文档，查找包含 `<!-- @topic: TopicName -->` 的对应小节执行回写。
+
+## 规范与模板入口
+
+`docs/index.json.standards` 登记 `docs/standards/coding.json`、`task-template.json` 和 `change-template.json`。规范目录无需另建 README 或索引；真实 C/T 卡片及其当前总账仍在 `docs/devel/`。旧路径只用于兼容已有项目，明确同步后以顶层登记的入口为准。已有设计文件名及其关联保留，不因英文默认命名改写历史资料。

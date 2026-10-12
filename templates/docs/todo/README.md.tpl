@@ -1,23 +1,30 @@
-# 待办缓冲池 (todo/)
+# Todo Buffer
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 为什么需要待办缓冲池？
+This directory buffers defects, ideas and technical debt that have no registered card. Existing-card progress, blockers and acceptance remain on that card rather than being duplicated here.
 
-在敏捷与日常迭代中，开发者或测试人员经常随时发现零碎 Bug、临时微调或突发灵感。
-如果直接散落在对话或即时通讯工具里，容易遗忘；如果立刻建卡，又可能因上下文不足导致卡片半途废弃。
+## 2. Index
 
-因此建立 `todo/` 缓冲池：
-- **`now.md`**：记录当前版本需要处理的即时缺陷（Bugs）与体验微调（Enhancements）；
-- **`future.md`**：记录跨版本的远期需求方向（Future Features）与技术债务（Technical Debts）。
+| Entry | Input | Destination |
+|---|---|---|
+| [now.md](now.md) | Current defects, experience or parameter adjustments | C card or current-stage T card |
+| [future.md](future.md) | Future capabilities, debt and unclear directions | Register, defer or discard after review |
+| [C track](../change/README.md) | Concrete repairs and rule differences | C card and change index |
+| [T track](../task/README.md) | Capabilities and dependencies | T card and task index |
 
----
+## 3. Buffer Rules
 
-## 2. 零沉淀纪律（不可逾越）
+- Record only unregistered work: symptom/direction, module, date and necessary context. Keep unknown causes or target versions explicit.
+- When a real C/T card is created and registered, physically remove the matching todo row in the same operation. Do not remove the row before its card is registered.
+- Do not retain rows marked completed or registered. Cards, indexes and Git preserve history. Rejection/rework continues on the existing C card.
+- Drafting or approving a design alone does not register execution; keep the item until its card exists in the index.
 
-1. **临时暂存，绝非墓地**：`todo/` 只是流转中转站，严禁把事项堆在 todo 中长期不动；
-2. **建卡即物理删除**：一旦某项缺陷在 `change/` 建立了 `Cxxx.json`，或者某项需求在 `task/` 建立了 `Txx.json`，**必须在同一操作中立即将该行从 todo 表格中物理删除**；
-3. **流转账本溯源**：已入轨事项的历史由卡片本身与 `index.json` 承载，todo 表中不得留存任何“已完成”、“已建卡”的冗余废行；
-4. **发版例行评审**：每次版本打 Tag 发版前，必须联合评审 `future.md` 表格，对远期事项做出立项、延期或彻底废弃的决策。
+## 4. Review and Routing
+
+1. Check existing todo and C/T indexes before recording an item; continue its existing card if one exists.
+2. Once execution conditions are clear, complete the design, create/register the proper card and remove the original row.
+3. Before release, review both buffers: registered items must be absent; unregistered items may be registered, deferred or discarded. Zero sediment does not require every unregistered item to disappear.
+4. Run `scripts/adflow-verify --json` from the project root and inspect semantic duplicates manually; the tool cannot recognize every reworded item.

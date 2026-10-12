@@ -30,15 +30,15 @@
   - `user_quote` 必须为非空人类会话原话引用，严禁由 AI 仅写“已确认”。
 
 ### 5. 中枢总账双向对齐检查 (Index Alignment)
-- [ ] 检查 `docs/devel/change/index.json` 中的 `cards` 状态与物理文件一致性；
+- [ ] 检查 C/T 两轨 `index.json` 登记的路径、卡号、状态与物理文件双向一致；归档路由仍须存在且身份/状态一致，依赖可引用归档卡；
 - [ ] 检查卡片声明的 `target.design_topic` 是否在对应设计文档中真实存在 `<!-- @topic -->`；
 - [ ] 检查 `CHANGELOG.md` 顶部是否存在对应卡片的双向超链接。
 
 ### 6. 设计文档有效性与严禁关联 README (INV_NO_README_AS_DESIGN_DOC)
-- [ ] 检查所有活跃与历史卡片（`Cxxx.json` / `Txx.json`）中的 `target.design_doc` 与 `design.doc`，以及 `index.json` 中 `topics[].design_doc`；
+- [ ] 检查活跃卡片（`Cxxx.json` / `Txx.json`）中的 `target.design_doc` 与 `design.doc`，以及 `index.json` 中 `topics[].design_doc`；历史卡按归档时适用规范另行抽查，不因升级追溯改写；
 - [ ] **断言**：
   - `design_doc` **绝对严禁指向任何 `README.md`**（包括 `docs/devel/design/README.md`，违规直接判定为 Exit Code 4 阻断）；
-  - 必须指向现行基线具体设计文档（`00-系统总体设计.md` 或 `01~99-[模块名].md`）；
+  - 必须指向现行基线具体设计文档（`00-system-overview.md` 或 `01~99-[模块名].md`）；
   - 目标设计文档内部必须真实存在与 `target.design_topic` 完全吻合的 `<!-- @topic: TopicName -->` 锚标。
 
 ---
@@ -69,6 +69,6 @@ Reviewer Agent 必须站在“尝试证伪（Falsify）”的立场审视改动�
 
 - v1.2.0 新增缺失主题、依赖环路、终态验收项未全为 true 的 `ADVISORY` 旁路诊断；不改变退出码，不追溯迁移旧卡。既有 ERROR/WARN 的 4/6 判定保留。
 - `--card <卡号> --to <目标状态>` 在内存检查目标状态，`--record` 仅回写指定卡的 gate，不修改卡片或索引状态。全局违规也会计入记录结果；Exit 0 后同步状态，再运行普通检查。
-- 不带 `--card` 的旧 `--record` 仍回写全部活跃卡；规范升级不执行它。`--warn-only` 仅用于观察，不能与 `--record` 合用，也不能作为正式通过证据。
+- 不带 `--card` 的旧 `--record` 仍回写全部活跃卡；规范升级不执行它。记录时重新评估目标卡的当前约束，不把其旧 gate 失败当成本轮失败原因；真实结构或全局违规仍阻断。`--warn-only` 仅用于观察，不能与 `--record` 合用，也不能作为正式通过证据。
 - 校验器检查非空、格式和部分关系，不能证明人类原话真实性、验收条件语义互斥完整、应用实测正确，或所有历史归档卡都已审计。审查者另行核对来源和覆盖范围。
 - 修复限定在授权范围内，最多 3 轮；相同阻断连续两次或依赖缺失授权/事实时停止相关操作并报告。性能收益需要实测，不作固定比例承诺。

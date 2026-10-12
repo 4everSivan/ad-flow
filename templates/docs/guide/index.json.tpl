@@ -4,16 +4,16 @@
   "created": "YYYY-MM-DD",
   "last_change": "YYYY-MM-DD",
   "status": "active",
-  "description": "系统使用与部署指南机器索引，记录施工标准与目标产物",
+  "description": "Usage and deployment guides with expected operational artifacts.",
   "guides": [
     {
       "id": "GUIDE-DEPLOY",
-      "title": "本地部署指南",
-      "file": "01-本地部署指南.md",
+      "title": "Local Deployment",
+      "file": "01-local-deployment.md",
       "category": "deployment",
       "target_env": "local",
       "output_artifact": "local/deploy_report.md",
-      "description": "工程本地开发环境与依赖服务的搭建、运行与初始化指南"
+      "description": "Project-specific local setup, execution and health verification."
     }
   ]
 }

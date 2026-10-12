@@ -1,0 +1,28 @@
+{
+  "sources": [
+    {
+      "title": "Google Java Style Guide",
+      "url": "https://google.github.io/styleguide/javaguide.html"
+    }
+  ],
+  "format": {
+    "indent_spaces": 2,
+    "line_width": 100
+  },
+  "naming": {
+    "classes_interfaces": "UpperCamelCase",
+    "methods_variables": "lowerCamelCase",
+    "constants": "UPPER_SNAKE_CASE"
+  },
+  "documentation": [
+    "Use Javadoc for public classes and public/protected members; include relevant @param, @return and @throws contracts.",
+    "Explain nullability, state changes and thread safety where relevant.",
+    "Omit redundant documentation for obvious accessors or accurately documented overrides."
+  ],
+  "rules": [
+    "Avoid wildcard imports; use one top-level class per source file.",
+    "Use braces for conditional and loop bodies, including single statements.",
+    "Handle caught exceptions or explain intentional ignoring; preserve useful causes.",
+    "Use @Override where applicable and try-with-resources for closeable resources."
+  ]
+}

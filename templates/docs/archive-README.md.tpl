@@ -1,43 +1,50 @@
-# 版本与阶段归档库 (archive/)
+# Release and Milestone Archive
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 归档原则
+Archive C/T cards from released batches or closed milestones. Freeze card contents and states; current indexes continue to route historical IDs and dependencies. Current designs remain under `docs/devel/design/`.
 
-1. **版本封箱**：每当项目完成既定里程碑打出 Git Tag（如 `v0.1.0`）时，当前版本周期内产生的所有已闭环变更卡（`Cxxx.json`）与阶段任务卡（`Txx.json`）整体移入本目录；
-2. **只读保护**：归档后的文件处于永久冻结状态，严禁二次修改或作为活文档更新；
-3. **零断链中枢**：设计文档不需要改写单个卡片的相对链接，由各版本归档的 `index.json` 承担该版本内的索引与跳转职责。
+Archiving belongs to an authorized release/closure operation. Card completion does not authorize tagging, push or deployment.
 
----
+## 2. Index
 
-## 2. 发版归档 SOP 四步法
+| Entry or location | Contents | Maintenance |
+|---|---|---|
+| [Current change index](../devel/change/index.json) | Active/historical C cards and topic routes | Keep registrations; update `file` when archived |
+| [Current task index](../devel/task/index.json) | Active/historical T cards, milestones and dependencies | Keep registrations; update `file` when archived |
+| `<version>/change/` | This batch's `closed` C cards and optional index snapshot | Read-only after archiving |
+| `<version>/task/` | This batch's `completed` T cards and optional index snapshot | Read-only after archiving |
 
+### Archived Batches
+
+| Release or milestone | Path | Archived on | Scope |
+|---|---|---|---|
+
+Register only actual archived batches. Do not pre-create sample releases or cards.
+
+## 3. Archiving Rules
+
+- Select cards by their real `version` and release scope: C cards must be `closed`, T cards `completed`. Leave other batches and unfinished work active.
+- Complete required build/test/release acceptance, todo review and CHANGELOG/version alignment. Ordinary verification must return Exit 0 before archiving.
+- Moving a card must not rewrite its state, acceptance, commit or gate. Later corrections use current designs/new cards rather than changing historical evidence.
+- Retain IDs, topics and dependencies in current indexes; update actual routes only. Archived index snapshots never replace current routing.
+- Inspect every destination before moving. Resolve existing-name collisions without overwriting; archiving does not itself require design edits or renumbering.
+
+## 4. Archive a Batch
+
+All paths are project-root relative; replace `<version>` with the real batch.
+
+1. **Confirm scope and destinations:** list selected IDs and original paths, inspect destinations, then create `docs/archive/<version>/change/` and `task/`. Exclude other batches.
+2. **Move terminal cards:** move only selected cards, preserving bytes and checking counts. Never overwrite a destination.
+3. **Update current routes:** change `cards[Cxxx].file` or `tasks[Txx].file`, for example to `docs/archive/<version>/task/T01.json`. Preserve an existing `cards` task-index structure. Save optional index snapshots in the batch directory, then register the batch above.
+4. **Verify and freeze:** run ordinary verification, trace design topic to current index to archived card, and check ID/status/dependency reachability. Confirm card bytes and baseline text did not change.
+
+```bash
+scripts/adflow-verify --json
 ```
-【第 1 步】创建归档目录: docs/archive/<version>/{change,task}
-     ↓
-【第 2 步】物理迁移卡片: 将 closed 状态卡片移入归档目录
-     ↓
-【第 3 步】更新中枢总账: 更新 index.json 中的 file 映射路径
-     ↓
-【第 4 步】设计文档零修改: 现行基线保持纯净，0 断链
-```
 
----
+Future tasks may use an archived prerequisite's `completed` status through current routing. The tool checks existence, identity and status without reaccepting or rewriting archived cards. Post-archive Exit 0 does not replace pre-archive business acceptance.
 
-## 3. 归档版本目录索引
-
-```
-docs/archive/
-├── README.md               # 本索引文档
-└── v0.1.0/                 # 示例：初始发版归档
-    ├── change/             # v0.1.0 期间收口的全部变更卡
-    │   ├── index.json      # v0.1.0 变更总账快照
-    │   ├── C001.json
-    │   └── ...
-    └── task/               # Phase 1 阶段完成的全部任务卡
-        ├── index.json      # Phase 1 任务总账快照
-        ├── T01.json
-        └── ...
-```
+If interrupted, retain completed moves and repair remaining routes to actual paths rather than repeating all moves. Build outputs, runtime data and reports stay in `local/`; archiving does not authorize cleanup of `local/` or `_adflow_backup/`.

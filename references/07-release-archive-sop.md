@@ -19,7 +19,7 @@
 ```
 【第 1 步】创建归档目录: docs/archive/<version>/{change,task}
      ↓
-【第 2 步】物理迁移卡片: 将 closed 状态卡片移入归档目录
+【第 2 步】物理迁移卡片: 将 closed 变更卡 / completed 任务卡移入归档目录
      ↓
 【第 3 步】更新中枢总账: 更新 index.json 中的 file 映射路径
      ↓
@@ -53,6 +53,8 @@ mv docs/devel/change/C001.json docs/archive/<version>/change/
 }
 ```
 同时可在 `docs/archive/<version>/change/` 备份一份当时总账的静态快照 `index.json`。
+
+任务卡同样移动至 `docs/archive/<version>/task/` 并更新现行 `task/index.json` 的 `file`；两轨现行总账保留历史卡号登记，不因归档删除。后续任务据现行索引只读解析已完成依赖，核对文件存在、卡号及状态一致；归档总账仅作历史快照，归档卡不按当前业务规则重验或回写 `gate`。
 
 ### 第四步：设计文档零破坏（Zero Diff）
 由于设计文档只声明 `<!-- @topic: MarketService -->` 与指向 `change/index.json#MarketService` 的总账入口，**设计文档正文中的任何字符都不需要改动**！

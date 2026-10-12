@@ -1,0 +1,30 @@
+{
+  "sources": [
+    {
+      "title": "Google Python Style Guide",
+      "url": "https://google.github.io/styleguide/pyguide.html"
+    }
+  ],
+  "format": {
+    "indent_spaces": 4,
+    "line_width": 80
+  },
+  "naming": {
+    "functions_variables_modules": "snake_case",
+    "classes": "PascalCase",
+    "constants": "UPPER_SNAKE_CASE"
+  },
+  "documentation": [
+    "Use triple-double-quoted docstrings for public modules, classes and functions, and non-obvious private functions.",
+    "Start with a concise summary; add Args, Returns or Yields, and Raises sections when applicable.",
+    "Describe semantics and constraints rather than repeating type annotations; document public attributes where useful.",
+    "Test docstrings are optional when test names already explain intent; explain unusual fixtures or dependencies."
+  ],
+  "rules": [
+    "Group standard-library, third-party and local imports; avoid wildcard imports.",
+    "Annotate public interfaces and complex data structures; allow clear local inference.",
+    "Avoid mutable default arguments and implicit shared mutable state.",
+    "Catch specific exceptions; broad catches need deliberate boundary handling or re-raising.",
+    "Use context managers for resources and explicit boundary validation rather than assertions for user input."
+  ]
+}

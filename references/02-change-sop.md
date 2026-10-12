@@ -10,15 +10,15 @@
    - 发现问题时，若已在 `docs/devel/todo/now.md` 登记，读取该行信息，并在建卡后**立即将该行物理删除**；
 2. **分配全局卡号**：
    - 读取 `docs/devel/change/index.json`，获取已存在的最大卡号并 +1（如 `C027`）；
-   - 卡号全局递增，跨版本不重置。
+   - 卡号全局递增，跨版本不重置；最大号 +1 不是原子预占，分支名也不保证跨分支唯一。合入时结合 `ID_DUPLICATE` 和 Git 冲突检查，撞号先修正卡号及引用，不得覆盖另一事项。
 3. **实例化变更卡**：
-   - 从目标项目的 `docs/devel/change/template.json` 复制至 `docs/devel/change/Cxxx.json`（技能包源模板为 `templates/docs/change/change-card.json.tpl`，日常无需访问）；
-   - 填写 `branch: "fix/Cxxx-[desc]"`（指定多分支开发的执行分支标签）；
-   - 填写 `target.module`、`target.component`、`target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`！若缺少对应设计，必须遵循“文档先行”先补齐设计正文）；
+   - 从目标项目的 `docs/standards/change-template.json` 复制至 `docs/devel/change/Cxxx.json`（技能包源模板为 `templates/docs/standards/change-template.json.tpl`，日常无需访问）；
+   - 填写真实发布批次 `version` 与 `branch: "fix/Cxxx-[desc]"`（指定多分支开发的执行分支标签）；
+   - 填写 `target.module`、`target.component`、`target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-system-overview.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`！若缺少对应设计，必须遵循“文档先行”先补齐设计正文）；
    - 填写 `why`（现象、根因、危害）与 `changes`（`before / after / impact`）；
    - 填写 `precheck`（缺陷复现嗅探命令）与 `callback`（`before / after` 脚本）；
    - **事前定义验收契约**：在 `verification.checks` 预先写好各核验项的 `true_if` 和 `false_if`。此时 `evidence` 置空，`result: null`；
-4. **总账预占登记**：
+4. **总账登记**：
    - 在 `docs/devel/change/index.json` 的 `cards` 增加本卡条目（包含 `branch` 映射），状态记为 `"draft"` 或 `"pending"`。
 
 ---
@@ -55,6 +55,7 @@
    - 保持当前状态，不能为了通过校验伪造原话。
 5. **预检并落盘 `verified`**：
    - 执行 `scripts/adflow-verify --card Cxxx --to verified --record`，在内存检查该目标状态的结构前提；它仅回写本卡 `gate`，不修改状态、不替代人工确认；
+   - `--record` 仅忽略本次实际回写卡的旧 `gate.exit_code` 回执，按当前真实结构及全局问题重评；未选卡的旧回执仍参与检查，普通只读校验仍核对旧回执；
    - 另行核对测试和行为证据确实支持所有验收项；工具不证明业务正确；
    - Exit 0 后同步卡片与索引为 `verified`，运行普通 `scripts/adflow-verify` 复核。Exit 4 阻断；既有 Exit 6 列出事实并按人工决策补证，正式收口仍须取得 Exit 0；新增 `ADVISORY` 不增加硬门槛。
 

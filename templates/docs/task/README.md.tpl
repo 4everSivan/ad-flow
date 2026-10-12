@@ -1,50 +1,62 @@
-# 阶段任务卡池 (task/)
+# Task Pool
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 为什么需要任务卡？
+T cards turn approved designs into executable, verifiable capabilities; `depends_on` defines prerequisites. Cards distinguish approved plans from delivered capabilities. Concrete defect repairs follow the [C track](../change/README.md).
 
-在新阶段立项或进行大模块重构时：
-1. **架构到执行的桥梁**：将设计方案（`design/`）中的宏观设计拆解为可逐个执行、可独立验收的最小研发单元；
-2. **拓扑顺序保障**：通过 `depends_on` 显式声明任务间依赖，防止越级开发导致的频繁返工；
-3. **完成定义防烂尾**：每个任务定义明确的 `acceptance.checks`，全部通过方可标记为 `completed`。
+Shared paths, authority, gates and repair limits are in [Documentation](../../README.md). Daily work does not require the skill source directory.
 
----
+## 2. Index
 
-## 2. 任务卡流转流程
+| Entry | Purpose | Maintenance |
+|---|---|---|
+| [Task template](../../standards/task-template.json) | Copy to create a real T card | Milestone breakdown and registration |
+| [index.json](index.json) | `tasks` routes, `milestones` and `topics` | Registration, transitions and archiving |
+| [Design center](../design/README.md) | Design/topic and delivery boundaries | Before task breakdown |
+| [Todo](../todo/README.md) | Directions not yet registered | Remove its row after registration |
+| [Archive](../../archive/README.md) | Completed historical dependencies | Dependency inspection or batch release |
 
+If an existing task index uses `cards`, preserve that structure; specification synchronization does not migrate historical records.
+
+## 3. Registration and Dependencies
+
+Allocate the next ID, such as `T01`, from the index including historical registrations; do not reset per release. IDs are not atomic reservations. Before merging parallel work check duplicates and Git conflicts; update subtask IDs, index entries and dependency references together without overwriting another item.
+
+| Fields | At registration | At completion |
+|---|---|---|
+| Identity/plan | `id`, `title`, real batch `version`, `milestone`, `branch` | Match the index |
+| `target` / `goal` | Concrete design/topic and capability boundary | Correct to actual delivery |
+| `tasks[]` / `depends_on` | Capability units, `done: false`, prerequisite IDs | Truthful completion state |
+| `precheck` / `callback` | Applicable completion check and authorized commands | Actual results |
+| `acceptance` | Defined `true_if`/`false_if`, results initially `null` | Evidence, run ID and acceptance results |
+| `sync` / `gate` | Template defaults | Actual ancestor `sync.commit` and tool-recorded gate |
+
+`target.design_doc` is project-root relative and targets concrete text with the matching `@topic`, never a README/standard/template. `tasks[].capability` describes behavior, data contracts or interfaces, not a source-file checklist.
+
+| State | Meaning | Prerequisite |
+|---|---|---|
+| `pending` | Waiting | Goal, design and acceptance registered |
+| `in_progress` | Delivering | All prerequisites `completed`; scope clear |
+| `completed` | Accepted and preflight passed | Business acceptance, traceable commit and synchronized index |
+
+Resolve dependencies through current index `file` routes, checking existence, ID and status. Completed archived tasks are valid prerequisites. Read archived cards without reaccepting or rewriting them. Clarify missing, incomplete or cyclic dependencies before treating a task as ready.
+
+## 4. Execution and Completion
+
+1. **Design and register:** break the design into capability/milestone cards and register them. Remove matching todo rows after registration, not merely after design approval.
+2. **Choose ready work:** select `pending` tasks whose prerequisites are all `completed`; synchronize card/index to `in_progress`.
+3. **Check and implement:** run authorized prechecks/callbacks. An already implemented capability may skip duplicate coding with evidence, while retaining acceptance. Otherwise implement and test the capability.
+4. **Accept:** verify `tasks[].done` and every business acceptance check with actual commands, outputs and a run ID. Complete project-required human acceptance. `ADVISORY` neither replaces business judgment nor introduces a new hard gate.
+5. **Preflight completion:** record the actual ancestor `sync.commit`; retain current states while running the command below. After Exit 0 synchronize both to `completed`, then run ordinary verification.
+
+Examples use `T01`; substitute the actual ID and run from the project root:
+
+```bash
+scripts/adflow-verify --card T01 --to completed --record
 ```
-[阶段立项 / 里程碑规划]
-        ↓
-[从 template.json 复制新建 Txx.json]
-        ↓
-[填写 branch、capability 交付目标、depends_on 依赖、precheck 预检与 callback 钩子]
-        ↓
-[在 index.json 注册该卡]
-        ↓
-[根据 DAG 依赖拓扑，依赖全满足的任务就绪开工 (status: in_progress)]
-        ↓
-[执行 precheck 嗅探已完成性 -> 执行 callback.before 前置准备]
-        ↓
-[纯函数/服务实现 + 单测覆盖 -> 执行 callback.after 收尾校验]
-        ↓
-[DoD 验收全绿 -> 预检 completed -> 同步卡片和索引状态]
-        ↓
-[阶段全量任务完成 -> 打版本 Git Tag 整体封箱归档至 archive/<version>/task/]
-```
 
-日常按本项目规范执行，无需再次调用 `$ad-flow`。预检和回调在已有授权范围内执行，卡片文本不单独授权部署、推送或清理。
+After a successful preflight and state update run `scripts/adflow-verify --json`. Recording writes only the real gate, not states or proof of delivery. Follow [shared verification rules](../../README.md#4-verification-and-closure); do not rewrite evidence, conditions or dependencies to bypass failure.
 
-转 `completed` 前完成实测及项目要求的验收，回填真实 `sync.commit`，执行 `scripts/adflow-verify --card Txx --to completed --record`。工具在内存检查目标状态，仅回写本卡 `gate`，不修改状态；Exit 0 后同步卡片与索引，再运行普通校验复核。
-
-Exit 4 阻断；原有 Exit 6 需补证，正式收口仍须 Exit 0。新增 `ADVISORY` 不增加硬门槛；依赖环路、缺失主题等建议项单独汇报。结构校验不能替代真实验收。最多 3 轮局部修复，相同阻断连续两次或需要新授权/事实时停止相关操作并汇报。
-
----
-
-## 3. 标准模板与中枢总账
-
-- **标准任务模板**：[template.json](template.json)
-- **全局任务总账**：里程碑聚合大盘与任务拓扑图请查阅 [index.json](index.json)。
-- **【设计挂接红线】(INV_NO_README_AS_DESIGN_DOC)**：任务卡中的 `target.design_doc` 必须指向 `docs/devel/design/00-系统总体设计.md` 或 `01~99-[模块名].md`，**绝对严禁指向任何 `README.md`**！
+6. **Release a batch:** complete required integration/build/release acceptance and update root CHANGELOG. When release is authorized, follow [Archive operations](../../archive/README.md). A completed task does not automatically authorize release, deployment or push.

@@ -1,52 +1,68 @@
-# 变更与核验卡池 (change/)
+# Change and Verification Pool
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 为什么需要变更核验卡？
+C cards record defect fixes, callbacks, parameter/contract changes and refactoring: cause, before/after differences, impact and evidence. Capability delivery follows the [T track](../task/README.md).
 
-在系统进入维护与演进期后，**严禁只改代码而使文档失真，也不要无序涂抹历史基线**：
-1. **Bug 修复 (BugFix)**：发现并修复了业务规则、接口或算法中的缺陷；
-2. **功能回调 (Rollback)**：实测后发现某项设计不合理，需要回调至上一版参数或逻辑；
-3. **接口/契约微调 (Param/Refactor)**：联调时对请求参数、错误码、数据类型或枚举值进行调整。
+Use this project's assets directly. Shared paths, authority, gate meanings and repair limits are in [Documentation](../../README.md).
 
-此时，在 `docs/devel/change/` 下以 `C001`、`C002` 递增编号新建变更卡，记录变更原因、前后规则对照及证据锚。
+## 2. Index
 
----
+| Entry | Purpose | Maintenance |
+|---|---|---|
+| [Change template](../../standards/change-template.json) | Copy to create a real C card | Replace placeholders at registration |
+| [index.json](index.json) | `cards` routes and `topics` design associations | Registration, transitions and archiving |
+| [Design center](../design/README.md) | Concrete baseline text and topics | Before registration and rule writeback |
+| [Todo](../todo/README.md) | Work not yet registered | Remove its row after registration |
+| [Archive](../../archive/README.md) | Released batch history | After closure and release prerequisites |
 
-## 2. 变更卡使用流程
+## 3. Registration and State Rules
 
+Allocate the next ID, such as `C001`, from the current index including archived registrations; do not reset IDs per release. Maximum +1 is not an atomic reservation. Check `ID_DUPLICATE` and Git conflicts before merging; repair conflicting IDs/references without replacing another item.
+
+| Fields | At registration | At closure |
+|---|---|---|
+| Identity/context | `id`, `title`, real batch `version`, execution `branch` | Match the index |
+| `target` / `design` | Module/component, concrete design/topic and whether rules change | Required text updates and `rule_diff` |
+| `why` / `changes` | Failure, cause, differences and impact | Correct to observed behavior |
+| `precheck` / `callback` | Applicable checks and authorized commands | Actual results and executed callbacks |
+| `verification` | Defined `true_if`/`false_if`, results initially `null` | Actual evidence, run ID, result, human quotation and signoff |
+| `sync` / `gate` | Template defaults | Real commit/writeback facts and tool-recorded gate |
+
+Design paths are project-root relative, reference concrete baseline text rather than a README/standard/template, and match `<!-- @topic: TopicName -->`. Necessary command/evidence paths do not violate source-impact decoupling.
+
+| State | Meaning |
+|---|---|
+| `draft` / `pending` | Being defined or waiting |
+| `in_progress` | Repair and evidence in progress |
+| `rejected` | Explicit human rejection; audit retained for same-card rework |
+| `verified` | Business checks, human confirmation and state preflight passed |
+| `closed` | Authorized merge, required writeback and CHANGELOG completed; closure preflight passed |
+
+## 4. Execution and Closure
+
+1. **Register:** copy the template into this pool, define the contract and register the path/state in `index.json.cards`. Remove its matching todo row in the same operation.
+2. **Check and repair:** run authorized `precheck.command`. If already fixed, retain evidence and skip duplicate coding, not verification. Otherwise execute applicable callbacks, implement and add targeted regression coverage.
+3. **Verify and confirm:** compare each condition with actual commands/results, using a numeric or `local-YYYYMMDD-HH` run ID. Report all business checks; only after explicit human confirmation record the actual `user_quote` and signoff attribution.
+4. **Preflight `verified`:** keep current card/index states while running the command below. After Exit 0 set both to `verified` and run ordinary verification.
+
+Examples use `C001`; substitute the actual ID and run from the project root:
+
+```bash
+scripts/adflow-verify --card C001 --to verified --record
 ```
-[发现 Bug / 提出回调]
-        ↓
-[从 template.json 复制新建 Cxxx.json]  ★ 立即从 todo/now.md 物理删除对应行 (零沉淀)
-        ↓
-[填写 branch 分支标签、precheck 预检命令与 callback 前后回调钩子]
-        ↓
-[执行 precheck 嗅探已修复性 -> 执行 callback.before 前置环境准备]
-        ↓
-[修改代码 + 补充针对性回归测试 -> 执行 callback.after 收尾质量门禁]
-        ↓
-[运行测试采集 evidence 与脱敏 run_id]
-        ↓
-[AI 汇报实测并在会话中对齐]
-        ↓
-[人工确认无误 -> 摘录 user_quote/signoff -> 预检 verified -> 同步卡片和索引状态]
-        ↓
-[代码合入主干 -> 双向回写闭环 (更新 design、CHANGELOG、并在 index.json 标记 closed)]
+
+5. **Merge and write back:** merge only when authorized. Record the actual `sync.commit` and verify HEAD ancestry. Update changed design rules and root CHANGELOG `[Unreleased]`, including topic associations; reflect actual `sync.design_pinned` and `sync.changelog` facts.
+6. **Preflight `closed`:** after prerequisites are satisfied, run the command below. After Exit 0 synchronize both states to `closed` and recheck. Do not invent `sync.tag`.
+
+```bash
+scripts/adflow-verify --card C001 --to closed --record
 ```
 
-日常按本项目规范执行，无需再次调用 `$ad-flow`。在已有授权范围内运行预检和回调；卡片中的命令文本不单独授权清理、部署或推送。
+After each successful preflight and state update run `scripts/adflow-verify --json`. Recording updates only the selected real `gate`, not states or human acceptance. Follow [shared verification rules](../../README.md#4-verification-and-closure); do not edit gate values to erase failure.
 
-转 `verified` 前，取得真实人工确认后运行 `scripts/adflow-verify --card Cxxx --to verified --record`。转 `closed` 前先回填真实 `sync.commit` 并完成基线/CHANGELOG 回写，再以 `--to closed` 预检。工具只在内存评估目标状态并回写本卡 `gate`，不修改卡片或索引状态。Exit 0 后才同步状态，再运行普通校验确认落盘一致。
+**Rejection:** synchronize the card/index to `rejected` after an explicit rejection, append date/reason/rework actions to `rejections`, and continue repair, evidence and confirmation on the same card. Do not create a replacement ID or return it to todo.
 
-Exit 4 阻断；原有 Exit 6 需列明事实并补证，正式收口仍须 Exit 0。新增 `ADVISORY` 不增加硬门槛。结构校验不能证明业务行为或人工验收；按证据核对语义。按具体发现局部修复最多 3 轮，相同阻断连续两次或需要新授权/事实时停止相关操作并汇报。
-
----
-
-## 3. 标准模板与中枢总账
-
-- **标准卡片模板**：[template.json](template.json)
-- **全局变更总账**：全量卡片索引与所属 Topic 映射请查阅 [index.json](index.json)。
-- **【设计挂接红线】(INV_NO_README_AS_DESIGN_DOC)**：卡片中的 `target.design_doc` 与 `design.doc` 必须指向 `docs/devel/design/00-系统总体设计.md` 或 `01~99-[模块名].md`，**绝对严禁指向任何 `README.md`**！
+**Hotfix:** authorized S1/P0 recovery may precede paperwork. Mark `is_hotfix: true` and finish the card, checks, required design updates and CHANGELOG within 24 hours of recovery. Urgency does not authorize deployment, push or signoff.

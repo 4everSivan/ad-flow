@@ -1,0 +1,29 @@
+{
+  "sources": [
+    {
+      "title": "Google C++ Style Guide",
+      "url": "https://google.github.io/styleguide/cppguide.html"
+    }
+  ],
+  "format": {
+    "indent_spaces": 2,
+    "line_width": 80,
+    "configuration": "existing clang-format settings and project C++ standard take priority"
+  },
+  "naming": {
+    "types_functions": "UpperCamelCase",
+    "variables": "snake_case",
+    "class_data_members": "snake_case_"
+  },
+  "documentation": [
+    "Document caller contracts beside declarations and implementation reasoning beside definitions.",
+    "State pointer nullability, ownership, lifetime, output mutation and synchronization requirements.",
+    "Avoid duplicating accurate header documentation in implementation files."
+  ],
+  "rules": [
+    "Make headers self-contained with include guards; include declarations directly.",
+    "Use RAII; prefer unique_ptr and use shared_ptr only for genuine shared ownership.",
+    "Prefer explicit C++ casts over C-style casts.",
+    "Avoid using namespace in headers and uncontrolled mutable global state."
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "sources": [
+    {
+      "title": "Google Shell Style Guide",
+      "url": "https://google.github.io/styleguide/shellguide.html",
+      "note": "Upstream targets Bash. Bash-only syntax must not be introduced into POSIX sh scripts."
+    }
+  ],
+  "format": {
+    "indent_spaces": 2,
+    "line_width": 80
+  },
+  "naming": {
+    "functions_variables": "lower_snake_case",
+    "constants_environment": "UPPER_SNAKE_CASE"
+  },
+  "documentation": [
+    "Add a file-header purpose comment after the shebang.",
+    "Document library functions and non-obvious functions: purpose, Globals, Arguments, Outputs and Returns as applicable.",
+    "Describe exit-status meanings and destructive effects; explain surprising quoting or portability requirements."
+  ],
+  "rules": [
+    "Declare the actual shell dialect; use local only when supported.",
+    "Quote expansions and forward arguments with \"$@\"; prefer $(...) over backticks.",
+    "Use Bash arrays or POSIX positional arguments for lists; avoid eval and command-string assembly.",
+    "Check important command/pipeline failures, write errors to stderr and use the correct ShellCheck dialect."
+  ]
+}

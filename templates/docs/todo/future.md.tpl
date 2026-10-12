@@ -1,17 +1,13 @@
-# 远期特性与技术债池 (future.md)
+# Future Capabilities and Technical Debt
 
-> **性质**: 跨版本远期池 ｜ **发版约定**: 每次版本发版前必须联合评审本表事项（立项/推迟/废弃）
+> **role**: Future work buffer | **release review**: Register, defer or discard items before each release.
 
----
+## 1. Future Capabilities
 
-## 1. 远期特性规划 (Future Features)
-
-| 规划编号 | 业务领域 | 方向概述 | 期望版本 | 状态 |
+| ID | Domain | Direction | Desired release | Status |
 |---|---|---|---|---|
 
----
+## 2. Technical Debt
 
-## 2. 技术债务排查 (Technical Debts)
-
-| 债务编号 | 模块 | 债务风险说明 | 发现日期 | 建议处置方案 |
+| ID | Module | Risk or maintenance cost | Discovered | Proposed action |
 |---|---|---|---|---|

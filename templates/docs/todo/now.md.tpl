@@ -1,17 +1,13 @@
-# 当前版本待办池 (now.md)
+# Current Todo
 
-> **性质**: 临时缓冲池 ｜ **纪律**: 落地建卡即物理删除该行，零沉淀
+> **role**: Temporary buffer | **rule**: Remove the row when its real card is registered.
 
----
+## 1. Bugs and Regressions
 
-## 1. 缺陷与回归待办 (Bugs)
-
-| 登记编号 | 模块 | 现象简述 | 发现日期 | 处理去向 (建卡即删) |
+| ID | Module | Symptom | Discovered | Destination (remove after registration) |
 |---|---|---|---|---|
 
----
+## 2. Experience and Parameter Adjustments
 
-## 2. 体验与参数微调 (Enhancements)
-
-| 登记编号 | 模块 | 微调诉求 | 登记日期 | 处理去向 (建卡即删) |
+| ID | Module | Requested adjustment | Registered | Destination (remove after registration) |
 |---|---|---|---|---|

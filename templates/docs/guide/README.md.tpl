@@ -1,71 +1,42 @@
-# 使用与部署指南 (guide/)
+# Usage and Deployment Guides
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 简介
+Explain usage, setup, integration, deployment and troubleshooting through prerequisites, commands and observable results. Architecture belongs in [Design](../devel/design/README.md); cache maintenance follows [Environment](../devel/env/README.md).
 
-`docs/guide/` 汇集了面向终端运行、本地调试与部署运维的实用操作手册。与面向架构设计与核心研发的 `docs/devel/` 分离，本目录聚焦于**系统依赖准备、配置参数声明、前后端启动、健康检查与环境安全清理**。
+Guides describe methods; `local/deploy_report.md` records an actual operation. Current runtime verifies whether the report remains valid. Isolated unit tests require neither deployment nor a report.
 
----
+## 2. Index
 
-## 2. 索引
-
-### 2.1 指南清单对照表
-
-| 文档名称 | 文档ID | 核心内容 | 目标环境 | 目标产物 |
+| Document | ID | Purpose | Applicable environment | Actual artifact |
 |---|---|---|---|---|
-| [01-本地部署指南.md](01-本地部署指南.md) | **GUIDE-DEPLOY** | 本地环境准备、环境变量配置、服务启停、健康检查 | 单机开发 / 联调 | `local/deploy_report.md` |
+| [Local deployment](01-local-deployment.md) | GUIDE-DEPLOY | Local setup, usage/service lifecycle and health checks | Actual platform and dependencies | `local/deploy_report.md` after real deployment; non-service projects describe actual usage |
 
-> 📌 **机器访问入口**：AI Agent 可直接通过 [docs/guide/index.json](index.json) 获取各操作指南的分类、执行前置条件与预期产物。
+The [machine index](index.json) resolves `guides[].file` relative to this directory. Register actual guides and applicability; do not invent databases or services to fill a template.
 
----
+## 3. Writing Rules
 
-## 3. 规范
+Follow [shared metadata and paths](../README.md). Include applicable details without another approval/report template:
 
-为保证所有部署操作在人机协作下具备 100% 可重复执行性，本目录指南文档必须严格遵循以下编写契约：
+| Content | Required information | Evidence |
+|---|---|---|
+| Prerequisites | Platforms, versions, dependencies, working directory and configuration | Source, project scripts and actual environment |
+| Commands | Exact parameters, sources, sequence and scope | Distinguish examples from real operations; explain substitutions |
+| Success | Exits, expected output, health or observable behavior | Label expectations; attribute actual output to a run |
+| Failure handling | Known errors, diagnosis, stop/recovery procedure | Actual supported capabilities, not an invented rollback |
 
-### 3.1 头部元数据规范
-所有指南 Markdown 文档必须在顶层一级标题正下方标注引用块元数据：
-- **`created`**（必填）：初次编写日期，格式 `YYYY-MM-DD`；
-- **`last-change`**（必填）：最近维护日期，格式 `YYYY-MM-DD`；
-- **`status`**（必填）：纯净状态枚举（如 `active`、`deprecated`）；
-- **`version`**（可选）：标注本指南所适配的最低或对应工程版本号（如 `version: >=v0.1.0`）。
+- Exclude secrets and sensitive addresses; explain injection while retaining reproducible non-sensitive parameters.
+- Keep generated outputs/logs/data under `local/`; do not overwrite data or delete evidence to retry.
+- Commands grant no authority. Continue existing authorized work; deployment, push and cleanup retain their actual scope boundaries.
+- Update routing/applicability when a guide changes and label untested platforms/steps explicitly.
 
-```markdown
-# 01 - 本地部署指南
+## 4. Execution and Runtime Evidence
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active ｜ **version**: >=v0.1.0
-```
+1. Read the relevant guide. For existing instances, locate them through the deployment report and verify processes, listeners, configuration and data paths; investigate absent/stale reports.
+2. Run applicable authorized commands in sequence and retain real failures. Pause instance changes dependent on unknown parameters while continuing independent checks.
+3. After actual deployment/restart/configuration changes, record time, version/commit, launch command, process management, ports/data paths, logs and health results in `local/deploy_report.md`. Redact secrets and mark inapplicable fields.
+4. Verify runtime and update the guide/index or C/T evidence when needed. A report describes one operation and does not replace later runtime checks or human acceptance.
 
-### 3.2 指南编写四要素红线
-1. **命令精确可复制**：每个操作步骤必须给出明确、可直接在终端执行的代码块，严禁口头模糊指导（例如禁止出现“自行安装合适版本的 Node”等模糊表述）；
-2. **明确预期输出**：每条关键命令必须附带执行成功时的标准终端输出或日志特征；
-3. **避坑与排错指南**：必须包含常见端口占用、权限不足、配置丢失等典型错误的自检与修复方案；
-4. **安全卸载与清理**：必须提供对应的服务停止、资源释放与临时文件安全清理方案。
-
----
-
-## 4. 构建打包与部署实机真理
-
-本工程实行 **“施工方案与物理实况分离，构建与运行双重隔离”** 的治理哲学：
-
-### 4.1 构建打包与产物隔离
-- 项目所有打包编译产物（前端 bundle `local/dist/`、二进制可执行文件 `local/bin/`、Python 构件包及编译缓存 `local/build/`）**一律强制输出至 `local/` 目录**；
-- 严禁在项目根目录下生成未经隔离的构建物，确保源码树纯净度 100%。
-
-### 4.2 蓝图方案 vs 实机真理
-- `docs/guide/` 下的部署文档是**“设计施工标准”**；
-- 真实部署执行后在 `local/` 目录下产出的 `local/deploy_report.md` 是**“物理运行实况”**。
-
-### 4.3 报告产出与测试依据流
-1. **部署执行与报告生成**：
-   - 开发者或 AI Agent 按照部署指南完成系统启动后，必须在 `local/` 目录下生成 `local/deploy_report.md`；
-   - 报告必须真实记录本次实际绑定的端口、实际使用的数据库路径、实时进程 PID、日志路径以及健康检查端点。
-2. **涉及已有实例时核对运行事实**：
-   - 优先参考 `local/deploy_report.md` 定位实例，并核对当前进程、监听端口和配置；
-   - 报告缺失、过期或与现场矛盾时，结合部署指南排查并刷新报告；参数不明时暂停实例变更。纯单元测试不依赖部署报告。
-3. **`local/` 禁删保护**：
-   - `local/` 目录存放本地打包构建产物、测试数据与实测报告，仅供人类开发者在终端手动清理；
-   - **AI Agent 严禁擅自删除或重置 `local/` 目录**。
+AI must not delete/reset existing `local/`. Service shutdown, data reset and cache maintenance retain their distinct authorization and [environment rules](../devel/env/README.md).

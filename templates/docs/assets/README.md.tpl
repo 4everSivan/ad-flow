@@ -1,55 +1,43 @@
-# 文档与工程资源库 (assets/)
+# Documentation Assets
 
-> **created**: YYYY-MM-DD ｜ **last-change**: YYYY-MM-DD ｜ **status**: active
+> **created**: YYYY-MM-DD | **last-change**: YYYY-MM-DD | **status**: active
 
----
+## 1. Purpose
 
-## 1. 简介
+Store architecture diagrams, flows, prototypes, screenshots and reusable demonstration media referenced by documentation. Maintain media together with its explanation and reachable links.
 
-`docs/assets/` 是工程全景中所有文档引用资源、系统架构设计图、原型设计稿以及 App 演示截图的**统一专用存储目录**。本目录杜绝了资源散落在根目录、源码目录或各级文档子目录中的碎片化污染，确保工程资产高内聚、易维护。
+Runtime-loaded assets retain their actual build-contract locations. Build outputs, temporary debugging captures, raw logs and one-run reports belong in the project's `local/` output area.
 
----
+## 2. Index
 
-## 2. 索引
-
-### 2.1 资源分类与规划
-
-| 资源类别 | 推荐子目录 / 前缀 | 说明 | 常见文件格式 |
+| Category | Example prefix | Contents | Preferred formats |
 |---|---|---|---|
-| **架构与流程图** | `arch-` / `flow-` | 模块依赖图、时序图、数据流图、网络拓扑图 | `.svg`, `.png` |
-| **App 与 UI 截图** | `ui-` / `app-` | 前端界面截屏、客户端运行效果图、原型设计稿 | `.png`, `.webp`, `.jpg` |
-| **品牌与图标** | `logo-` / `icon-` | 项目 Logo、系统徽标、模块专用图标 | `.svg`, `.png` |
-| **测试与演示素材** | `demo-` / `evidence-` | 关键核验录屏动图、演示快照、基准测试对比图 | `.gif`, `.png`, `.webp` |
+| Architecture/flow | `arch-` / `flow-` | Relationships, sequences, data flow and topology | SVG, PNG |
+| Prototype/interface | `ui-` / `app-` | Interaction designs and observed interfaces | PNG, WebP, JPG |
+| Documentation branding | `logo-` / `icon-` | Documentation identifiers and icons | SVG, PNG |
+| Reusable demos/evidence | `demo-` / `evidence-` | Selected explanatory or inspectable media | PNG, WebP, GIF |
 
----
+These categories aid naming; they do not require pre-created directories or another machine index.
 
-## 3. 规范
+## 3. Asset Rules
 
-为保证资源库清晰整洁且不导致 Git 仓库恶性膨胀，所有存放于本目录的资产必须遵守以下规约：
+- Use descriptive lowercase hyphenated names, such as `arch-system-overview.svg` or `ui-login-error.png`, rather than generic screenshot names.
+- Prefer vectors for diagrams/icons; compress raster images and normally keep each image below 2 MB. Use project-approved external storage for large videos or design source files.
+- Check source and applicability, redact secrets/personal data and label mocks/prototypes/illustrations. They cannot substitute for observed runtime evidence.
+- Resolve Markdown media relative to the current document and provide meaningful alternative text. Update captions when media or behavior changes.
 
-### 3.1 命名规范
-1. **语义化小写连字符**：文件名统一采用小写字母并以连字符（`-`）分隔，如 `arch-overview.svg`、`ui-dashboard-dark.png`；
-2. **模块与场景前缀**：建议包含所属功能模块或文档类型前缀（如 `matching-flow.png`、`market-kline-sample.png`）；
-3. **禁止无意义默认命名**：严禁出现 `image.png`、`截屏2026-09-23.png`、`未命名.jpg` 等混乱命名。
-
-### 3.2 格式与体积红线
-1. **矢量图优先**：架构图、时序图、图标等优先采用矢量格式（`.svg`），保证清晰度并节省存储；
-2. **轻量化压缩**：位图格式（`.png`、`.webp`、`.jpg`）在入库前必须进行无损或高保真压缩，**单张图片体积原则上不得超过 2MB**；
-3. **严禁大型二进制散落**：严禁将原始视频文件（如 `.mp4`）或超大 PSD/Sketch 设计工程源文件直接提交至本目录（设计源文件应走云端设计协作工具链接管理）。
-
-### 3.3 文档引用格式契约
-在各级 Markdown 文档中引用资源时，统一采用相对路径或根路径引用：
+Syntax examples only; replace with actual assets:
 
 ```markdown
-<!-- 推荐相对路径引用方式 -->
-![系统架构概览](assets/arch-overview.svg)
-<!-- 在子目录文档（如 docs/devel/design/）中引用 -->
-![撮合流程图](../../assets/matching-flow.png)
+<!-- In docs/README.md -->
+![System modules](assets/arch-system-overview.svg)
+
+<!-- In docs/devel/design/01-module.md -->
+![Module call flow](../../assets/flow-module-call.svg)
 ```
 
----
+## 4. Updates and Cleanup
 
-## 4. 资源生命周期与清理
-
-1. **废弃资源清理**：当设计基线或文档内容重构导致某些图片不再被任何 Markdown 文件引用时，应在发版封箱前及时清理孤立废弃资产，防止仓库无意义膨胀；
-2. **禁止提交临时截图**：开发调试过程中的临时报错截图、单次会话临时证据严禁提交入库，只允许通过终端日志文本形式沉淀。
+1. Identify the consuming document, use a semantic name and add a real reference. Keep the actual drawing source or source link when reproduction is needed.
+2. Before moving/replacing assets, inspect current and historical references. Preserve media still referenced by frozen archives; do not rewrite archived cards to hide broken links.
+3. Before release, confirm whether unreferenced media is obsolete. Delete only within authorized scope; temporary/runtime evidence follows the protection rules of its output location.

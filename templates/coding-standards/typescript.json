@@ -1,0 +1,29 @@
+{
+  "sources": [
+    {
+      "title": "Google TypeScript Style Guide",
+      "url": "https://google.github.io/styleguide/tsguide.html"
+    }
+  ],
+  "format": {
+    "indent_spaces": 2,
+    "line_width": 80,
+    "configuration": "existing tsconfig and formatter settings take priority"
+  },
+  "naming": {
+    "functions_variables": "lowerCamelCase",
+    "types_classes": "UpperCamelCase"
+  },
+  "documentation": [
+    "Use JSDoc for public APIs and ordinary line comments for implementation details.",
+    "Document semantics, optional values, effects and rejected errors; do not duplicate TypeScript types in JSDoc.",
+    "Keep comments on the declaration callers use, including interface contracts."
+  ],
+  "rules": [
+    "Prefer const and precise types; use unknown with narrowing for unknown input.",
+    "Explain necessary any usage and avoid unsupported type or non-null assertions.",
+    "Specify public contracts and allow obvious local inference.",
+    "Validate external input at runtime; static types alone do not validate JSON.",
+    "Respect project module conventions; do not use namespace to imitate modules."
+  ]
+}
