@@ -339,8 +339,19 @@ def check_card(ctx, card, cid, rel, track):
                      "卡片声称 gate.exit_code==0，但实测存在硬违规（伪造/漏跑门禁）")
 
 
+def check_legacy_templates(ctx):
+    idx = ctx.load_json("docs/index.json") or {}
+    if "standards" in idx:
+        for legacy in (LEGACY_FILES["docs/standards/change-template.json"],
+                       LEGACY_FILES["docs/standards/task-template.json"]):
+            if ctx.exists(legacy):
+                ctx.hard("LEGACY_TEMPLATE_EXISTS", None, legacy,
+                         "已启用 standards 规范，旧模板 %s 必须删除" % legacy)
+
+
 # ---- 全局检查 ----
 def check_globals(ctx):
+    check_legacy_templates(ctx)
     # P11 零沉淀：todo 行内含已存在卡号
     for todo in ("docs/devel/todo/now.md", "docs/devel/todo/future.md"):
         txt = ctx.read_text(todo)
@@ -586,6 +597,7 @@ def run_init(ctx):
             ctx.load_json(rel)
     if ctx.exists(PLACEHOLDER):
         ctx.hard("PLACEHOLDER_DESIGN_EXISTS", None, PLACEHOLDER, "存在禁用占位设计文档")
+    check_legacy_templates(ctx)
     check_version(ctx, required=True)
 
 

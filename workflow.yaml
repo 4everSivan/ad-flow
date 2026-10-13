@@ -355,6 +355,8 @@ pipeline:
         - "docs/archive/README.md"
       forbidden_files_not_exist:
         - "docs/devel/design/01-系统设计方案.md"
+        - "docs/devel/change/template.json"
+        - "docs/devel/task/template.json"
       backup_security_check:
         rule: "_adflow_backup/ must remain intact if created; AI must NEVER delete it. Verify backup_gitignore coverage separately from adflow-verify and report already tracked backup paths"
       local_security_check:
@@ -418,7 +420,10 @@ upgrade_pipeline:
           template: "scripts/adflow_verify.py"
         - dest: "scripts/adflow-verify"
           template: "scripts/adflow-verify"
-      note: "Snapshot before relocating standards; preserve coding bytes and custom C/T template fields, stop on differing old/canonical copies. Refresh managed template defaults and verifier copies; merge docs/index.json.standards. Retain established guide names/content and point refreshed links/indexes to actual files. Retire legacy template copies only after canonical validation/reference updates and when no consumer depends on them. Never rewrite business cards, gate blocks, custom rules or human quotes"
+      retire_legacy:
+        - "docs/devel/change/template.json"
+        - "docs/devel/task/template.json"
+      note: "Snapshot before relocating standards; preserve coding bytes and custom C/T template fields, stop on differing old/canonical copies. Refresh managed template defaults and verifier copies; merge docs/index.json.standards. Retain established guide names/content and point refreshed links/indexes to actual files. Retire and physically delete legacy template copies (docs/devel/change/template.json and docs/devel/task/template.json) after moving to docs/standards/. Never rewrite business cards, gate blocks, custom rules or human quotes"
     - step: "U5_SYNC_DOCS_INDEX_VERSION"
       action: "PUBLISH_GOVERNANCE_VERSION"
       canonical_tag: "<!-- @ad-flow: initialized v1.3.0 -->"

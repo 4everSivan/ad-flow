@@ -514,6 +514,8 @@ class VerifyTests(unittest.TestCase):
                               "task_template": "docs/standards/task-template.json",
                               "change_template": "docs/standards/change-template.json"}
         self.write_json("docs/index.json", index)
+        for legacy in ("docs/devel/task/template.json", "docs/devel/change/template.json"):
+            (self.root / legacy).unlink()
         self.run_tool("--mode", "init")
 
     def test_init_standards_routes_and_json_are_validated(self):
@@ -554,6 +556,18 @@ class VerifyTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(json.loads(result.stdout)["target"], str(self.root.resolve()))
 
+    def test_legacy_template_forbidden_when_standards_enabled(self):
+        self.install_skeleton()
+        for legacy in ("docs/devel/change/template.json", "docs/devel/task/template.json"):
+            with self.subTest(legacy=legacy):
+                self.write(legacy, "{}")
+                result = self.run_tool("--mode", "init", expect=4)
+                self.assertIn("LEGACY_TEMPLATE_EXISTS", {f["code"] for f in result["findings"]})
+                result = self.run_tool(expect=4)
+                self.assertIn("LEGACY_TEMPLATE_EXISTS", {f["code"] for f in result["findings"]})
+                (self.root / legacy).unlink()
+
 
 if __name__ == "__main__":
     unittest.main()
+
