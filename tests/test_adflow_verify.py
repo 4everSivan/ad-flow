@@ -112,7 +112,7 @@ class VerifyTests(unittest.TestCase):
         for dest, source in sources.items():
             self.write(dest, (REPO / "templates" / source).read_text(encoding="utf-8"))
         self.write("AGENTS.md", (self.root / "AGENTS.md").read_text(encoding="utf-8") +
-                   "\n<!-- @ad-flow: initialized v1.2.0 -->")
+                   "\n<!-- @ad-flow: initialized v1.3.0 -->")
         for name in ("adflow_verify.py", "adflow-verify"):
             self.write("scripts/" + name, (REPO / "scripts" / name).read_text(encoding="utf-8"))
 

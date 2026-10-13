@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-13
+
 ### Added
 
 - 新增 JSON 代码编写规范及 Python、Go、JavaScript、TypeScript、Java、Shell、C++、Rust 语言模板，保留 Google 与 Rust 官方来源。初始化可多选或只用通用规则，生成 `docs/standards/coding.json` 并关联 README、AGENTS 与顶层索引。
@@ -70,6 +72,7 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/4everSivan/ad-flow/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/4everSivan/ad-flow/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/4everSivan/ad-flow/releases/tag/v1.1.0
