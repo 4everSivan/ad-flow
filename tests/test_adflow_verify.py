@@ -112,7 +112,7 @@ class VerifyTests(unittest.TestCase):
         for dest, source in sources.items():
             self.write(dest, (REPO / "templates" / source).read_text(encoding="utf-8"))
         self.write("AGENTS.md", (self.root / "AGENTS.md").read_text(encoding="utf-8") +
-                   "\n<!-- @ad-flow: initialized v1.3.0 -->")
+                   "\n<!-- @ad-flow: initialized v1.4.0 -->")
         for name in ("adflow_verify.py", "adflow-verify"):
             self.write("scripts/" + name, (REPO / "scripts" / name).read_text(encoding="utf-8"))
 
@@ -363,6 +363,51 @@ class VerifyTests(unittest.TestCase):
         result = self.run_tool("--record", expect=4)
         self.assertIn("ID_DUPLICATE", {f["code"] for f in result["findings"]})
         self.assertEqual(before, self.files())
+
+    def test_archived_non_terminal_card_blocks(self):
+        for track, cid, status in (("change", "C001", "in_progress"),
+                                   ("change", "C001", "verified"),
+                                   ("change", "C001", "rejected"),
+                                   ("task", "T01", "in_progress"),
+                                   ("task", "T01", "pending")):
+            with self.subTest(track=track, status=status):
+                card = self.card(cid, track, status)
+                rel = "docs/archive/v0.1.0/%s/%s.json" % (track, cid)
+                self.write_json(rel, card)
+                index = self.read_json("docs/devel/%s/index.json" % track)
+                key = "tasks" if track == "task" and "tasks" in index else "cards"
+                index[key][cid] = {"status": status, "file": rel}
+                self.write_json("docs/devel/%s/index.json" % track, index)
+                (self.root / ("docs/devel/%s/%s.json" % (track, cid))).unlink()
+                result = self.run_tool(expect=4)
+                self.assertIn("ARCHIVE_NON_TERMINAL", {f["code"] for f in result["findings"]})
+
+    def test_archived_terminal_cards_do_not_block(self):
+        for track, cid, status in (("change", "C001", "closed"),
+                                   ("task", "T01", "completed")):
+            card = self.card(cid, track, status)
+            rel = "docs/archive/v0.1.0/%s/%s.json" % (track, cid)
+            self.write_json(rel, card)
+            index = self.read_json("docs/devel/%s/index.json" % track)
+            key = "tasks" if track == "task" and "tasks" in index else "cards"
+            index[key][cid] = {"status": status, "file": rel}
+            self.write_json("docs/devel/%s/index.json" % track, index)
+            (self.root / ("docs/devel/%s/%s.json" % (track, cid))).unlink()
+        self.run_tool()
+
+    def test_milestone_drift_is_nonblocking_advisory(self):
+        self.card("T01", "task", "in_progress")
+        index = self.read_json("docs/devel/task/index.json")
+        index["cards"]["T01"]["milestone"] = "M1-首发"
+        index["milestones"] = {"M1-首发": {"status": "completed"}}
+        self.write_json("docs/devel/task/index.json", index)
+        result = self.run_tool()
+        self.assertIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
+        # list 型里程碑没有状态标记，不产生该诊断。
+        index["milestones"] = {"M1-首发": ["T01"]}
+        self.write_json("docs/devel/task/index.json", index)
+        result = self.run_tool()
+        self.assertNotIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
 
     def test_batch_record_recovers_after_global_failure_is_fixed(self):
         self.closed_cards("C001", "C002")

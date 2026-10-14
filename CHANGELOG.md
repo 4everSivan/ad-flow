@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-14
+
+### Added
+
+- 新增发版与归档门禁（INV_RELEASE_ARCHIVE_GATE）：打 Tag、发布或移卡入归档前，本发布批次 C 卡须全部 `closed`、T 卡须全部 `completed` 且普通校验 Exit 0；严禁非终态卡进入归档区，明确「收口 → 校验 Exit 0 → 归档移动 + 总账更新 → 复核校验 Exit 0 → 打 Tag / CHANGELOG 定稿」顺序；Exit 4 期间禁止发布、归档与主干合入。规则写入 AGENTS.md 模板、归档 README 与发版归档 SOP。
+- 校验器新增 `ARCHIVE_NON_TERMINAL` 确定性违规（Exit 4）：归档区卡片状态非 `closed`/`completed` 即阻断，补齐归档前置自 v1.1.0 起仅存在于文本的门禁覆盖。该提升为记录在案的适用性/迁移决策：存量项目升级后，历史冻结非终态卡会暴露为 Exit 4，属预期暴露而非升级引入的故障；按归档 README「历史批次账实修复」流程人工处置，升级只报告不改写。
+- 校验器新增 `MILESTONE_STATUS_DRIFT` 旁路诊断（ADVISORY）：里程碑标记 `completed` 而成员任务未完成时报告，不影响退出码；list 型里程碑结构（无状态字段）自动跳过。
+- 新增归档批次账实不符修复 SOP（异常流手册第四节 + 归档 README「历史批次账实修复」，随升级分发到已初始化项目）：盘点暴露 → 人工三口径处置（补收加豁免标注 / 回迁活跃区 / 废弃注明理由，严禁伪造证据字段）→ 派生矛盾修正 → 勘误登记 → 治理修复建卡 → 复核恢复 Exit 0。
+
+### Changed
+
+- 修正发版归档 SOP 与归档 README 中「归档前普通校验 Exit 0」的过度承诺：非终态活跃卡没有状态前置要求，Exit 0 不证明批次全部终态；归档前须逐卡核定，归档后复核须再次 Exit 0。
+- AGENTS.md 模板补充发布、归档与主干合入的阻断条件与操作顺序；推送、部署仍需独立授权，发版紧迫性不扩大权限。
+
+### Fixed
+
+- 修复发布未受门禁约束即移动卡片、导致非终态卡冻结进归档区的账实不符漏洞：此类"卡片与总账一致但状态非终态、gate 与 sync.commit 全部缺失"的历史事故，此后在归档复核中即被 `ARCHIVE_NON_TERMINAL` 阻断，不再静默保持 Exit 0。
+
 ## [1.3.0] - 2026-10-13
 
 ### Added
@@ -73,7 +91,8 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/4everSivan/ad-flow/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/4everSivan/ad-flow/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/4everSivan/ad-flow/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/4everSivan/ad-flow/releases/tag/v1.1.0

@@ -59,3 +59,27 @@
 2. **基线落地队列 (Land Queue)**：
    - 实现可以完全并行，但合入主干并执行设计方案回写时采用串行收口；
    - 后合入的分支若遇到对应设计小节被修改，先 Rebase 主干，解决设计文本冲突后再更新 `change/index.json`。
+
+---
+
+## 四、归档批次账实不符修复 (Archive Ledger Remediation)
+
+**触发场景**：项目升级治理规范后，`scripts/adflow-verify` 将历史归档区中的非终态卡（`draft/pending/in_progress/verified/rejected`）暴露为 `ARCHIVE_NON_TERMINAL`（Exit 4）。典型成因是早期发布时未执行归档前置检查，卡片以未收口状态被冻结进归档区（卡片与总账一致，但与"该版本已发版"的事实矛盾）。这些发现是预期暴露，不是升级引入的新故障。
+
+**处置原则**：升级与校验器只负责暴露问题，**改写任何归档卡状态都必须由人工治理口径驱动，AI 不得代办**。归档卡不被校验器重验 `gate` 与证据字段，补收的合法性完全来自人工口径记录——豁免标注与勘误登记是仅有的审计线索，缺一不可。
+
+**六步流程**：
+
+1. **升级并盘点**：在目标项目调用 `$ad-flow --upgrade` 同步新版校验器与红线；运行 `scripts/adflow-verify --json` 列出全部 `ARCHIVE_NON_TERMINAL` 发现，逐卡对照 Git Tag、CHANGELOG、git 历史与运行事实，核实该卡工作是否已随版本实际交付；
+2. **人工定口径**（每张卡三选一，由人类决策）：
+
+   | 口径 | 适用 | 操作 |
+   |---|---|---|
+   | A · 补收 | 已随版本实际交付且事实可佐证 | 状态改 `closed`（C 卡）/ `completed`（T 卡）；卡内追加豁免标注，如 `"closure": {"date": "YYYY-MM-DD", "basis": "人工治理决策：<版本> 历史补收，佐证为 tag/CHANGELOG/运行事实", "ref": "<勘误记录或治理卡号>"}`；**严禁伪造** `user_quote`/`signoff`/`gate`/`sync.commit`，缺失即留空、由豁免标注说明 |
+   | B · 回迁 | 未完成且事项仍有效 | 卡片移回 `docs/devel/{change,task}/`，总账 `file` 指回活跃路径，按正常双轨流程推进至终态（自然过门禁、留真实 `gate`）；旧格式 `run_id` 等字段到达终态前按现行契约补齐 |
+   | C · 废弃 | 未完成且事项已无意义 | 人工判定后置 `closed`，`closure.basis` 注明"人工废弃"及理由 |
+
+3. **修正派生矛盾**：总账状态字段与卡片同步（避免 `INDEX_STATUS_DRIFT`）；里程碑状态与成员卡对齐（如 M1 标记 completed 而成员 T 卡未完成的矛盾）；topics 登记核对；
+4. **勘误登记**：在 `docs/archive/<version>/` 建勘误记录（如 `ERRATUM.md`）并登记归档 README 批次清单：事故描述、涉及卡号清单、处置口径与日期、审计声明（该版本验收以 tag、CHANGELOG 与运行事实为准，卡片状态系人工口径修复，非当时真实收口）；
+5. **（推荐）治理修复建卡跟踪**：本次修复本身按正常变更流建一张 C 卡走完 `verified`→`closed`，人工定口径的会话原话即合规 `user_quote`；无合适设计挂接时遵循"文档先行"先补治理小节；
+6. **复核收口**：`scripts/adflow-verify` 恢复 Exit 0、`--mode init` 通过；CHANGELOG 记录本次治理修复。

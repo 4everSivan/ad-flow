@@ -12,7 +12,7 @@ description: >-
 
 ## 1. Purpose and Invocation
 
-Initialize or upgrade the ad-flow governance assets in `target_dir` (default: the current project). Current governance version: **1.3.0**.
+Initialize or upgrade the ad-flow governance assets in `target_dir` (default: the current project). Current governance version: **1.4.0**.
 
 - Accept `$ad-flow`, `/ad-flow`, `ad-flow`, `adflow`, and explicit initialization/upgrade requests, with an optional project path.
 - Keep one skill entrypoint. `init`, `new-card`, and `archive` are not skill subcommands.
@@ -49,9 +49,9 @@ Read the initialization tag in `AGENTS.md`/`Agent.md` and `adflow_version` in `d
 
 | Target state | Action |
 |---|---|
-| Version equals 1.3.0 | Check installed assets before exiting unchanged; resume incomplete initialization as described below. Explicit `--force`/`--upgrade` requests preserving synchronization |
+| Version equals 1.4.0 | Check installed assets before exiting unchanged; resume incomplete initialization as described below. Explicit `--force`/`--upgrade` requests preserving synchronization |
 | Older or unversioned ad-flow tag | Run the upgrade pipeline |
-| Version newer than 1.3.0 | Report the newer version; do not downgrade, including with `--force` |
+| Version newer than 1.4.0 | Report the newer version; do not downgrade, including with `--force` |
 | No ad-flow tag/version | Survey assets, then initialize |
 
 Matching version fields record the installed specification, not proof of completed initialization. Before a same-version exit, run the installed verifier in init and process modes without `--record` (use the skill's verifier read-only if the installed copy is missing). Also check Step 7's source-backed designs and registrations when applicable. If installation is incomplete, reuse its preserved sources and continue only the unfinished Steps 4–8 within the existing authorization; preserve business records and completed work, never repeat migration. Existing-card findings alone are not an incomplete installation and do not authorize rewriting cards. Report completion only after Step 8's mechanical and semantic checks.
@@ -102,7 +102,7 @@ For existing assets, apply the backup Git exclusion above before creating `_adfl
 
 ### Step 4: Install Project Rules
 
-Render `templates/AGENTS.md.tpl` to `${target_dir}/AGENTS.md` with `<!-- @ad-flow: initialized v1.3.0 -->`. Collect project-specific rules from every distinct existing agent file before replacing any of them, retaining their source attribution under `## 项目自定义规则 (Project Custom Rules)` (also recognize `## Project Custom Rules`). If an untagged original has no such section, retain its rules in full. For a previously managed file, preserve project-specific text outside identifiable managed sections; exclude old initialization markers and identifiable old managed rules from the merged content. Keep uncertain text and disclose conflicts instead of silently dropping rules. Preserve all original snapshots. Only then make distinct legacy `Agent.md`/`agents.md` aliases pointers to `AGENTS.md` without stale ad-flow tags; account for case-insensitive paths before writing.
+Render `templates/AGENTS.md.tpl` to `${target_dir}/AGENTS.md` with `<!-- @ad-flow: initialized v1.4.0 -->`. Collect project-specific rules from every distinct existing agent file before replacing any of them, retaining their source attribution under `## 项目自定义规则 (Project Custom Rules)` (also recognize `## Project Custom Rules`). If an untagged original has no such section, retain its rules in full. For a previously managed file, preserve project-specific text outside identifiable managed sections; exclude old initialization markers and identifiable old managed rules from the merged content. Keep uncertain text and disclose conflicts instead of silently dropping rules. Preserve all original snapshots. Only then make distinct legacy `Agent.md`/`agents.md` aliases pointers to `AGENTS.md` without stale ad-flow tags; account for case-insensitive paths before writing.
 
 ### Step 5: Install the 10 Directory READMEs
 
@@ -138,7 +138,7 @@ Upgrade runs only when this skill is invoked for the target; it is not a backgro
 2. Refresh managed `AGENTS.md` rules from the template and preserve project-specific rules from all distinct agent files as in Step 4, leaving their snapshots intact. Retain the previous initialization marker at this step; do not publish the new version yet.
 3. Refresh the 10 directory README guidelines while preserving project content, especially the design module matrix.
 4. Synchronize standards and verifier copies using Step 6. Move existing coding standards to `docs/standards/coding.json` byte-for-byte; preserve custom C/T template fields when relocating them. If old and canonical copies differ, report the preservation conflict before replacing either. Refresh managed template defaults in their established Chinese language; keep coding specifications in English. Do not translate existing business cards, custom rules or quotations. Retain project guide content and established guide filenames; update links/indexes to the actual files. Merge `docs/index.json.standards` without replacing other fields; remove an obsolete managed coding pointer only after its canonical target is verified. Retire and physically delete legacy template copies (`docs/devel/change/template.json`, `docs/devel/task/template.json`) after snapshot, reference updates and canonical validation, ensuring `docs/devel/{change,task}` contain only active cards, README, and index.json. Leave business cards and their `gate` blocks unchanged.
-5. After managed assets are synchronized, set the canonical tag and `docs/index.json.adflow_version` to `1.3.0`, preserving other index fields; re-read both to verify agreement. These writes are not atomic across files. If interrupted between them, report the version conflict read-only rather than guessing which version to trust.
-6. Run the Step 8 evaluation/repair loop **without `--record`**. Existing-card violations are reported, not automatically rewritten. Report the specification synchronization and any unresolved existing-project findings separately; do not declare the project fully compliant when checks fail.
+5. After managed assets are synchronized, set the canonical tag and `docs/index.json.adflow_version` to `1.4.0`, preserving other index fields; re-read both to verify agreement. These writes are not atomic across files. If interrupted between them, report the version conflict read-only rather than guessing which version to trust.
+6. Run the Step 8 evaluation/repair loop **without `--record`**. Existing-card violations are reported, not automatically rewritten. Archived non-terminal cards (`ARCHIVE_NON_TERMINAL`) are human-disposition items: report them and point to the archive README's historical-batch remediation flow; never rewrite archived card statuses during upgrade. Report the specification synchronization and any unresolved existing-project findings separately; do not declare the project fully compliant when checks fail.
 
-New diagnostic coverage remains `ADVISORY` in this version. Promoting it to a hard requirement needs a separately documented applicability/migration decision; do not impose it retroactively merely because the skill was updated.
+New diagnostic coverage stays `ADVISORY` by default (`MILESTONE_STATUS_DRIFT` in this version follows that rule). One documented promotion applies from 1.4.0: `ARCHIVE_NON_TERMINAL` (archived cards must be `closed`/`completed`) is a hard check because it enforces the archive preconditions documented since v1.1.0; the promotion and its migration handling are recorded in the CHANGELOG. Legacy projects with frozen non-terminal archived cards surface as Exit 4 after upgrade and require the human-driven remediation flow; do not impose any other new coverage retroactively merely because the skill was updated.

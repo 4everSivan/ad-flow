@@ -10,7 +10,7 @@
 2. 当前阶段内的所有任务卡（`Txx.json`）均已处于 `status: "completed"` 状态；
 3. 全量测试通过，代码已打出对应 Git Tag（如 `git tag v0.1.0`）；
 4. `todo/future.md` 与 `now.md` 已完成例行评审。
-5. **运行 `scripts/adflow-verify` 且 Exit 0**：确认待归档批次内所有卡片均为合规终态、零沉淀无残留、版本一致。Exit 4 禁止归档。
+5. **归档前置双核对**：逐卡核定本批次全部卡片为合规终态（普通校验的 Exit 0 **不证明**批次终态——非终态活跃卡没有状态前置要求，须单独核定），且运行 `scripts/adflow-verify` 为 Exit 0。Exit 4 禁止归档。
 
 ---
 
@@ -66,6 +66,7 @@ Git Diff 在设计方案上为 0，彻底根除了历史断链的隐患。
 
 - [ ] `docs/devel/change/` 下仅保留尚未发版的活跃卡片（甚至为空）；
 - [ ] `docs/archive/<version>/` 下完整包含了本次发版的所有卡片与测试快照；
+- [ ] 归档区（本批次及历史批次）无非终态卡：移动与总账更新后再次运行 `scripts/adflow-verify` 且 Exit 0；非 `closed`/`completed` 卡在归档区会被判 `ARCHIVE_NON_TERMINAL` 确定性违规。历史批次的存量冻结卡不改写状态，按归档 README「历史批次账实修复」流程人工处置；
 - [ ] 尝试从任意设计文档小节跟随 Topic 并在 `index.json` 查卡，路径 100% 正确命中；
 - [ ] 自动化测试与 CI 门禁跑通退出码 0；
 - [ ] 所有构建与打包分发产物（如 dist / jar / binary）严格输出或归拢至 `local/`（如 `local/dist/`），严禁将打包成果物散落提交至 Git 源码树。
