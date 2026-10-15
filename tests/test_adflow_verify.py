@@ -409,6 +409,52 @@ class VerifyTests(unittest.TestCase):
         result = self.run_tool()
         self.assertNotIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
 
+    def test_milestone_drift_matches_title_label_and_tasks_list(self):
+        # 真实项目形态：里程碑对象带 tasks 成员清单，任务卡 milestone 字段填标题。
+        self.card("T10", "task", "in_progress")
+        index = self.read_json("docs/devel/task/index.json")
+        index["cards"]["T10"]["milestone"] = "M1-v0.1.0-首发里程碑"
+        index["milestones"] = {"M1": {"title": "M1-v0.1.0-首发里程碑 (已发版归档)",
+                                      "status": "completed", "tasks": ["T01", "T10"]}}
+        self.write_json("docs/devel/task/index.json", index)
+        result = self.run_tool()
+        self.assertIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
+
+    def test_milestone_drift_matches_title_without_tasks_list(self):
+        # 无 tasks 清单时，任务卡填里程碑标题（含带后缀标题）同样应被识别为成员。
+        self.card("T10", "task", "in_progress")
+        index = self.read_json("docs/devel/task/index.json")
+        index["cards"]["T10"]["milestone"] = "M1-首发"
+        index["milestones"] = {"M1": {"title": "M1-首发", "status": "completed"}}
+        self.write_json("docs/devel/task/index.json", index)
+        result = self.run_tool()
+        self.assertIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
+
+    def test_milestone_prefix_does_not_cross_match_sibling(self):
+        # M1 的完成标记不得误伤 M10 的未完成任务（前缀必须落在整词边界上）。
+        self.card("T10", "task", "in_progress")
+        index = self.read_json("docs/devel/task/index.json")
+        index["cards"]["T10"]["milestone"] = "M10-后续里程碑"
+        index["milestones"] = {"M1": {"title": "M1-首发", "status": "completed"},
+                               "M10": {"title": "M10-后续里程碑", "status": "pending"}}
+        self.write_json("docs/devel/task/index.json", index)
+        result = self.run_tool()
+        self.assertNotIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
+
+    def test_milestone_all_members_completed_is_silent(self):
+        # 成员全部完成后不得残留诊断（终态卡按契约补齐 gate 与提交锚点）。
+        commit = self.git_commit()
+        card = self.card("T10", "task", "completed")
+        card.update(sync={"commit": commit}, gate={"exit_code": 0})
+        self.save_card(card, "task")
+        index = self.read_json("docs/devel/task/index.json")
+        index["cards"]["T10"]["milestone"] = "M1-v0.1.0-首发里程碑"
+        index["milestones"] = {"M1": {"title": "M1-v0.1.0-首发里程碑",
+                                      "status": "completed", "tasks": ["T10"]}}
+        self.write_json("docs/devel/task/index.json", index)
+        result = self.run_tool()
+        self.assertNotIn("MILESTONE_STATUS_DRIFT", {f["code"] for f in result["findings"]})
+
     def test_batch_record_recovers_after_global_failure_is_fixed(self):
         self.closed_cards("C001", "C002")
         self.run_tool()
