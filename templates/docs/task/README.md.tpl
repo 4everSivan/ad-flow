@@ -49,7 +49,7 @@ T 卡把已批准设计拆成可执行、可验收的能力单元，用 `depends
 2. **选择就绪任务**：从 `pending` 卡中筛选所有依赖均已 `completed` 的任务，同步卡片与索引为 `in_progress`；不跨过未完成依赖。
 3. **预检与实现**：运行授权范围内的 `precheck.command`。已实现时记录证据并跳过重复编码，仍做验收；否则执行适用回调、能力实现与对应测试。
 4. **逐项验收**：核对 `tasks[].done` 与 `acceptance.checks`，保存真实命令、输出和 `run_id`。业务验收项须全部满足，完成项目要求的人工验收；工具的 `ADVISORY` 不代替业务判断，也不新增硬门槛。
-5. **完成预检**：回填真实 `sync.commit`，核对其为当前 HEAD 祖先；保持当前状态，运行以下命令。Exit 0 后同步卡片与索引为 `completed`，再普通复核。
+5. **完成预检**：回填真实 `sync.commit`，核对其为当前 HEAD 祖先；保持当前状态，运行以下命令。Exit 0 后同步卡片与索引为 `completed`，再以节点回执复核。
 
 以下以 `T01` 为例，执行时使用真实卡号；命令均在项目根目录运行：
 
@@ -57,6 +57,10 @@ T 卡把已批准设计拆成可执行、可验收的能力单元，用 `depends
 scripts/adflow-verify --card T01 --to completed --record
 ```
 
-预检 Exit 0 后，同步状态再运行 `scripts/adflow-verify --json`。`--record` 仅记录本卡真实门禁结果，不更新状态，也不证明能力已交付。失败时按 [共同校验规则](../../README.md#4-校验与收口) 补证或修复，不手改 gate、验收条件或依赖来绕过失败。
+预检 Exit 0 后，同步状态再运行下列命令复核，并把输出的节点回执按 [AGENTS.md](../../../AGENTS.md) 二.3 的格式转交人类（只填「未覆盖」「需要你」两行）。`--record` 仅记录本卡真实门禁结果，不更新状态，也不证明能力已交付。失败时按 [共同校验规则](../../README.md#4-校验与收口) 补证或修复，不手改 gate、验收条件或依赖来绕过失败。
 
-6. **阶段发布**：本阶段任务完成后，按项目要求完成集成、构建和发布验收，更新根目录 CHANGELOG；在发布已获授权时按 [归档操作](../../archive/README.md) 封箱本批次卡片。任务 `completed` 不自动触发发版、部署或推送。
+```bash
+scripts/adflow-verify --card T01 --receipt
+```
+
+6. **阶段发布**：本阶段任务完成后，按项目要求完成集成、构建和发布验收，更新根目录 CHANGELOG；运行 `scripts/adflow-verify --release <version>` 取得 Exit 0 后，在发布已获授权时按 [归档操作](../../archive/README.md) 封箱本批次卡片。任务 `completed` 不自动触发发版、部署或推送。

@@ -30,7 +30,7 @@
     ],
     "after": [
       "# 任务执行后脚本或流程，如代码格式化、静态检查、构建打包等",
-      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 completed；目标状态预检使用 --card <本卡号> --to <目标状态> --record，仅回写本卡 gate，Exit 0 后再同步状态"
+      "scripts/adflow-verify  # 收口前门禁：Exit 4 禁止置 completed；目标状态预检使用 --card <本卡号> --to <目标状态> --record，仅回写本卡 gate，Exit 0 后再同步状态，并以 --card <本卡号> --receipt 复核、输出节点回执"
     ]
   },
 

@@ -68,6 +68,9 @@ Reviewer Agent 必须站在“尝试证伪（Falsify）”的立场审视改动�
 ## 四、版本兼容与校验边界
 
 - v1.2.0 新增缺失主题、依赖环路、终态验收项未全为 true 的 `ADVISORY` 旁路诊断；不改变退出码，不追溯迁移旧卡。既有 ERROR/WARN 的 4/6 判定保留。
+- 后续新增的 `DEP_NOT_READY`（任务已开工但前置未完成）、`ARCHIVE_UNREGISTERED`（归档卡未经总账路由）、`TAG_DUPLICATE`（多个版本不同的初始化标签）与 `PLACEHOLDER_UNRENDERED`（初始化占位符未渲染）同为 `ADVISORY`。`ARCHIVE_NON_TERMINAL` 同时覆盖总账路由与归档目录中直接存放的卡片；`TOOL_VERSION_DRIFT` 仅在 `--mode init` 核对校验器副本与治理版本一致。
+- `--release <version>` 为发版/归档前的只读批次预检：本批次活跃卡未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），无 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。它不能与 `--card`、`--to`、`--record` 合用，也不证明发布范围完整。
+- `--card <卡号> --receipt` 在状态同步后执行完整普通复核（退出码语义不变），并按固定格式输出节点回执：事实行取自卡片与本次复核，执行者只填写「未覆盖」「需要你」。审查时可对照回执与卡片原文，事实行被改写即视为汇报失真。它不能与 `--to`、`--record`、`--warn-only` 合用。
 - `--card <卡号> --to <目标状态>` 在内存检查目标状态，`--record` 仅回写指定卡的 gate，不修改卡片或索引状态。全局违规也会计入记录结果；Exit 0 后同步状态，再运行普通检查。
 - 不带 `--card` 的旧 `--record` 仍回写全部活跃卡；规范升级不执行它。记录时重新评估目标卡的当前约束，不把其旧 gate 失败当成本轮失败原因；真实结构或全局违规仍阻断。`--warn-only` 仅用于观察，不能与 `--record` 合用，也不能作为正式通过证据。
 - 校验器检查非空、格式和部分关系，不能证明人类原话真实性、验收条件语义互斥完整、应用实测正确，或所有历史归档卡都已审计。审查者另行核对来源和覆盖范围。

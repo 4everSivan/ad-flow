@@ -65,6 +65,9 @@ scripts/adflow-verify --mode init --json
 
 # 日常收口、合入和归档前检查活跃卡及全局约束
 scripts/adflow-verify --json
+
+# 打 Tag、发布或归档前只读预检本批次：活跃卡须全部 closed/completed
+scripts/adflow-verify --release <version> --json
 ```
 
 | 结果 | 含义 | 处理 |
@@ -74,7 +77,7 @@ scripts/adflow-verify --json
 | Exit 6 | 存在需研判的告警或证据缺口 | 按事实补证，正式收口仍需 Exit 0 |
 | `ADVISORY` | 旁路建议，不改变退出码 | 单独汇报，沿用既有业务验收标准 |
 
-C/T 转入收口状态时，按对应卡池 README 运行 `--card ... --to ... --record`。工具在内存预检目标状态，仅回写目标卡的真实 `gate`；Exit 0 后同步卡片与索引状态，再运行普通检查复核。未限定卡号的 `--record` 会回写所有活跃卡，治理升级不用它。
+C/T 转入收口状态时，按对应卡池 README 运行 `--card ... --to ... --record`。工具在内存预检目标状态，仅回写目标卡的真实 `gate`；Exit 0 后同步卡片与索引状态，再运行 `scripts/adflow-verify --card <卡号> --receipt` 复核，并按 [AGENTS.md](../AGENTS.md) 二.3 的固定格式转交节点回执。未限定卡号的 `--record` 会回写所有活跃卡，治理升级不用它。
 
 记录时重新评估目标卡当前前提，不把其旧失败回执当作本轮失败原因；其他卡与全局实际违规仍参与检查。禁止手工把 `gate.exit_code` 改成 0，`--warn-only` 也不能作为正式通过证据。
 

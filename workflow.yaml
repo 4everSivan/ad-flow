@@ -16,7 +16,8 @@ execution_contract:
   lifecycle: "Keep dual tracks, card states, human acceptance, zero-sediment, and archiving unchanged"
   input_separation: "Separate policy, current-step instructions, source evidence, examples, and output contract; XML is optional for dynamic sources and grants no authority"
   authority: "Reuse explicit authorization for the target operation; otherwise confirm existing-asset migration. Initialization does not authorize deploy/push/merge/cleanup/signoff"
-  new_checks: "New semantic diagnostics stay ADVISORY; existing identity, routing, and per-track state contracts remain hard checks. Keep exit 0/4/6 semantics and do not migrate old cards automatically. One documented promotion from 1.4.0: ARCHIVE_NON_TERMINAL (the archive area holds terminal cards only) is a hard check enforcing the v1.1.0 archive preconditions; legacy frozen non-terminal archived cards need the human-driven remediation flow in the archive README. MILESTONE_STATUS_DRIFT stays advisory"
+  new_checks: "New semantic diagnostics stay ADVISORY; existing identity, routing, and per-track state contracts remain hard checks. Keep exit 0/4/6 semantics and do not migrate old cards automatically. One documented promotion from 1.4.0: ARCHIVE_NON_TERMINAL (the archive area holds terminal cards only) is a hard check enforcing the v1.1.0 archive preconditions; legacy frozen non-terminal archived cards need the human-driven remediation flow in the archive README. MILESTONE_STATUS_DRIFT stays advisory. ARCHIVE_NON_TERMINAL covers index-routed cards and card files found directly under docs/archive/. DEP_NOT_READY, ARCHIVE_UNREGISTERED, TAG_DUPLICATE and PLACEHOLDER_UNRENDERED are advisory. TOOL_VERSION_DRIFT is an init-mode installation-integrity check. The read-only release preflight (--release VERSION) is opt-in and is not run during initialization or upgrade"
+  card_receipt: "Daily rule installed by AGENTS.md section 2.3: after each card checkpoint sync, 'scripts/adflow-verify --card ID --receipt' re-checks read-only and prints the fixed receipt; agents forward fact rows verbatim and fill only the 未覆盖 and 需要你 rows. --record stores gate.from_status so receipts show the recorded transition. Not used during initialization or upgrade"
 
 backup_gitignore:
   target_file: "${target_dir}/.gitignore"
@@ -58,7 +59,7 @@ invariants:
     rule: "AI Agent is strictly forbidden from setting 'design_doc' or 'doc' in any C/T card or index.json to any README.md (including 'docs/devel/design/README.md'). It MUST point to a living baseline design doc ('00-系统总体设计.md' or '01~99-[module].md') containing the matching '<!-- @topic: TopicName -->'. If missing, Agent must follow Doc First to create/update the design doc first."
     severity: "FATAL"
   - id: "INV_RELEASE_ARCHIVE_GATE"
-    rule: "Tagging, publishing, or moving any card into docs/archive/ requires the whole release batch to be terminal (C closed / T completed) with plain verification Exit 0; Exit 0 alone does not prove batch terminality, so cards are checked individually. Non-terminal cards must never enter the archive area; the verifier reports ARCHIVE_NON_TERMINAL as a deterministic violation. Historical frozen non-terminal archived cards are remediated only by human disposition per the archive README remediation flow, never rewritten during upgrade"
+    rule: "Tagging, publishing, or moving any card into docs/archive/ requires the whole release batch to be terminal (C closed / T completed), checked mechanically with 'scripts/adflow-verify --release <version>' Exit 0 (plain Exit 0 alone does not prove batch terminality; humans still confirm the release scope and the batch of cards without version). Non-terminal cards must never enter the archive area; the verifier reports ARCHIVE_NON_TERMINAL as a deterministic violation. Historical frozen non-terminal archived cards are remediated only by human disposition per the archive README remediation flow, never rewritten during upgrade"
     severity: "FATAL"
 
 pipeline:
@@ -78,8 +79,10 @@ pipeline:
       current_version: "1.4.0"
       compare: "Parse numeric version components using code; conflicting/malformed sources stop without writes"
       on_version_newer:
+        state: "VERSION_NEWER"
         action: "TERMINATE_WITHOUT_DOWNGRADE"
       on_version_conflict:
+        state: "VERSION_CONFLICT"
         action: "REPORT_WITHOUT_WRITES"
       on_version_match:
         state: "ALREADY_INITIALIZED_UP_TO_DATE"
@@ -126,14 +129,15 @@ pipeline:
         - "agents.md"
       coding_languages: "Apply coding_standards.selection; package dependencies or template examples alone do not establish authored languages"
     outputs:
-      state: "ALREADY_INITIALIZED | EMPTY_PROJECT | ONGOING_CODE_AND_DOCS | ONGOING_CODE_ONLY"
+      state: "ALREADY_INITIALIZED_UP_TO_DATE | NEEDS_UPGRADE | VERSION_NEWER | VERSION_CONFLICT | EMPTY_PROJECT | ONGOING_CODE_AND_DOCS | ONGOING_CODE_ONLY"
+      routing: "Steps 2-3 run only for ONGOING_* states; NEEDS_UPGRADE uses upgrade_pipeline; ALREADY_INITIALIZED_UP_TO_DATE resumes only Steps 4-8 when incomplete; VERSION_* states stop without writes"
       existing_agent_file: "path | null"
       selected_languages: "List of available language IDs; [] means common-only; preserve existing standards on sync"
 
   - step: 2
     name: "HUMAN_CONFIRMATION_GATE"
     description: "Guard against unauthorized modification on existing projects"
-    condition: "state != 'EMPTY_PROJECT' and state != 'ALREADY_INITIALIZED' and not has_flag('--yes') and not prior_authorization_for_target_migration"
+    condition: "state in ('ONGOING_CODE_AND_DOCS', 'ONGOING_CODE_ONLY') and not has_flag('--yes') and not prior_authorization_for_target_migration"
     action: "PROMPT_USER"
     prompt: |
       检测到当前项目已有代码或文档资产。
@@ -150,7 +154,7 @@ pipeline:
   - step: 3
     name: "CREATE_SAFE_BACKUP"
     description: "Create isolation snapshot zone _adflow_backup/ before modifying target"
-    condition: "state != 'EMPTY_PROJECT'"
+    condition: "state in ('ONGOING_CODE_AND_DOCS', 'ONGOING_CODE_ONLY')"
     action: "CREATE_ISOLATION_SNAPSHOT"
     sub_tasks:
       - check_destinations: "Inventory all snapshot destinations before moving assets; stop on collisions, never overwrite captured originals"
@@ -263,6 +267,7 @@ pipeline:
     description: "Inject index routing hubs, selected coding standards, card templates, todo buffers, guide docs, and root configs"
     action: "WRITE_FILES"
     initial_data: "Empty indexes and todo/design registrations; examples are not real project records"
+    placeholder_rendering: "Applies to Steps 4-6. Replace MyProject with the project name; replace YYYY-MM-DD with the initialization date in Markdown metadata header lines and JSON created/last_change/updated_at. Keep format examples in bodies and fenced outlines; on upgrade retain existing project names and created dates. Leftovers surface as PLACEHOLDER_UNRENDERED advisories"
     mappings:
       - dest: "${target_dir}/docs/index.json"
         template: "templates/docs/index.json.tpl"
@@ -369,7 +374,7 @@ pipeline:
       coding_standards_check:
         rule: "For newly composed JSON, common contains nonempty English rule arrays grouped by concern and languages contains exactly selected profiles, each with format, naming, documentation, rules and official sources. For preserved JSON, compare bytes with the saved original. Verify local README/AGENTS links and index pointer. Report choices; do not claim style compliance from the process verifier"
       process_gate_check:
-        rule: "Run 'scripts/adflow-verify --mode init' (base assets, canonical or legacy template/guide paths, registered/present coding JSON and tools) and 'scripts/adflow-verify' (active-card discipline plus archive terminality: non closed/completed cards in docs/archive fail as ARCHIVE_NON_TERMINAL). Exit 0 required before reporting success; Exit 4 blocks the success report until violations are fixed. Older installations follow coding_standards.compatibility; historical frozen archived cards are human-disposition items, never rewritten by upgrade"
+        rule: "Run 'scripts/adflow-verify --mode init' (base assets, canonical or legacy template/guide paths, registered/present coding JSON, tools and a verifier copy whose VERSION matches adflow_version) and 'scripts/adflow-verify' (active-card discipline plus archive terminality: non closed/completed cards in docs/archive, routed or found on disk, fail as ARCHIVE_NON_TERMINAL). Exit 0 required before reporting success; Exit 4 blocks the success report until violations are fixed. Older installations follow coding_standards.compatibility; historical frozen archived cards are human-disposition items, never rewritten by upgrade"
     report_to_user:
       key_entries:
         - "AGENTS.md"
@@ -408,7 +413,7 @@ upgrade_pipeline:
         - "docs/devel/env/README.md"
         - "docs/guide/README.md"
         - "docs/archive/README.md"
-      note: "Update managed guidelines only; preserve project content and user module registrations in design/README.md"
+      note: "Update managed guidelines only; preserve project content, user module registrations in design/README.md and the archive batch list (归档批次清单) with linked errata in archive/README.md"
     - step: "U4_SYNC_CARD_TEMPLATES"
       action: "UPDATE_TEMPLATES"
       targets:

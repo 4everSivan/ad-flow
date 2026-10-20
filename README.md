@@ -46,9 +46,11 @@
 | 存量资产迁移 | 授权后隔离旧文档，依据旧文档及源码重构设计 | 快照目的地冲突时停止；来源不确定时显式记录 |
 | 双轨执行 | C 卡记录修复及前后差异，T 卡记录阶段目标及依赖 | 保留现有卡片状态、人工验收和发版归档流程 |
 | 预检与回调 | 用 `precheck` 避免重复开发，按 `callback` 准备环境和检查产物 | 命令文本不能自行授权部署、推送或清理 |
-| 流程校验 | 检查设计挂接、证据字段、提交祖先、索引、依赖及归档区终态等结构条件 | 不证明应用行为正确、原话真实或人工验收完成 |
+| 流程校验 | 检查设计挂接、证据字段、提交祖先、索引、依赖及归档区终态（含未经总账登记的归档卡）等结构条件 | 不证明应用行为正确、原话真实或人工验收完成 |
 | 目标状态预检 | 在内存检查拟转入状态，可仅回写指定卡的 `gate` | 不自动改变卡片或索引状态；`--card` 不缩小全项目检查范围 |
-| 旁路诊断 | 报告缺失主题、依赖环路、里程碑漂移和终态验收项未全为 true | `ADVISORY` 不改变退出码，不自动迁移旧卡 |
+| 节点回执 | `--card ID --receipt` 在状态同步后复核，并按固定格式输出卡片回执（标题、批次、验收表、门禁、同步、人工、改动） | 只读；事实行取自卡片与本次复核，执行者只补「未覆盖」「需要你」 |
+| 发版批次预检 | `--release <version>` 核对本批次活跃卡均已 `closed`/`completed` | 只读；不证明发布范围完整，未填 `version` 的未收口卡交人工划定 |
+| 旁路诊断 | 报告缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、未登记归档卡、重复初始化标签和未渲染占位符 | `ADVISORY` 不改变退出码，不自动迁移旧卡 |
 
 ### 3.1 核心执行设计原则
 
@@ -112,8 +114,8 @@ flowchart TD
         └─► 声明 target.design_doc / design_topic 与 design.rule_diff
              └─► 执行 precheck 嗅探已修复性 ──► 执行 callback.before 准备环境
                   └─► 切分支编码 + 补回归测试 ──► 执行 callback.after 质量门禁
-                       └─► 采集证据及真实人工确认 ──► 预检 verified ──► 同步状态
-                            └─► 授权合入、回写基线与日志 ──► 预检 closed ──► 同步状态
+                       └─► 采集证据及真实人工确认 ──► 预检 verified ──► 同步状态 ──► 节点回执
+                            └─► 授权合入、回写基线与日志 ──► 预检 closed ──► 同步状态 ──► 节点回执
 
 【通道 B：阶段任务流 (Feature Track)】
   future.md 登记 ──► design/ 撰写或修订现行设计方案 (@topic)
@@ -121,7 +123,7 @@ flowchart TD
              └─► 按 depends_on DAG 拓扑顺序推进
                   └─► 执行 precheck 嗅探已完成性 ──► 执行 callback.before 准备环境
                        └─► 纯函数/服务实现 + 单测 ──► 执行 callback.after 收尾校验
-                            └─► DoD 验收全绿 ──► 预检 completed ──► 同步状态
+                            └─► DoD 验收全绿 ──► 预检 completed ──► 同步状态 ──► 节点回执
                                  └─► 阶段封箱归档至 archive/<version>/
 ```
 
@@ -314,11 +316,14 @@ $ad-flow --upgrade
 以下命令在**已经初始化的目标项目根目录**执行。默认只读，可选的第一个位置参数指定其他目标目录。
 
 ```bash
-# 骨架检查：23 个原有基础文件、已登记/存在的代码规范、2 个工具及版本
+# 骨架检查：23 个原有基础文件、已登记/存在的代码规范、2 个工具（副本版本须与 adflow_version 一致）及版本
 scripts/adflow-verify --mode init --json
 
 # 流程检查：按所有活跃卡的状态核对已覆盖前提，并要求归档区只含终态卡
 scripts/adflow-verify --json
+
+# 发版批次预检：打 Tag、发布或归档前，本批次活跃卡须全部 closed/completed（只读）
+scripts/adflow-verify --release v0.1.0 --json
 ```
 
 也可直接运行 Python 入口：
@@ -346,7 +351,13 @@ scripts/adflow-verify --card C001 --to closed --record
 scripts/adflow-verify --card T01 --to completed --record
 ```
 
-**预检不改变卡片或索引状态。** Exit 0 后，由执行者同步该卡及索引状态，再运行普通 `scripts/adflow-verify` 复核。`--card` 仅限定回写及目标状态预检，所有活跃卡与全局问题仍参与检查；因此全局或其他卡的违规也会计入本卡记录结果。
+**预检不改变卡片或索引状态。** Exit 0 后，由执行者同步该卡及索引状态，再用节点回执复核：
+
+```bash
+scripts/adflow-verify --card C001 --receipt
+```
+
+该命令执行完整普通复核（退出码语义不变），文本模式只输出一份固定格式的 Markdown 回执（`--json` 时放在 `receipt` 字段）。标题、批次行、验收表与「门禁」「同步」「人工」「驳回」「改动」行取自卡片和本次复核，执行者原样转交，只填写「未覆盖」「需要你」两行；标题的 `from → to` 来自 `--record` 预检时记录的 `gate.from_status` / `gate.target_status`。格式与填写规则写在目标项目 `AGENTS.md` 二.3，证据采集完成请求人工确认、`verified`、`closed`、`completed` 与 `rejected` 各节点通用。`--card` 仅限定回写及目标状态预检，所有活跃卡与全局问题仍参与检查；因此全局或其他卡的违规也会计入本卡记录结果。
 
 `--record` 对本次回写的卡重新计算真实前提，不把这些卡旧的失败 gate 当作新违规；修复原问题后，已有批量命令可重评恢复。未回写卡的门禁和其它实际违规仍然参与检查。索引中的归档卡只读解析身份与状态，用于跨版本依赖，不按现行规则重验或回写。
 
@@ -357,6 +368,8 @@ scripts/adflow-verify --card T01 --to completed --record
 | `--card ID --to STATE` | 在内存检查拟转入状态；`--to` 必须带 `--card` | 默认无；C 卡支持 verified/closed，T 卡支持 completed |
 | `--card ID --record` | 记录当前完整检查的结果 | 仅回写指定卡的 `gate` |
 | `--record` | 兼容旧用法 | 回写全部活跃卡的 `gate`；升级不用此参数 |
+| `--card ID --receipt` | 状态同步后复核并输出该卡固定格式回执 | 无；不能搭配 `--to`、`--record`、`--warn-only` 或 `--mode init` |
+| `--release VERSION` | 发版/归档前批次预检，`v0.1.0` 与 `0.1.0` 视为同一批次 | 无；不能搭配 `--card`、`--to`、`--record` 或 `--mode init` |
 | `--warn-only` | 将 ERROR 降为 WARN，供观察 | 不写入，不能与 `--record` 合用；存在违规时返回 6 |
 
 | 退出码或诊断 | 含义 | 后续处理 |
@@ -365,13 +378,15 @@ scripts/adflow-verify --card T01 --to completed --record
 | `2` | 参数组合或取值无效 | 按命令帮助修正参数 |
 | `4` | 存在确定性治理违规 | 阻断收口，按问题代码和路径修复后重验 |
 | `6` | 存在软告警或降级观察结果 | 列出事实供人工研判；正式收口仍需 Exit 0 |
-| `ADVISORY` | 缺失主题、依赖环路、里程碑漂移或终态验收项未全为 true | 旁路汇报，不影响退出码、不新增硬门槛 |
+| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、未登记归档卡、重复初始化标签、未渲染占位符或空发布批次 | 旁路汇报，不影响退出码、不新增硬门槛 |
 
-`ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed` 且普通校验 Exit 0（Exit 0 本身不证明批次终态，须逐卡核定）；归档移动与总账更新后须复核校验再次 Exit 0。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
+`ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动与总账更新后须复核校验再次 Exit 0。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
 
 校验器不替代应用测试、源码与设计一致性审查或人工验收，也不自动审计全部历史归档卡。`sync.commit` 检查的是当前 HEAD 的祖先关系，是否已合入主干需另行核对；证据字段齐全也不能证明原话真实或业务结论成立。覆盖边界见 [审计清单](references/05-audit-checklist.md)。
 
 代码规范仅检查已登记文件是否存在及 JSON 是否可读，不判断源码是否符合风格；编码与审查沿用项目现有检查工具。
+
+`--mode init` 另核对 `scripts/adflow_verify.py` 的版本与 `docs/index.json.adflow_version` 一致（`TOOL_VERSION_DRIFT`，Exit 4），避免升级后项目仍运行旧门禁；模板占位符 `MyProject`、`YYYY-MM-DD` 未在元数据中渲染时以 `PLACEHOLDER_UNRENDERED` 旁路提示。
 
 ---
 
@@ -431,4 +446,4 @@ skills/ad-flow/
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录及项目内工具独立运行；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。
+测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录、发版批次预检、项目内工具独立运行及样例与现行模板的字段同步；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。

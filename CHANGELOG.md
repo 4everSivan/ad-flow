@@ -6,6 +6,30 @@
 
 ## [Unreleased]
 
+### Added
+
+- 校验器新增只读发版批次预检 `--release <version>`：本批次（按卡片 `version`，缺失时回退总账登记）活跃卡未达本轨终态报 `RELEASE_NOT_TERMINAL`（Exit 4），无 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6），找不到批次卡片报 `RELEASE_BATCH_EMPTY`（ADVISORY）。发版与归档门禁由“逐卡人工核定”改为可执行预检，发布范围仍由人工确认；该参数为可选项，不改变默认门禁，也不在初始化或升级中运行。
+- `--mode init` 新增 `TOOL_VERSION_DRIFT`：已安装 `scripts/adflow_verify.py` 的版本须与 `docs/index.json.adflow_version` 一致，避免升级后项目仍运行缺少新门禁的旧校验器。
+- 新增 ADVISORY 诊断：`DEP_NOT_READY`（任务已 `in_progress` 但前置未 `completed`）、`ARCHIVE_UNREGISTERED`（归档卡未经现行总账路由）、`TAG_DUPLICATE`（`AGENTS.md` 含多个版本不同的初始化标签）、`PLACEHOLDER_UNRENDERED`（初始化后元数据仍为 `MyProject` / `YYYY-MM-DD`）。均不改变退出码。
+- 卡片节点回执：`scripts/adflow-verify --card <卡号> --receipt` 在状态同步后执行完整复核（退出码语义不变），按固定格式输出 Markdown 回执——标题（`from → to`）、批次/分支/设计行、验收表，以及「门禁」「同步」「人工」「驳回」「改动」事实行全部取自卡片与本次复核，执行者只填写「未覆盖」「需要你」。AGENTS 模板新增二.3 规定请求人工确认、`verified`、`closed`、`completed`、`rejected` 各节点统一转交该回执，C/T 卡池 README、文档中心与 SOP 的“同步后复核”一步改用此命令。`--record` 预检时额外记录 `gate.from_status`，回执据此显示真实发生的状态转换。
+- 技能与 workflow 明确模板占位符渲染契约：项目名与元数据日期在初始化时填写真实值，正文格式示例保留占位符，升级保留既有项目名与创建日期。
+
+### Changed
+
+- AGENTS 模板、归档 README、文档中心、任务 README 与发版归档 SOP 的发版顺序统一为“收口 → `--release` 批次预检 Exit 0 → 归档移动 + 总账更新 → 复核 Exit 0 → 打 Tag / CHANGELOG 定稿”；修正任务 SOP 与发版归档 SOP 中“先打 Tag 再归档”的旧顺序。
+- 升级刷新归档 README 时保留项目的归档批次清单及勘误登记。
+- 样例对齐现行模板：变更卡与任务卡补齐 `version`、`sync`、`gate` 并在收尾回调中运行校验器，移除清空 `local/` 测试数据的破坏性回调；设计样例改为四章结构与英文元数据，改经变更总账查询历史卡，不再直接链接会随归档移动的卡片文件。新增测试保证样例字段集合与模板同步。
+
+### Fixed
+
+- 归档扫描通过卡号文件名或 `id` 识别缺少 `status` 的卡片，以 `JSON_TYPE`（Exit 4）报告，不再静默跳过；总账快照和非卡片报告仍不受检。
+- 初始化占位符检查仅匹配字符串元数据，避免对象或数组字段触发 `TypeError`，保持占位符诊断的 `ADVISORY` 口径。
+- `changes` / `tasks` 与既有 `rejections` 一同校验为对象数组或 null；非法类型返回 `JSON_TYPE`（Exit 4），不再使节点回执崩溃或静默丢弃内容。
+- 修复 `ARCHIVE_NON_TERMINAL` 漏检：此前只检查经总账路由的归档卡，绕过总账直接放入 `docs/archive/<version>/{change,task}/` 的非终态卡仍保持 Exit 0。现增加归档目录物理扫描（跳过总账快照 `index.json` 与非卡片资料），与总账路由同口径判定。
+- 修复 `CHANGELOG_LINK_MISSING` 漏报：此前以子串匹配卡号，CHANGELOG 模板注释中的语法示例 `C001` 会让首张 C 卡永远“已互链”，`C0011` 也会误命中 `C001`。现忽略 HTML 注释并按整词匹配。
+- 修复零沉淀检查漏报：卡号紧邻中文（如“修复C001问题”）时 `\b` 无法识别，残留待办不被阻断。现改用 ASCII 边界匹配。
+- 修复 `workflow.yaml` 状态路由：第 1 步输出状态名与第 2、3 步条件不一致（`ALREADY_INITIALIZED` 与 `ALREADY_INITIALIZED_UP_TO_DATE`；`NEEDS_UPGRADE` 及版本冲突状态会落入迁移确认与快照步骤）。迁移确认与隔离快照现仅作用于 `ONGOING_*` 状态，并补齐 `VERSION_NEWER` / `VERSION_CONFLICT` 状态。
+
 ## [1.4.0] - 2026-10-14
 
 ### Added

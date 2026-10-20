@@ -1,6 +1,7 @@
 """CLI behavior and compatibility checks using isolated project fixtures."""
 import copy
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -657,6 +658,327 @@ class VerifyTests(unittest.TestCase):
                 result = self.run_tool(expect=4)
                 self.assertIn("LEGACY_TEMPLATE_EXISTS", {f["code"] for f in result["findings"]})
                 (self.root / legacy).unlink()
+
+    def codes(self, result):
+        return {f["code"] for f in result["findings"]}
+
+    def test_unregistered_archived_non_terminal_card_still_blocks(self):
+        # 绕过总账直接放入归档区的未收口卡，不能逃过归档终态门禁。
+        rel = "docs/archive/v0.1.0/change/C001.json"
+        self.write_json(rel, {"id": "C001", "status": "in_progress"})
+        result = self.run_tool(expect=4)
+        self.assertIn("ARCHIVE_NON_TERMINAL", self.codes(result))
+        self.assertIn("ARCHIVE_UNREGISTERED", self.codes(result))
+
+    def test_unregistered_archived_card_requires_status(self):
+        for track, name, card in (("change", "C001", {"id": "C001"}),
+                                  ("change", "C002", {}),
+                                  ("change", "legacy", {"id": "C003"}),
+                                  ("task", "T01", {"id": "T01"})):
+            with self.subTest(track=track, name=name):
+                rel = "docs/archive/v0.1.0/%s/%s.json" % (track, name)
+                self.write_json(rel, card)
+                before = self.files()
+                result = self.run_tool(expect=4)
+                self.assertTrue(any(f["code"] == "JSON_TYPE" and f["path"] == rel
+                                    and "status" in f["msg"] for f in result["findings"]))
+                self.assertEqual(before, self.files())
+                (self.root / rel).unlink()
+
+    def test_unregistered_archived_terminal_card_is_advisory_only(self):
+        self.write_json("docs/archive/v0.1.0/task/T01.json", {"id": "T01", "status": "completed"})
+        # 批次总账快照与非卡片资料不按卡片检查。
+        self.write_json("docs/archive/v0.1.0/task/index.json", {"tasks": {}})
+        self.write_json("docs/archive/v0.1.0/task/coverage.json", {"id": "coverage", "lines": 91})
+        self.write_json("docs/archive/v0.1.0/task/other.json", {"id": "T0111", "lines": 91})
+        self.write("docs/archive/v0.1.0/task/broken.json", "{not json")
+        result = self.run_tool()
+        self.assertEqual([f["path"] for f in result["findings"] if f["code"] == "ARCHIVE_UNREGISTERED"],
+                         ["docs/archive/v0.1.0/task/T01.json"])
+
+    def test_routed_archived_card_is_not_reported_twice(self):
+        rel = "docs/archive/v0.1.0/task/T01.json"
+        self.write_json(rel, {"id": "T01", "status": "pending"})
+        self.write_json("docs/devel/task/index.json", {"tasks": {"T01": {"status": "pending", "file": rel}}})
+        result = self.run_tool(expect=4)
+        self.assertEqual([f["code"] for f in result["findings"]], ["ARCHIVE_NON_TERMINAL"])
+
+    def test_changelog_link_ignores_template_comment_and_longer_ids(self):
+        self.closed_cards("C001")
+        self.write("CHANGELOG.md", (REPO / "templates/docs/changelog.md.tpl").read_text(encoding="utf-8"))
+        result = self.run_tool(expect=6)
+        self.assertIn("CHANGELOG_LINK_MISSING", self.codes(result))
+        self.write("CHANGELOG.md", "- C0011 unrelated\n")
+        self.run_tool(expect=6)
+        self.write("CHANGELOG.md", "- [C001](docs/devel/change/C001.json)：修复日K\n")
+        self.run_tool()
+
+    def test_zero_sediment_detects_card_ids_next_to_cjk_text(self):
+        self.card()
+        self.write("docs/devel/todo/now.md", "| B1 | 行情 | 修复C001问题 | 2026-10-01 | 建卡 |\n")
+        result = self.run_tool(expect=4)
+        self.assertIn("ZERO_SEDIMENT_VIOLATION", self.codes(result))
+        self.write("docs/devel/todo/now.md", "| B1 | 行情 | 时区 UTC0012 偏移 | 2026-10-01 | 待定 |\n")
+        self.run_tool()
+
+    def test_release_preflight_blocks_non_terminal_batch_cards(self):
+        card = self.card(status="verified")
+        card["version"] = "v0.1.0"
+        self.save_card(card)
+        later = self.card("C002")
+        later["version"] = "v0.2.0"
+        self.save_card(later)
+        before = self.files()
+        self.run_tool()
+        for release in ("v0.1.0", "0.1.0"):
+            with self.subTest(release=release):
+                result = self.run_tool("--release", release, expect=4)
+                self.assertEqual({f["card"] for f in result["findings"]
+                                  if f["code"] == "RELEASE_NOT_TERMINAL"}, {"C001"})
+                self.assertEqual(result["release"], release)
+        self.run_tool("--release", "v0.2.0", expect=4)
+        self.assertEqual(before, self.files())
+
+    def test_release_scope_falls_back_to_index_and_flags_unknown_batches(self):
+        self.card()
+        self.card("T01", "task", "in_progress")
+        index = self.read_json("docs/devel/change/index.json")
+        index["cards"]["C001"]["version"] = "v0.1.0"
+        self.write_json("docs/devel/change/index.json", index)
+        result = self.run_tool("--release", "v0.1.0", expect=4)
+        self.assertIn("RELEASE_NOT_TERMINAL", self.codes(result))
+        self.assertEqual({f["card"] for f in result["findings"]
+                          if f["code"] == "RELEASE_SCOPE_UNKNOWN"}, {"T01"})
+
+    def test_release_preflight_passes_terminal_batch(self):
+        self.closed_cards("C001")
+        card = self.read_json("docs/devel/change/C001.json")
+        card["version"] = "v0.1.0"
+        self.save_card(card)
+        result = self.run_tool("--release", "v0.1.0")
+        self.assertNotIn("RELEASE_BATCH_EMPTY", self.codes(result))
+        result = self.run_tool("--release", "v9.9.9")
+        self.assertIn("RELEASE_BATCH_EMPTY", self.codes(result))
+
+    def test_release_is_read_only_preflight(self):
+        self.card()
+        before = self.files()
+        for args in (("--release", "v0.1.0", "--record"), ("--release", "v0.1.0", "--card", "C001"),
+                     ("--release", "v", ), ("--mode", "init", "--release", "v0.1.0")):
+            with self.subTest(args=args):
+                result = subprocess.run([sys.executable, str(TOOL), str(self.root), *args],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(before, self.files())
+
+    def test_in_progress_task_with_unfinished_dependency_is_advisory(self):
+        self.card("T01", "task")
+        card = self.card("T02", "task", "in_progress")
+        card["depends_on"] = ["T01"]
+        self.save_card(card, "task")
+        result = self.run_tool()
+        self.assertIn("DEP_NOT_READY", self.codes(result))
+
+    def test_conflicting_initialization_tags_are_advisory(self):
+        self.write("AGENTS.md", "<!-- @ad-flow: initialized v1.1.0 -->\n\n<!-- @ad-flow: initialized v1.0.0 -->")
+        result = self.run_tool()
+        self.assertIn("TAG_DUPLICATE", self.codes(result))
+
+    def test_init_detects_stale_verifier_copy(self):
+        self.install_skeleton()
+        self.run_tool("--mode", "init")
+        tool = self.root / "scripts/adflow_verify.py"
+        tool.write_text(tool.read_text(encoding="utf-8").replace(
+            'VERSION = "1.4.0"', 'VERSION = "1.2.0"'), encoding="utf-8")
+        result = self.run_tool("--mode", "init", expect=4)
+        self.assertIn("TOOL_VERSION_DRIFT", self.codes(result))
+
+    def test_init_reports_unrendered_placeholders_as_advisory(self):
+        self.install_skeleton()
+        result = self.run_tool("--mode", "init")
+        flagged = {f["path"] for f in result["findings"] if f["code"] == "PLACEHOLDER_UNRENDERED"}
+        self.assertIn("docs/index.json", flagged)
+        self.assertIn("AGENTS.md", flagged)
+        self.assertIn("docs/devel/design/README.md", flagged)
+        # 渲染文首元数据与 JSON 元数据后诊断消失；正文中的格式示例保留占位符。
+        for rel in [p for p in self.files() if p.endswith(".md")]:
+            lines = (self.root / rel).read_text(encoding="utf-8").splitlines()
+            head = [l.replace("MyProject", "Demo").replace("YYYY-MM-DD", "2026-10-19") for l in lines[:6]]
+            self.write(rel, "\n".join(head + lines[6:]))
+        for rel in ("docs/index.json", "docs/devel/index.json", "docs/guide/index.json",
+                    "docs/devel/change/index.json", "docs/devel/task/index.json"):
+            data = self.read_json(rel)
+            data.update({k: "Demo" if k == "project" else "2026-10-19" for k in
+                         ("project", "created", "last_change", "updated_at") if k in data})
+            self.write_json(rel, data)
+        result = self.run_tool("--mode", "init")
+        self.assertNotIn("PLACEHOLDER_UNRENDERED", self.codes(result))
+        self.assertIn("YYYY-MM-DD", (self.root / "docs/README.md").read_text(encoding="utf-8"))
+
+    def test_init_placeholder_check_handles_nonstring_metadata(self):
+        self.install_skeleton()
+        for rel, field, value in (("docs/index.json", "project", {"name": "Demo"}),
+                                  ("docs/devel/index.json", "created", []),
+                                  ("docs/guide/index.json", "last_change", {}),
+                                  ("docs/devel/change/index.json", "updated_at", []),
+                                  ("docs/devel/task/index.json", "updated_at", {})):
+            with self.subTest(rel=rel, field=field):
+                original = self.read_json(rel)
+                data = copy.deepcopy(original)
+                data[field] = value
+                self.write_json(rel, data)
+                before = self.files()
+                try:
+                    self.run_tool("--mode", "init")
+                    self.assertEqual(before, self.files())
+                finally:
+                    self.write_json(rel, original)
+
+    def receipt(self, cid, expect=0):
+        result = self.run_tool("--card", cid, "--receipt", expect=expect)
+        return result["receipt"]
+
+    def test_record_keeps_from_status_for_receipt_transition(self):
+        self.card()
+        self.run_tool("--card", "C001", "--to", "verified", "--record")
+        gate = self.read_json("docs/devel/change/C001.json")["gate"]
+        self.assertEqual((gate["from_status"], gate["target_status"]), ("pending", "verified"))
+
+    def test_receipt_fixed_layout_for_closed_change(self):
+        commit = self.git_commit()
+        card = self.card(status="verified")
+        card.update(title="修复日K", version="v0.1.0", branch="fix/C001-kline",
+                    sync={"commit": commit, "design_pinned": True},
+                    design={"doc": "docs/devel/design/01-core.md", "modified": True},
+                    changes=[{"after": "返回 7 元组"}])
+        self.save_card(card)
+        self.write("CHANGELOG.md", "- [C001](docs/devel/change/C001.json)\n")
+        self.run_tool("--card", "C001", "--to", "closed", "--record")
+        card = self.read_json("docs/devel/change/C001.json")
+        card["status"] = "closed"
+        self.save_card(card)
+        before = self.files()
+        text = self.receipt("C001")
+        self.assertEqual(before, self.files())
+        lines = text.splitlines()
+        self.assertEqual(lines[0], "### C001 · 修复日K · verified → closed")
+        self.assertEqual(lines[1], "批次 v0.1.0 · 分支 fix/C001-kline · 设计 01-core.md @Core")
+        self.assertEqual(lines[3:6], ["| 验收项 | 结果 | 证据 |", "|---|---|---|",
+                                      "| behavior | ✓ | fixture evidence |"])
+        rows = [l.split("：", 1)[0] for l in lines if l.startswith("- ")]
+        self.assertEqual(rows, ["- 门禁", "- 同步", "- 人工", "- 改动", "- 未覆盖", "- 需要你"])
+        self.assertIn("复核 Exit 0 · gate 记录 Exit 0", text)
+        self.assertIn("- 同步：commit %s · CHANGELOG ✓ · 设计回写 ✓" % commit[:7], text)
+        self.assertIn("- 人工：「这次实测符合预期，可以验收」— Owner (AI代签)", text)
+        self.assertIn("- 改动：返回 7 元组", text)
+        # 文本模式只输出回执，便于原样转交。
+        plain = subprocess.run([sys.executable, str(TOOL), str(self.root), "--card", "C001", "--receipt"],
+                               capture_output=True, text=True)
+        self.assertEqual(plain.stdout.strip(), text)
+
+    def test_receipt_before_signoff_asks_for_confirmation(self):
+        card = self.card(status="in_progress")
+        card["verification"]["user_quote"] = ""
+        card["verification"]["checks"].append({"item": "a|b", "true_if": "y", "false_if": "n",
+                                                "result": None, "evidence": "line1\nline2"})
+        self.save_card(card)
+        text = self.receipt("C001")
+        self.assertTrue(text.startswith("### C001 · — · in_progress\n"))
+        self.assertIn("| a\\|b | 待定 | line1 line2 |", text)
+        self.assertIn("- 人工：待人工确认", text)
+        self.assertIn("CHANGELOG 未登记", text)
+
+    def test_receipt_task_lists_capabilities_and_dependencies(self):
+        self.card("T01", "task")
+        card = self.card("T02", "task", "in_progress")
+        card.update(depends_on=["T01"], tasks=[{"id": "T02-1", "title": "契约", "done": True},
+                                               {"id": "T02-2", "title": "费用", "done": False}])
+        self.save_card(card, "task")
+        text = self.receipt("T02")
+        self.assertIn("- 同步：commit — · 依赖 T01 pending", text)
+        self.assertIn("- 人工：按项目要求另行验收（T 卡无代签字段）", text)
+        self.assertIn("- 改动：T02-1 契约 ✓；T02-2 费用 ✗", text)
+        self.assertIn("ADVISORY DEP_NOT_READY[本卡]", text)
+
+    def test_receipt_reports_failures_with_real_exit_code(self):
+        self.closed_cards("C001", "C002")
+        for cid in ("C001", "C002"):
+            card = self.read_json("docs/devel/change/%s.json" % cid)
+            card["gate"]["exit_code"] = 4
+            self.save_card(card)
+        text = self.receipt("C001", expect=4)
+        self.assertIn("复核 Exit 4 · gate 记录 Exit 4", text)
+        self.assertIn("ERROR GATE_EXIT_NONZERO×2[含本卡]", text)
+
+    def test_receipt_shows_rejection_history(self):
+        card = self.card(status="rejected")
+        card["rejections"] = [{"date": "2026-10-01", "reason": "旧原因"},
+                              {"date": "2026-10-02", "reason": "实测仍返回空数组"}]
+        self.save_card(card)
+        self.assertIn("- 驳回：共 2 次，最近 2026-10-02：实测仍返回空数组", self.receipt("C001"))
+
+    def test_receipt_array_field_types_return_json_findings(self):
+        for cid, track, field in (("C001", "change", "changes"), ("T01", "task", "tasks")):
+            original = self.card(cid, track)
+            for value in (1, True, "invalid", {"title": "invalid"}, [None]):
+                with self.subTest(field=field, value=value):
+                    card = copy.deepcopy(original)
+                    card[field] = value
+                    self.save_card(card, track)
+                    before = self.files()
+                    for args in ((), ("--card", cid, "--receipt")):
+                        result = self.run_tool(*args, expect=4)
+                        self.assertTrue(any(f["code"] == "JSON_TYPE" and f["card"] == cid
+                                            and field in f["msg"] for f in result["findings"]))
+                    self.assertEqual(before, self.files())
+            for value in (None, [], [{}]):
+                with self.subTest(field=field, valid_value=value):
+                    card = copy.deepcopy(original)
+                    card[field] = value
+                    self.save_card(card, track)
+                    self.receipt(cid)
+            self.save_card(original, track)
+
+    def test_receipt_argument_rules(self):
+        self.card()
+        for args in (("--receipt",), ("--card", "C001", "--receipt", "--record"),
+                     ("--card", "C001", "--to", "verified", "--receipt"),
+                     ("--card", "C001", "--receipt", "--warn-only"),
+                     ("--mode", "init", "--card", "C001", "--receipt")):
+            with self.subTest(args=args):
+                result = subprocess.run([sys.executable, str(TOOL), str(self.root), *args],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+        result = self.run_tool("--card", "C099", "--receipt", expect=4)
+        self.assertNotIn("receipt", result)
+        self.assertIn("TRANSITION_CARD", self.codes(result))
+
+    def test_examples_match_current_templates(self):
+        # 样例是 Agent 的仿写对象，字段集合须与现行模板同步。
+        for sample, template in (("sample-change-card.json", "change-template.json.tpl"),
+                                 ("sample-task-card.json", "task-template.json.tpl")):
+            with self.subTest(sample=sample):
+                card = json.loads((REPO / "examples" / sample).read_text(encoding="utf-8"))
+                tpl = json.loads((REPO / "templates/docs/standards" / template).read_text(encoding="utf-8"))
+                self.assertEqual(set(tpl) - set(card), set())
+                for key, value in tpl.items():
+                    if isinstance(value, dict):
+                        self.assertEqual(set(value) - set(card[key]), set(), key)
+                self.assertTrue(card["version"])
+                self.assertEqual(card["gate"]["exit_code"], 0)
+                self.assertTrue(card["sync"]["commit"])
+                for check in (card.get("verification") or card["acceptance"])["checks"]:
+                    self.assertNotEqual(check["true_if"], check["false_if"])
+                callbacks = " ".join(card["callback"]["before"] + card["callback"]["after"])
+                self.assertNotRegex(callbacks, r"(?i)\b(delete|drop|rm\s+-rf)\b|local/")
+        doc = (REPO / "examples/sample-design-doc.md").read_text(encoding="utf-8")
+        self.assertRegex(doc, r"\*\*created\*\*: \d{4}-\d{2}-\d{2} ｜ \*\*last-change\*\*: "
+                              r"\d{4}-\d{2}-\d{2} ｜ \*\*status\*\*: \w+")
+        self.assertEqual(re.findall(r"^## (\d)\. ", doc, re.M), ["1", "2", "3", "4"])
+        topic = re.search(r"<!-- @topic: (\w+) -->", doc).group(1)
+        self.assertIn("(../change/index.json#%s)" % topic, doc)
+        # 设计正文不直接链接会随归档移动的卡片文件。
+        self.assertNotRegex(doc, r"\]\([^)]*[CT]\d{2,3}\.json\)")
 
 
 if __name__ == "__main__":

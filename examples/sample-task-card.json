@@ -2,6 +2,7 @@
   "$schema": "https://ad-flow.org/schemas/task-card.v1.json",
   "id": "T03",
   "title": "撮合引擎内核",
+  "version": "v0.1.0",
   "milestone": "M2-领域内核",
   "status": "completed",
   "branch": "feat/T03-matching-engine",
@@ -30,7 +31,8 @@
     ],
     "after": [
       "black src/matching tests/test_matching.py",
-      "flake8 src/matching"
+      "flake8 src/matching",
+      "scripts/adflow-verify --card T03 --to completed --record"
     ]
   },
 
@@ -68,5 +70,14 @@
         "result": true
       }
     ]
+  },
+  "sync": {
+    "commit": "9f3c2ab"
+  },
+  "gate": {
+    "tool": "adflow-verify",
+    "version": "1.4.0",
+    "ran_at": "2026-09-17",
+    "exit_code": 0
   }
 }

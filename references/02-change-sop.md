@@ -48,7 +48,7 @@
 2. **记录脱敏流水号**：
    - 获取测试流水号（如 `$GITHUB_RUN_ID` 纯数字或本地运行时间戳 `local-YYYYMMDD-HH`），填入 `verification.run_id`；
 3. **人机对齐汇报**：
-   - AI 在会话中向人类呈报测试事实、修改前后逻辑与关键验证现象；
+   - 运行 `scripts/adflow-verify --card Cxxx --receipt`，以固定格式的节点回执（见目标项目 `AGENTS.md` 二.3）呈报测试事实、修改前后逻辑与关键验证现象：事实行原样转交，只填写「未覆盖」「需要你」两行，并在「需要你」中请求人工确认；
 4. **人类口头确认与 AI 代签依据**：
    - 人类在会话中明确回复同意后，AI 摘录人类发言原话填入 `verification.user_quote`；
    - 填写 `signoff`（格式：`用户名 (AI代签)`）；
@@ -57,7 +57,7 @@
    - 执行 `scripts/adflow-verify --card Cxxx --to verified --record`，在内存检查该目标状态的结构前提；它仅回写本卡 `gate`，不修改状态、不替代人工确认；
    - `--record` 仅忽略本次实际回写卡的旧 `gate.exit_code` 回执，按当前真实结构及全局问题重评；未选卡的旧回执仍参与检查，普通只读校验仍核对旧回执；
    - 另行核对测试和行为证据确实支持所有验收项；工具不证明业务正确；
-   - Exit 0 后同步卡片与索引为 `verified`，运行普通 `scripts/adflow-verify` 复核。Exit 4 阻断；既有 Exit 6 列出事实并按人工决策补证，正式收口仍须取得 Exit 0；新增 `ADVISORY` 不增加硬门槛。
+   - Exit 0 后同步卡片与索引为 `verified`，运行 `scripts/adflow-verify --card Cxxx --receipt` 复核并转交节点回执。Exit 4 阻断；既有 Exit 6 列出事实并按人工决策补证，正式收口仍须取得 Exit 0；新增 `ADVISORY` 不增加硬门槛。
 
 ---
 
@@ -79,4 +79,4 @@
      - 记录 `commit` 与当前目标版本 `version`；
      - 将卡号追加到对应 `topics[topic].changes` 列表中；
    - 在 `Cxxx.json` 中将 `sync` 各标志置为 `true`。
-   - 同步卡片状态为 `closed`，再运行普通校验确认落盘结果。保留未通过事实，不手工把 `gate.exit_code` 改为 0。
+   - 同步卡片状态为 `closed`，再运行 `scripts/adflow-verify --card Cxxx --receipt` 确认落盘结果并转交节点回执。保留未通过事实，不手工把 `gate.exit_code` 改为 0。
