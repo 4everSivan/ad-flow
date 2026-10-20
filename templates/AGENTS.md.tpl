@@ -1,7 +1,7 @@
 # AGENTS.md
 
-<!-- @ad-flow: initialized v1.4.0 -->
-> MyProject 研发与 AI 协作规范 (ad-flow v1.4.0)。文档导航与机器总账位于 [docs/README.md](docs/README.md) 与 [docs/index.json](docs/index.json)。首次初始化后，日常研发遵循本项目内规范；仅在希望同步新版治理规范时再次调用 `$ad-flow` 或 `/ad-flow`。
+<!-- @ad-flow: initialized v1.5.0 -->
+> MyProject 研发与 AI 协作规范 (ad-flow v1.5.0)。文档导航与机器总账位于 [docs/README.md](docs/README.md) 与 [docs/index.json](docs/index.json)。首次初始化后，日常研发遵循本项目内规范；仅在希望同步新版治理规范时再次调用 `$ad-flow` 或 `/ad-flow`。
 
 ## 执行入口与规则作用范围
 

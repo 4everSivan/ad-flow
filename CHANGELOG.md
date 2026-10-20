@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-20
+
 ### Added
 
 - 校验器新增只读发版批次预检 `--release <version>`：本批次（按卡片 `version`，缺失时回退总账登记）活跃卡未达本轨终态报 `RELEASE_NOT_TERMINAL`（Exit 4），无 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6），找不到批次卡片报 `RELEASE_BATCH_EMPTY`（ADVISORY）。发版与归档门禁由“逐卡人工核定”改为可执行预检，发布范围仍由人工确认；该参数为可选项，不改变默认门禁，也不在初始化或升级中运行。
@@ -22,6 +24,7 @@
 
 ### Fixed
 
+- 里程碑成员判定兼容 `milestones[].tasks` 清单、任务卡中的里程碑 ID、标题及带归档后缀的标题，修复 `MILESTONE_STATUS_DRIFT` 漏报；区分 `M1` 与 `M10`，诊断按任务号稳定排序。此修复在 v1.4.0 标签之后合入，本版首次随正式发布交付。
 - 归档扫描通过卡号文件名或 `id` 识别缺少 `status` 的卡片，以 `JSON_TYPE`（Exit 4）报告，不再静默跳过；总账快照和非卡片报告仍不受检。
 - 初始化占位符检查仅匹配字符串元数据，避免对象或数组字段触发 `TypeError`，保持占位符诊断的 `ADVISORY` 口径。
 - `changes` / `tasks` 与既有 `rejections` 一同校验为对象数组或 null；非法类型返回 `JSON_TYPE`（Exit 4），不再使节点回执崩溃或静默丢弃内容。

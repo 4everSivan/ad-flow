@@ -1,6 +1,6 @@
 # ad-flow Agentic Execution Workflow (Machine-Oriented)
 # Specification for AI Agent initialization execution
-version: "1.4.0"
+version: "1.5.0"
 workflow_id: "adflow_init"
 target_actor: "AI_AGENT"
 trigger_aliases:
@@ -76,7 +76,7 @@ pipeline:
         - "agents.md"
         - "docs/index.json"
       tag_pattern: "<!-- @ad-flow: initialized(?: v(?P<ver>[0-9.]+))? -->"
-      current_version: "1.4.0"
+      current_version: "1.5.0"
       compare: "Parse numeric version components using code; conflicting/malformed sources stop without writes"
       on_version_newer:
         state: "VERSION_NEWER"
@@ -388,7 +388,7 @@ pipeline:
 
 upgrade_pipeline:
   trigger: "state == 'NEEDS_UPGRADE'"
-  description: "Smoothly synchronize and upgrade all governance constitutions, README specifications, and templates to v1.4.0"
+  description: "Smoothly synchronize and upgrade all governance constitutions, README specifications, and templates to v1.5.0"
   steps:
     - step: "U1_SNAPSHOT_CURRENT_GOVERNANCE"
       action: "CREATE_UPGRADE_SNAPSHOT"
@@ -434,10 +434,10 @@ upgrade_pipeline:
       note: "Snapshot before relocating standards; preserve coding bytes and custom C/T template fields, stop on differing old/canonical copies. Refresh managed template defaults and verifier copies; merge docs/index.json.standards. Retain established guide names/content and point refreshed links/indexes to actual files. Retire and physically delete legacy template copies (docs/devel/change/template.json and docs/devel/task/template.json) after moving to docs/standards/. Never rewrite business cards, gate blocks, custom rules or human quotes"
     - step: "U5_SYNC_DOCS_INDEX_VERSION"
       action: "PUBLISH_GOVERNANCE_VERSION"
-      canonical_tag: "<!-- @ad-flow: initialized v1.4.0 -->"
+      canonical_tag: "<!-- @ad-flow: initialized v1.5.0 -->"
       target: "docs/index.json"
       field: "adflow_version"
-      value: "1.4.0"
+      value: "1.5.0"
       rule: "Publish the canonical tag and index version only after managed assets are synchronized; preserve other index fields and re-read both anchors for agreement. Writes are not cross-file atomic; interrupted version conflicts remain read-only reports"
     - step: "U6_UPGRADE_REPORT"
       action: "REPORT_UPGRADE_COMPLETE"

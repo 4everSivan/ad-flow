@@ -113,7 +113,7 @@ class VerifyTests(unittest.TestCase):
         for dest, source in sources.items():
             self.write(dest, (REPO / "templates" / source).read_text(encoding="utf-8"))
         self.write("AGENTS.md", (self.root / "AGENTS.md").read_text(encoding="utf-8") +
-                   "\n<!-- @ad-flow: initialized v1.4.0 -->")
+                   "\n<!-- @ad-flow: initialized v1.5.0 -->")
         for name in ("adflow_verify.py", "adflow-verify"):
             self.write("scripts/" + name, (REPO / "scripts" / name).read_text(encoding="utf-8"))
 
@@ -789,7 +789,7 @@ class VerifyTests(unittest.TestCase):
         self.run_tool("--mode", "init")
         tool = self.root / "scripts/adflow_verify.py"
         tool.write_text(tool.read_text(encoding="utf-8").replace(
-            'VERSION = "1.4.0"', 'VERSION = "1.2.0"'), encoding="utf-8")
+            'VERSION = "1.5.0"', 'VERSION = "1.2.0"'), encoding="utf-8")
         result = self.run_tool("--mode", "init", expect=4)
         self.assertIn("TOOL_VERSION_DRIFT", self.codes(result))
 

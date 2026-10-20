@@ -34,7 +34,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 
 # ---- 常量 ----
 TOPIC_RE = re.compile(r"<!--\s*@topic:\s*([A-Za-z0-9_]+)\s*-->")

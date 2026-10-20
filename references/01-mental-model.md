@@ -78,7 +78,7 @@
 ## 七、治理版本感知与平滑升级心智 (Version-Aware Governance Lifecycle)
 
 1. **显式版本锚定**：
-   - 目标项目的 `AGENTS.md`（`<!-- @ad-flow: initialized v1.4.0 -->`）与 `docs/index.json`（`"adflow_version": "1.4.0"`）显式记录当前落地的治理版本号；
+   - 目标项目的 `AGENTS.md`（`<!-- @ad-flow: initialized v1.5.0 -->`）与 `docs/index.json`（`"adflow_version": "1.5.0"`）显式记录当前落地的治理版本号；
 2. **一次初始化、日常独立执行**：
    - 日常研发直接遵循项目内规范，无需再次调用技能；更新技能包不会自动改写已经初始化的项目。
 3. **平滑升级与业务零破坏**：
