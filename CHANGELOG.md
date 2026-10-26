@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-26
+
 ### Added
 
 - T 卡补齐人工核验代签：任务卡模板 `acceptance` 新增 `user_quote` 与 `signoff`，AGENTS 二.1、任务 README 与任务 SOP 在 `completed` 预检前增加“节点回执请求确认 → 记录人类原话”一步，与 AGENTS 声明的“人工核验代签”闭环及 C 卡流程一致。此前 T 卡无处记录确认，回执固定显示“按项目要求另行验收”。
@@ -137,7 +139,8 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/4everSivan/ad-flow/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/4everSivan/ad-flow/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/4everSivan/ad-flow/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/4everSivan/ad-flow/compare/v1.2.0...v1.3.0
