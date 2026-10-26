@@ -24,10 +24,12 @@
 - [ ] **断言**：关联的提交必须真实存在于 Git 历史中，且必须是当前 HEAD 的祖先提交（是否已进入主干需另行核对）（防止伪造假 Commit Hash）。
 
 ### 4. 证据锚有效性检查 (Evidence Anchors)
-- [ ] 检查卡片 `verification.run_id` 与 `user_quote`；
+- [ ] 检查 C 卡 `verification` 与 T 卡 `acceptance` 中的 `run_id`、`user_quote` 与 `signoff`；
 - [ ] **断言**：
   - `run_id` 必须为非空安全流水号（如纯数字或 `local-` 前缀），严禁包含内网 URL；
-  - `user_quote` 必须为非空人类会话原话引用，严禁由 AI 仅写“已确认”。
+  - `user_quote` 必须为非空人类会话原话引用，严禁由 AI 仅写“已确认”；
+  - `rejected` 卡不得保留驳回前的确认原话，返工后的确认须为驳回之后的新原话（`SIGNOFF_STALE`）；
+  - T 卡 `completed` 缺少确认原话或代签人报 `TASK_SIGNOFF_MISSING`（ADVISORY，旧卡不追溯阻断）。
 
 ### 5. 中枢总账双向对齐检查 (Index Alignment)
 - [ ] 检查 C/T 两轨 `index.json` 登记的路径、卡号、状态与物理文件双向一致；归档路由仍须存在且身份/状态一致，依赖可引用归档卡；

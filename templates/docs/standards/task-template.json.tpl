@@ -46,6 +46,8 @@
   "acceptance": {
     "result": null,
     "run_id": "",
+    "user_quote": "",
+    "signoff": "",
     "checks": [
       {
         "item": "架构纯度与边界",

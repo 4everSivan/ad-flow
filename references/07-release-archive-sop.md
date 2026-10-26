@@ -8,7 +8,7 @@
 
 1. 当前版本内的所有变更卡（`Cxxx.json`）均已处于 `status: "closed"` 状态；
 2. 当前阶段内的所有任务卡（`Txx.json`）均已处于 `status: "completed"` 状态；
-3. 全量测试通过；Git Tag（如 `git tag v0.1.0`）在归档移动并复核校验 Exit 0 之后再打，顺序见 `AGENTS.md` 发版与归档门禁；
+3. 全量测试通过；Git Tag（如 `git tag -a v0.1.0 -m "Release v0.1.0"`）最后打：归档移动、总账更新与 CHANGELOG 定稿提交且复核校验 Exit 0 之后，在该提交上打 Tag，顺序见 `AGENTS.md` 发版与归档门禁；
 4. `todo/future.md` 与 `now.md` 已完成例行评审。
 5. **归档前置批次预检**：运行 `scripts/adflow-verify --release <version>` 取得 Exit 0。普通校验的 Exit 0 **不证明**批次终态（非终态活跃卡没有状态前置要求）；批次预检在普通校验之上逐卡核对 `version` 属于本批次的活跃卡：未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6，先划定批次）。发布范围是否完整仍由人工确认。Exit 4 禁止归档。
 
@@ -21,9 +21,9 @@
      ↓
 【第 2 步】物理迁移卡片: 将 closed 变更卡 / completed 任务卡移入归档目录
      ↓
-【第 3 步】更新中枢总账: 更新 index.json 中的 file 映射路径
+【第 3 步】更新中枢总账: 更新 index.json 中的 file 映射路径，定稿 CHANGELOG
      ↓
-【第 4 步】设计文档零修改: 现行基线保持纯净，0 断链
+【第 4 步】复核并打 Tag: 设计文档零修改，复核 Exit 0 后提交，在该提交上打 Tag
 ```
 
 ### 第一步：建立版本归档箱
@@ -54,11 +54,15 @@ mv docs/devel/change/C001.json docs/archive/<version>/change/
 ```
 同时可在 `docs/archive/<version>/change/` 备份一份当时总账的静态快照 `index.json`。
 
+同一步定稿 CHANGELOG：将 `## [Unreleased]` 改为 `## [<version>] - <发布日期>` 并在其上新建空的 `## [Unreleased]`；本批次卡片链接改指归档路径。项目使用 `sync.tag` 时，为本批次 C 卡填写即将打出的 Tag 名——这是归档卡唯一允许写入的字段，与归档移动在同一提交中完成。
+
 任务卡同样移动至 `docs/archive/<version>/task/` 并更新现行 `task/index.json` 的 `file`；两轨现行总账保留历史卡号登记，不因归档删除。后续任务据现行索引只读解析已完成依赖，核对文件存在、卡号及状态一致；归档总账仅作历史快照，归档卡不按当前业务规则重验或回写 `gate`。
 
-### 第四步：设计文档零破坏（Zero Diff）
+### 第四步：设计文档零破坏（Zero Diff）并打 Tag
 由于设计文档只声明 `<!-- @topic: MarketService -->` 与指向 `change/index.json#MarketService` 的总账入口，**设计文档正文中的任何字符都不需要改动**！
 Git Diff 在设计方案上为 0，彻底根除了历史断链的隐患。
+
+复核 `scripts/adflow-verify` 再次 Exit 0 后，提交归档移动、总账与 CHANGELOG 变更，在发布已获授权时于该提交上打 Tag；推送另需授权。不得先打 Tag 再补归档或 CHANGELOG，否则 Tag 指向的提交与发布记录不一致。
 
 ---
 
@@ -68,5 +72,6 @@ Git Diff 在设计方案上为 0，彻底根除了历史断链的隐患。
 - [ ] `docs/archive/<version>/` 下完整包含了本次发版的所有卡片与测试快照；
 - [ ] 归档区（本批次及历史批次）无非终态卡：移动与总账更新后再次运行 `scripts/adflow-verify` 且 Exit 0；非 `closed`/`completed` 卡在归档区会被判 `ARCHIVE_NON_TERMINAL` 确定性违规（总账路由与归档目录物理扫描双覆盖，未登记的归档卡另报 `ARCHIVE_UNREGISTERED` 提示补登）。历史批次的存量冻结卡不改写状态，按归档 README「历史批次账实修复」流程人工处置；
 - [ ] 尝试从任意设计文档小节跟随 Topic 并在 `index.json` 查卡，路径 100% 正确命中；
+- [ ] `CHANGELOG.md` 已有 `[<version>] - <发布日期>` 条目与新的空 `[Unreleased]`，本批次卡片链接指向归档路径；Tag 指向包含上述变更的提交；
 - [ ] 自动化测试与 CI 门禁跑通退出码 0；
 - [ ] 所有构建与打包分发产物（如 dist / jar / binary）严格输出或归拢至 `local/`（如 `local/dist/`），严禁将打包成果物散落提交至 Git 源码树。

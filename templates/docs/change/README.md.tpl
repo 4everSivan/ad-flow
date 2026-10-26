@@ -55,7 +55,7 @@ scripts/adflow-verify --card C001 --to verified --record
 ```
 
 5. **合入与回写**：在合入已获授权的前提下完成合入，填写真实 `sync.commit` 并核对其为当前 HEAD 祖先。设计规则变化时回写正文，更新根目录 CHANGELOG 的 `[Unreleased]` 条目及总账主题关联；如实更新 `sync.design_pinned`、`sync.changelog`。
-6. **预检 `closed`**：完成上述前提后执行下列命令；Exit 0 后同步卡片及索引为 `closed`，再以节点回执复核。尚未实际打 Tag 时不虚填 `sync.tag`。
+6. **预检 `closed`**：完成上述前提后执行下列命令；Exit 0 后同步卡片及索引为 `closed`，再以节点回执复核。`sync.tag` 收口时留空，发版归档时随归档提交填写（见 [归档库](../../archive/README.md)）。
 
 ```bash
 scripts/adflow-verify --card C001 --to closed --record
@@ -67,6 +67,6 @@ scripts/adflow-verify --card C001 --to closed --record
 scripts/adflow-verify --card C001 --receipt
 ```
 
-**驳回**：人工明确驳回后，同步卡片与索引为 `rejected`，在 `rejections` 追加日期、`reason` 和返工动作，并以节点回执确认驳回已登记；继续同卡修复、重新取证与确认，不占新号或退回 todo。
+**驳回**：人工明确驳回后，同步卡片与索引为 `rejected`，在 `rejections` 追加日期、`reason` 和返工动作，清空驳回前的 `user_quote` 与 `signoff`（驳回即作废旧确认；残留旧原话，或返工后沿用 `--record` 记录过的驳回前原话，均报 `SIGNOFF_STALE`），并以节点回执确认驳回已登记；继续同卡修复、重新取证并重新取得人工确认，不占新号或退回 todo。
 
 **Hotfix**：S1/P0 故障可在明确授权范围内先修后补，补卡标记 `is_hotfix: true`；故障恢复后 24 小时内补齐卡片、核验、必要设计回写与 CHANGELOG。紧急性不扩大部署、推送或代签权限。

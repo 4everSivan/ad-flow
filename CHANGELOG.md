@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- T 卡补齐人工核验代签：任务卡模板 `acceptance` 新增 `user_quote` 与 `signoff`，AGENTS 二.1、任务 README 与任务 SOP 在 `completed` 预检前增加“节点回执请求确认 → 记录人类原话”一步，与 AGENTS 声明的“人工核验代签”闭环及 C 卡流程一致。此前 T 卡无处记录确认，回执固定显示“按项目要求另行验收”。
+- 新增 ADVISORY 诊断（不改变退出码，旧卡不追溯阻断）：`TASK_SIGNOFF_MISSING`（`completed` 任务卡缺少确认原话或代签人）、`TASKS_NOT_ALL_DONE`（`completed` 任务卡仍有 `tasks[].done` 不为 `true`）、`SIGNOFF_STALE`（`rejected` 变更卡仍保留驳回前的 `user_quote`，或返工后的终态卡沿用驳回前已记录的原话）。
+- 维护者工具 `tools/bump_version.py`：`--check` 核对 23 处治理版本号与 CHANGELOG 发布标题、链接是否一致；`<X.Y.Z>` 一次性更新全部版本号并把 `[Unreleased]` 切为新版本条目、更新比较链接。不安装到目标项目，提交与打 Tag 仍由人工执行。回归测试运行 `--check`，漏改任一处即失败。
+
+### Changed
+
+- 节点回执「人工」行 C/T 卡统一：已确认显示原话与代签人，未确认显示“待人工确认”，驳回后显示“已驳回，返工后重新请求确认”。「同步」行在收口前把未到期的项显示为“待回填 / 待登记 / 待回写”，收口后仍缺失才显示“缺失 / 未登记 / 未回写”，避免 `verified` 等中间节点误读为缺口。
+- 驳回流程明确清空驳回前的 `user_quote` / `signoff`，返工后须取得新的人工确认（AGENTS、变更 README、异常流手册、审计清单）。
+- 目标项目发版顺序改为“收口 → `--release` 批次预检 Exit 0 → 归档移动 + 总账更新 + CHANGELOG 定稿 → 复核 Exit 0 → 提交后在该提交上打 Tag”，保证 Tag 指向的提交已包含归档结果与定稿的 CHANGELOG（AGENTS、归档 README、任务 README、任务 SOP、发版归档 SOP）。`sync.tag` 改为在归档步骤随归档提交填写，消除“收口时不得虚填”与“归档卡冻结”导致该字段永远无法如实填写的矛盾。
+- 测试从校验器读取 `VERSION`，发版时不再需要手改测试中的版本号；README 新增技能维护与发版步骤。
+
+### Fixed
+
+- 修复驳回后沿用过期代签：已 `verified` 的卡被驳回后，`--to verified` 预检会接受驳回前的确认原话。C 卡 `--record` 现在于 `gate.signed_quote` / `gate.signed_rejection_count` 记下所依据的原话与驳回次数；驳回卡残留原话，或返工后仍沿用该原话时报 `SIGNOFF_STALE`，并保留旧记录直至写入新原话；回执不再把驳回前的原话显示为有效确认。仅对本版 `--record` 记录过的卡生效，不追溯旧卡。
+- 补齐 v1.5.0 遗漏的 CHANGELOG 比较链接：新增 `[1.5.0]`，`[Unreleased]` 改为从 `v1.5.0` 比较。
+
 ## [1.5.0] - 2026-10-20
 
 ### Added
@@ -119,7 +137,8 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/4everSivan/ad-flow/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/4everSivan/ad-flow/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/4everSivan/ad-flow/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/4everSivan/ad-flow/compare/v1.1.0...v1.2.0

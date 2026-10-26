@@ -12,6 +12,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 TOOL = REPO / "scripts/adflow_verify.py"
+BUMP = REPO / "tools/bump_version.py"
+# 版本号只在校验器中维护；测试随之读取，发版时无需手改。
+VERSION = re.search(r'^VERSION = "([^"]+)"', TOOL.read_text(encoding="utf-8"), re.M).group(1)
 
 
 class VerifyTests(unittest.TestCase):
@@ -113,7 +116,7 @@ class VerifyTests(unittest.TestCase):
         for dest, source in sources.items():
             self.write(dest, (REPO / "templates" / source).read_text(encoding="utf-8"))
         self.write("AGENTS.md", (self.root / "AGENTS.md").read_text(encoding="utf-8") +
-                   "\n<!-- @ad-flow: initialized v1.5.0 -->")
+                   "\n<!-- @ad-flow: initialized v%s -->" % VERSION)
         for name in ("adflow_verify.py", "adflow-verify"):
             self.write("scripts/" + name, (REPO / "scripts" / name).read_text(encoding="utf-8"))
 
@@ -789,7 +792,7 @@ class VerifyTests(unittest.TestCase):
         self.run_tool("--mode", "init")
         tool = self.root / "scripts/adflow_verify.py"
         tool.write_text(tool.read_text(encoding="utf-8").replace(
-            'VERSION = "1.5.0"', 'VERSION = "1.2.0"'), encoding="utf-8")
+            'VERSION = "%s"' % VERSION, 'VERSION = "1.2.0"'), encoding="utf-8")
         result = self.run_tool("--mode", "init", expect=4)
         self.assertIn("TOOL_VERSION_DRIFT", self.codes(result))
 
@@ -886,7 +889,7 @@ class VerifyTests(unittest.TestCase):
         self.assertTrue(text.startswith("### C001 · — · in_progress\n"))
         self.assertIn("| a\\|b | 待定 | line1 line2 |", text)
         self.assertIn("- 人工：待人工确认", text)
-        self.assertIn("CHANGELOG 未登记", text)
+        self.assertIn("- 同步：commit 待回填 · CHANGELOG 待登记 · 设计回写 待回写", text)
 
     def test_receipt_task_lists_capabilities_and_dependencies(self):
         self.card("T01", "task")
@@ -895,8 +898,8 @@ class VerifyTests(unittest.TestCase):
                                                {"id": "T02-2", "title": "费用", "done": False}])
         self.save_card(card, "task")
         text = self.receipt("T02")
-        self.assertIn("- 同步：commit — · 依赖 T01 pending", text)
-        self.assertIn("- 人工：按项目要求另行验收（T 卡无代签字段）", text)
+        self.assertIn("- 同步：commit 待回填 · 依赖 T01 pending", text)
+        self.assertIn("- 人工：待人工确认", text)
         self.assertIn("- 改动：T02-1 契约 ✓；T02-2 费用 ✗", text)
         self.assertIn("ADVISORY DEP_NOT_READY[本卡]", text)
 
@@ -952,6 +955,102 @@ class VerifyTests(unittest.TestCase):
         result = self.run_tool("--card", "C099", "--receipt", expect=4)
         self.assertNotIn("receipt", result)
         self.assertIn("TRANSITION_CARD", self.codes(result))
+
+    def test_task_completion_records_human_signoff(self):
+        card = self.card("T01", "task", "in_progress")
+        card.update(sync={"commit": self.git_commit()},
+                    tasks=[{"id": "T01-1", "title": "契约", "done": False}])
+        self.save_card(card, "task")
+        result = self.run_tool("--card", "T01", "--to", "completed")
+        self.assertEqual({f["code"] for f in result["findings"] if f["card"] == "T01"},
+                         {"TASK_SIGNOFF_MISSING", "TASKS_NOT_ALL_DONE"})
+        self.assertIn("- 人工：待人工确认", self.receipt("T01"))
+        card["acceptance"].update(user_quote="撮合规则我抽查过了，可以完成", signoff="Owner (AI代签)")
+        card["tasks"][0]["done"] = True
+        self.save_card(card, "task")
+        self.assertEqual(self.run_tool("--card", "T01", "--to", "completed", "--record")["findings"], [])
+        card = self.read_json("docs/devel/task/T01.json")
+        card["status"] = "completed"
+        self.save_card(card, "task")
+        text = self.receipt("T01")
+        self.assertTrue(text.startswith("### T01 · — · in_progress → completed\n"))
+        self.assertIn("- 人工：「撮合规则我抽查过了，可以完成」— Owner (AI代签)", text)
+
+    def test_rejection_voids_previous_signoff(self):
+        card = self.card(status="verified")
+        card.update(status="rejected", rejections=[{"date": "2026-10-25", "reason": "实例仍返回空数组"}])
+        self.save_card(card)
+        self.assertIn("SIGNOFF_STALE", self.codes(self.run_tool()))
+        text = self.receipt("C001")
+        self.assertIn("- 人工：已驳回，返工后重新请求确认", text)
+        self.assertIn("ADVISORY SIGNOFF_STALE[本卡]", text)
+        card["verification"].update(user_quote="", signoff="")
+        self.save_card(card)
+        self.assertNotIn("SIGNOFF_STALE", self.codes(self.run_tool()))
+        # 返工后的 verified 预检必须取得新的确认，不能沿用驳回前的原话。
+        result = self.run_tool("--card", "C001", "--to", "verified", expect=4)
+        self.assertIn("EVIDENCE_QUOTE", self.codes(result))
+
+    def test_reverification_cannot_silently_reuse_pre_rejection_quote(self):
+        self.card()
+        self.run_tool("--card", "C001", "--to", "verified", "--record")
+        card = self.read_json("docs/devel/change/C001.json")
+        self.assertEqual((card["gate"]["signed_quote"], card["gate"]["signed_rejection_count"]),
+                         ("这次实测符合预期，可以验收", 0))
+        # 驳回后未清空旧原话就返工重验：预检报告过期代签，gate 保留驳回前的指纹。
+        card.update(status="in_progress", rejections=[{"date": "2026-10-25", "reason": "实例仍返回空数组"}])
+        self.save_card(card)
+        result = self.run_tool("--card", "C001", "--to", "verified", "--record")
+        self.assertIn("SIGNOFF_STALE", self.codes(result))
+        card = self.read_json("docs/devel/change/C001.json")
+        self.assertEqual(card["gate"]["signed_rejection_count"], 0)
+        card["status"] = "verified"
+        self.save_card(card)
+        self.assertIn("ADVISORY SIGNOFF_STALE[本卡]", self.receipt("C001"))
+        # 取得新的确认原话后提示消失，指纹更新为驳回后的确认。
+        card["verification"]["user_quote"] = "返工后日K正常，同意合入"
+        self.save_card(card)
+        self.assertNotIn("SIGNOFF_STALE", self.codes(self.run_tool()))
+        self.run_tool("--card", "C001", "--to", "verified", "--record")
+        self.assertEqual(self.read_json("docs/devel/change/C001.json")["gate"]["signed_rejection_count"], 1)
+
+    def test_receipt_sync_row_flags_gaps_only_after_closure(self):
+        self.closed_cards("C001")
+        self.write("CHANGELOG.md", "")
+        text = self.receipt("C001", expect=6)
+        self.assertRegex(text, r"- 同步：commit [0-9a-f]{7} · CHANGELOG 未登记 · 设计回写 未回写")
+
+    def test_version_sites_agree_with_verifier(self):
+        result = subprocess.run([sys.executable, str(BUMP), "--check"], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_bump_version_updates_every_site_and_cuts_changelog(self):
+        root = self.root / "skill"
+        shutil.copytree(REPO, root, ignore=shutil.ignore_patterns(".git", ".zcode", "__pycache__"))
+        log = root / "CHANGELOG.md"
+        log.write_text(log.read_text(encoding="utf-8").replace(
+            "## [Unreleased]\n", "## [Unreleased]\n\n### Fixed\n\n- fixture entry\n", 1), encoding="utf-8")
+        new = "%d.0.0" % (int(VERSION.split(".")[0]) + 1)
+
+        def bump(*args):
+            return subprocess.run([sys.executable, str(root / "tools/bump_version.py"), *args],
+                                  capture_output=True, text=True)
+
+        result = bump(new, "--date", "2030-01-02")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(bump("--check").returncode, 0)
+        self.assertIn('VERSION = "%s"' % new, (root / "scripts/adflow_verify.py").read_text(encoding="utf-8"))
+        self.assertNotIn("initialized v%s" % VERSION,
+                         (root / "templates/AGENTS.md.tpl").read_text(encoding="utf-8"))
+        text = log.read_text(encoding="utf-8")
+        url = "https://github.com/4everSivan/ad-flow/compare/"
+        self.assertIn("## [Unreleased]\n\n## [%s] - 2030-01-02\n" % new, text)
+        self.assertIn("[Unreleased]: %sv%s...HEAD\n[%s]: %sv%s...v%s\n" % (url, new, new, url, VERSION, new), text)
+        # 空的 [Unreleased] 与非递增版本都拒绝发版，且不写任何文件。
+        before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+        self.assertNotEqual(bump("%d.0.1" % int(new.split(".")[0])).returncode, 0)
+        self.assertNotEqual(bump(VERSION).returncode, 0)
+        self.assertEqual(before, {p: p.read_bytes() for p in root.rglob("*") if p.is_file()})
 
     def test_examples_match_current_templates(self):
         # 样例是 Agent 的仿写对象，字段集合须与现行模板同步。

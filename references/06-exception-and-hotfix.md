@@ -10,7 +10,7 @@
 
 ```
 人类判定驳回 ──► 卡片 status 改为 "rejected"
-                     └─► rejections[] 追加驳回事实与原因
+                     └─► rejections[] 追加驳回事实与原因，清空旧 user_quote / signoff
                           └─► 同卡返工修复 (不占新号，保留历史教训)
                                └─► 重新跑测试并进入第二轮 verification
 ```
@@ -29,9 +29,10 @@
      }
    ]
    ```
+   同时清空 `verification.user_quote` 与 `signoff`：驳回即作废此前的确认，旧原话只留在 Git 历史中。驳回卡仍保留确认原话时，校验器报 `SIGNOFF_STALE`（ADVISORY）；`--record` 会在 `gate.signed_quote` / `gate.signed_rejection_count` 记下所依据的原话与当时的驳回次数，返工后仍沿用该原话时同样报 `SIGNOFF_STALE`，并保留旧记录直至写入新的确认原话。
 3. **修复后重验**：
    - 修复完成后，重新收集 `evidence`，更新 `checks[].result`；卡片与索引保持一致；
-   - 再次呈报人工核验，通过后状态由 `rejected` 转为 `verified`。
+   - 以节点回执再次呈报人工核验，取得新的确认原话写入 `user_quote` / `signoff` 后，状态由 `rejected` 转为 `verified`。
 
 ---
 

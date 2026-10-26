@@ -55,8 +55,12 @@ AI Agent 或开发者无需人工猜测下一步该干什么，通过 `task/inde
    - 执行自动化测试套件与纯度检测；
    - 比对 `acceptance.checks` 中的 `true_if / false_if`，收集 `evidence` 并置 `result: true`；
    - 记录无害流水号 `run_id`；
-   - 所有检查项全绿后保持当前状态，准备目标状态预检；不得以结构检查替代实测或项目要求的人工验收。
-6. **运行收口硬门禁（置 `completed` 前，硬阻断）**：
+   - 所有检查项全绿后保持当前状态，准备目标状态预检；不得以结构检查替代实测或人工验收。
+6. **人机对齐与代签**：
+   - 运行 `scripts/adflow-verify --card Txx --receipt`，以节点回执呈报验收事实，在「需要你」中请求人工确认；
+   - 人类在会话中明确确认后，AI 摘录原话填入 `acceptance.user_quote`，`signoff` 填 `用户名 (AI代签)`；不得以测试输出代替确认，也不能为通过校验伪造原话；
+   - 缺少确认时 `completed` 预检报 `TASK_SIGNOFF_MISSING`，仍有 `tasks[].done` 未完成时报 `TASKS_NOT_ALL_DONE`（均为 ADVISORY，旧卡不追溯阻断）。
+7. **运行收口硬门禁（置 `completed` 前，硬阻断）**：
    - 先将真实提交写入 `sync.commit`，执行 `scripts/adflow-verify --card Txx --to completed --record`，在内存检查 `completed` 的前提（流水号、结果字段、提交祖先、前置卡闭环等），仅回写本卡真实 `gate`；
    - `--record` 仅忽略本次实际回写卡的旧 `gate.exit_code` 回执，按当前真实结构及全局问题重评；未选卡的旧回执仍参与检查，普通只读校验仍核对旧回执；
    - **Exit 4 严禁置 `completed`**。既有 Exit 6 按事实补证，正式收口仍须 Exit 0；新增 `ADVISORY` 只汇报、不增加硬门槛；
@@ -69,4 +73,4 @@ AI Agent 或开发者无需人工猜测下一步该干什么，通过 `task/inde
 
 当当前 Phase 所有里程碑任务均已 `"completed"`：
 1. 跑通全量集成测试与构建，运行 `scripts/adflow-verify --release <版本号>` 取得 Exit 0；
-2. 执行 [references/07-release-archive-sop.md](07-release-archive-sop.md)，将当前阶段任务卡全量封箱移入 `docs/archive/<版本号>/task/`，复核校验 Exit 0 后打出阶段版本 Git Tag（顺序见发版与归档门禁）。
+2. 执行 [references/07-release-archive-sop.md](07-release-archive-sop.md)，将当前阶段任务卡全量封箱移入 `docs/archive/<版本号>/task/` 并定稿 CHANGELOG，复核校验 Exit 0 后提交，在该提交上打出阶段版本 Git Tag（顺序见发版与归档门禁）。

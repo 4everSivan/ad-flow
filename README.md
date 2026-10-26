@@ -96,7 +96,7 @@ flowchart TD
 
 - **基线与卡片脱钩**：卡片明确挂接设计文档及其 `@topic`，源码影响范围用领域能力描述；卡片归档路径由索引管理；
 - **设计挂接**：`target.design_doc` 指向真实设计正文，正文包含与 `target.design_topic` 匹配的 `<!-- @topic: TopicName -->`；目录 `README.md` 不能代替设计文档；
-- **版本封箱只读归档**：发版打 Tag 时，整批卡片移动到 `docs/archive/<version>/`，只需在 `index.json` 更新物理路径，设计文档保持 0 改动、0 断链。
+- **版本封箱只读归档**：发版时整批卡片移动到 `docs/archive/<version>/`，只需在 `index.json` 更新物理路径，设计文档保持 0 改动、0 断链；Tag 最后打在包含归档结果与定稿 CHANGELOG 的提交上。
 
 ---
 
@@ -123,8 +123,9 @@ flowchart TD
              └─► 按 depends_on DAG 拓扑顺序推进
                   └─► 执行 precheck 嗅探已完成性 ──► 执行 callback.before 准备环境
                        └─► 纯函数/服务实现 + 单测 ──► 执行 callback.after 收尾校验
-                            └─► DoD 验收全绿 ──► 预检 completed ──► 同步状态 ──► 节点回执
-                                 └─► 阶段封箱归档至 archive/<version>/
+                            └─► DoD 验收全绿 ──► 节点回执请求人工确认 ──► 记录原话代签
+                                 └─► 预检 completed ──► 同步状态 ──► 节点回执
+                                      └─► 阶段封箱归档至 archive/<version>/
 ```
 
 ---
@@ -347,7 +348,7 @@ scripts/adflow-verify --card C001 --to verified --record
 # C 卡：已回填真实 sync.commit、基线与 CHANGELOG，预检 closed
 scripts/adflow-verify --card C001 --to closed --record
 
-# T 卡：已满足 DoD、完成前置依赖并回填 sync.commit，预检 completed
+# T 卡：已满足 DoD、记录真实 user_quote/signoff、完成前置依赖并回填 sync.commit，预检 completed
 scripts/adflow-verify --card T01 --to completed --record
 ```
 
@@ -357,7 +358,7 @@ scripts/adflow-verify --card T01 --to completed --record
 scripts/adflow-verify --card C001 --receipt
 ```
 
-该命令执行完整普通复核（退出码语义不变），文本模式只输出一份固定格式的 Markdown 回执（`--json` 时放在 `receipt` 字段）。标题、批次行、验收表与「门禁」「同步」「人工」「驳回」「改动」行取自卡片和本次复核，执行者原样转交，只填写「未覆盖」「需要你」两行；标题的 `from → to` 来自 `--record` 预检时记录的 `gate.from_status` / `gate.target_status`。格式与填写规则写在目标项目 `AGENTS.md` 二.3，证据采集完成请求人工确认、`verified`、`closed`、`completed` 与 `rejected` 各节点通用。`--card` 仅限定回写及目标状态预检，所有活跃卡与全局问题仍参与检查；因此全局或其他卡的违规也会计入本卡记录结果。
+该命令执行完整普通复核（退出码语义不变），文本模式只输出一份固定格式的 Markdown 回执（`--json` 时放在 `receipt` 字段）。标题、批次行、验收表与「门禁」「同步」「人工」「驳回」「改动」行取自卡片和本次复核，执行者原样转交，只填写「未覆盖」「需要你」两行；标题的 `from → to` 来自 `--record` 预检时记录的 `gate.from_status` / `gate.target_status`；C 卡 `--record` 另记 `gate.signed_quote` / `gate.signed_rejection_count`，驳回后沿用旧确认原话时报 `SIGNOFF_STALE`。格式与填写规则写在目标项目 `AGENTS.md` 二.3，证据采集完成请求人工确认、`verified`、`closed`、`completed` 与 `rejected` 各节点通用。`--card` 仅限定回写及目标状态预检，所有活跃卡与全局问题仍参与检查；因此全局或其他卡的违规也会计入本卡记录结果。
 
 `--record` 对本次回写的卡重新计算真实前提，不把这些卡旧的失败 gate 当作新违规；修复原问题后，已有批量命令可重评恢复。未回写卡的门禁和其它实际违规仍然参与检查。索引中的归档卡只读解析身份与状态，用于跨版本依赖，不按现行规则重验或回写。
 
@@ -378,9 +379,9 @@ scripts/adflow-verify --card C001 --receipt
 | `2` | 参数组合或取值无效 | 按命令帮助修正参数 |
 | `4` | 存在确定性治理违规 | 阻断收口，按问题代码和路径修复后重验 |
 | `6` | 存在软告警或降级观察结果 | 列出事实供人工研判；正式收口仍需 Exit 0 |
-| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、未登记归档卡、重复初始化标签、未渲染占位符或空发布批次 | 旁路汇报，不影响退出码、不新增硬门槛 |
+| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、T 卡完成时缺人工确认或能力单元未完成、驳回卡残留旧确认、未登记归档卡、重复初始化标签、未渲染占位符或空发布批次 | 旁路汇报，不影响退出码、不新增硬门槛 |
 
-`ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动与总账更新后须复核校验再次 Exit 0。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
+`ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动、总账更新与 CHANGELOG 定稿后须复核校验再次 Exit 0，提交后在该提交上打 Tag。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
 
 校验器不替代应用测试、源码与设计一致性审查或人工验收，也不自动审计全部历史归档卡。`sync.commit` 检查的是当前 HEAD 的祖先关系，是否已合入主干需另行核对；证据字段齐全也不能证明原话真实或业务结论成立。覆盖边界见 [审计清单](references/05-audit-checklist.md)。
 
@@ -403,6 +404,8 @@ skills/ad-flow/
 │   └── adflow-verify                 # sh 薄封装（exec python3 …）
 │
 ├── tests/                            # 隔离工程夹具下的 CLI 行为回归测试
+├── tools/
+│   └── bump_version.py               # 维护者发版工具：核对/更新全部治理版本号并切分 CHANGELOG（不安装到目标项目）
 │
 ├── templates/                        # 标准脚手架资产库（供 init 一键注入）
 │   ├── AGENTS.md.tpl                 # 项目宪法模板（含防重入标签、多分支提交规约与部署红线）
@@ -446,4 +449,14 @@ skills/ad-flow/
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录、发版批次预检、项目内工具独立运行及样例与现行模板的字段同步；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。
+测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录、发版批次预检、项目内工具独立运行、样例与现行模板的字段同步及版本号一致性；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。
+
+### 技能维护与发版
+
+治理版本号分布在校验器、workflow、SKILL、README、AGENTS 模板、索引与卡片模板等 23 处，以 `scripts/adflow_verify.py` 的 `VERSION` 为准，由 `tools/bump_version.py` 统一维护，不手工逐处修改：
+
+1. 所有变化已记入 CHANGELOG 的 `[Unreleased]`，回归测试全绿；
+2. 运行 `python3 tools/bump_version.py <X.Y.Z>`：更新全部版本号，把 `[Unreleased]` 切为 `[X.Y.Z] - <今天>` 并更新比较链接；`[Unreleased]` 为空、版本未递增或现有版本号不一致时拒绝执行且不写文件；
+3. 复核 diff 后重跑测试（其中 `--check` 核对版本号与 CHANGELOG 链接），提交 `chore(release): publish vX.Y.Z`；
+4. 在**该发布提交**上打 Tag `vX.Y.Z`，GitHub Release 正文只取该版本条目；推送需单独确认；
+5. 打 Tag 后的修复记入新的 `[Unreleased]` 随下一版发布，不移动已发布的 Tag，也不在提交标题中沿用旧版本号。

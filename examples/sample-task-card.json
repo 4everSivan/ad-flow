@@ -54,6 +54,8 @@
   "acceptance": {
     "result": true,
     "run_id": "88201",
+    "user_quote": "11 类撮合规则我抽查过了，T03 可以标记完成",
+    "signoff": "sivan (AI代签)",
     "checks": [
       {
         "item": "架构纯度约束",
