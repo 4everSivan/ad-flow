@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- AGENTS 项目宪法「四、测试规范」新增首条规则「本地既有测试规则优先」：先扫描项目既有测试规则与约定（原 agent 文件测试规范、构建/测试配置与命令、CI 测试入口、既有测试目录布局与命名习惯），存在则按已有规则组织与执行测试，不强行迁移测试位置或改写既有约定；原「测试文件归拢」等规则成为无既有约定时的默认规范。已有项目经 `$ad-flow --upgrade` 刷新宪法时同步获得该规则，项目自定义规则区不受影响。
+
 ### Changed
 
 - CLI 回归测试从 `tests/test_adflow_verify.py` 迁至 `tools/test_adflow_verify.py`，维护命令改为 `python3 -m unittest discover -s tools -v`。回归测试与 `bump_version.py` 同属维护者资产，统一归入不安装到目标项目的 `tools/` 资产区，仓库根目录不再保留 `tests/` 目录。
