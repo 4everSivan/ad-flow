@@ -403,9 +403,9 @@ skills/ad-flow/
 │   ├── adflow_verify.py              # 校验引擎（仅标准库）：P1–P14 状态感知门禁 + --mode init + gate 证伪
 │   └── adflow-verify                 # sh 薄封装（exec python3 …）
 │
-├── tests/                            # 隔离工程夹具下的 CLI 行为回归测试
-├── tools/
-│   └── bump_version.py               # 维护者发版工具：核对/更新全部治理版本号并切分 CHANGELOG（不安装到目标项目）
+├── tools/                            # 维护者资产（不安装到目标项目）
+│   ├── test_adflow_verify.py         # 隔离工程夹具下的 CLI 行为回归测试
+│   └── bump_version.py               # 维护者发版工具：核对/更新全部治理版本号并切分 CHANGELOG
 │
 ├── templates/                        # 标准脚手架资产库（供 init 一键注入）
 │   ├── AGENTS.md.tpl                 # 项目宪法模板（含防重入标签、多分支提交规约与部署红线）
@@ -446,7 +446,7 @@ skills/ad-flow/
 维护本技能包时，在本仓库根目录运行 CLI 回归测试：
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -v
 ```
 
 测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录、发版批次预检、项目内工具独立运行、样例与现行模板的字段同步及版本号一致性；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。

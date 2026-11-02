@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- CLI 回归测试从 `tests/test_adflow_verify.py` 迁至 `tools/test_adflow_verify.py`，维护命令改为 `python3 -m unittest discover -s tools -v`。回归测试与 `bump_version.py` 同属维护者资产，统一归入不安装到目标项目的 `tools/` 资产区，仓库根目录不再保留 `tests/` 目录。
+
 ## [1.6.0] - 2026-10-26
 
 ### Added
