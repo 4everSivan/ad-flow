@@ -70,7 +70,10 @@ Reviewer Agent 必须站在“尝试证伪（Falsify）”的立场审视改动�
 ## 四、版本兼容与校验边界
 
 - v1.2.0 新增缺失主题、依赖环路、终态验收项未全为 true 的 `ADVISORY` 旁路诊断；不改变退出码，不追溯迁移旧卡。既有 ERROR/WARN 的 4/6 判定保留。
-- 后续新增的 `DEP_NOT_READY`（任务已开工但前置未完成）、`ARCHIVE_UNREGISTERED`（归档卡未经总账路由）、`TAG_DUPLICATE`（多个版本不同的初始化标签）与 `PLACEHOLDER_UNRENDERED`（初始化占位符未渲染）同为 `ADVISORY`。`ARCHIVE_NON_TERMINAL` 同时覆盖总账路由与归档目录中直接存放的卡片；`TOOL_VERSION_DRIFT` 仅在 `--mode init` 核对校验器副本与治理版本一致。
+- 后续新增的 `DEP_NOT_READY`（任务已开工但前置未完成）、`ARCHIVE_UNREGISTERED`（归档卡未经现行总账或批次总账路由）、`TAG_DUPLICATE`（多个版本不同的初始化标签）与 `PLACEHOLDER_UNRENDERED`（初始化占位符未渲染）同为 `ADVISORY`。`ARCHIVE_NON_TERMINAL` 同时覆盖总账路由与归档目录中直接存放的卡片；`TOOL_VERSION_DRIFT` 仅在 `--mode init` 核对校验器副本与治理版本一致。
+- 分层总账：归档批次总账 `docs/archive/<version>/index.json`（`adflow-archive-batch-v1`）的条目与现行总账适用同一组路由硬检查，参与撞号与依赖判定。现行总账仍登记归档卡时只报聚合的 `LEDGER_ARCHIVED_ENTRIES`（ADVISORY），旧布局不追溯阻断；`--release` 另以 `RELEASE_STRANDED`（ADVISORY）提示批次早于本次发布、仍滞留活跃区的终态卡。
+- `LEDGER_DUPLICATE_KEY`（同一总账或批次总账内卡号重名，JSON 只保留最后一条）与 `ARCHIVE_ID_COLLISION`（未登记的归档卡与其他卡撞号）暂为 `ADVISORY`，计划在后续版本升级为阻断；未登记的归档卡只参与撞号判定，不作为依赖解析来源。合入主干前在 `git merge --no-commit --no-ff` 的合并结果上复核。
+- `--next-id change|task` 与 `--topic <主题>` 为只读路由查询：分别输出覆盖全部批次及本机其他工作树、本地/远端跟踪分支的下一卡号（看不到他人未推送的分支）、主题在现行总账与各批次中的全部卡片（查不到主题时报 `TOPIC_EMPTY`，ADVISORY）。它们执行完整普通复核，退出码语义不变；不能与 `--card`、`--to`、`--record`、`--receipt`、`--release`、`--warn-only` 或 `--mode init` 合用。
 - `--release <version>` 为发版/归档前的只读批次预检：本批次活跃卡未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），无 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。它不能与 `--card`、`--to`、`--record` 合用，也不证明发布范围完整。
 - `--card <卡号> --receipt` 在状态同步后执行完整普通复核（退出码语义不变），并按固定格式输出节点回执：事实行取自卡片与本次复核，执行者只填写「未覆盖」「需要你」。审查时可对照回执与卡片原文，事实行被改写即视为汇报失真。它不能与 `--to`、`--record`、`--warn-only` 合用。
 - `--card <卡号> --to <目标状态>` 在内存检查目标状态，`--record` 仅回写指定卡的 gate，不修改卡片或索引状态。全局违规也会计入记录结果；Exit 0 后同步状态，再运行普通检查。

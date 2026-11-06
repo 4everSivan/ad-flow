@@ -9,10 +9,17 @@
 ### Added
 
 - AGENTS 项目宪法「四、测试规范」新增首条规则「本地既有测试规则优先」：先扫描项目既有测试规则与约定（原 agent 文件测试规范、构建/测试配置与命令、CI 测试入口、既有测试目录布局与命名习惯），存在则按已有规则组织与执行测试，不强行迁移测试位置或改写既有约定；原「测试文件归拢」等规则成为无既有约定时的默认规范。已有项目经 `$ad-flow --upgrade` 刷新宪法时同步获得该规则，项目自定义规则区不受影响。
+- 分层总账：发版归档改为把本批次卡片的登记与主题归属写入冻结的批次总账 `docs/archive/<version>/index.json`（`$schema: adflow-archive-batch-v1`，两轨共用一份），并从现行总账移出；现行总账只登记活跃卡，`topics[*].design_doc` 照常保留，设计正文的总账链接不变。此前现行总账保留全部历史登记，每次发版只改写 `file`，规模随卡片总数线性膨胀，日常建卡与转状态都要改写这份不断增长的文件。校验器对批次总账条目执行与现行总账相同的路由硬检查（`INDEX_FILE_INVALID` / `INDEX_FILE_DEAD` / `INDEX_ID_DRIFT` / `INDEX_STATUS_DRIFT` / `ARCHIVE_NON_TERMINAL`），并据此判定 `ID_DUPLICATE` 与跨版本依赖；未声明该 schema 的批次根文件（如项目自建快照）不按清单解析。
+- 校验器新增只读路由查询：`--next-id change|task` 输出覆盖现行总账、全部批次总账与归档目录的下一卡号（文本模式只打印卡号），取代通读历史登记求最大号；它同时读取本机其他工作树中的卡片文件与本地/远端跟踪分支末端的卡片文件名，最大号来自别处时以 `next_id_basis` 与 stderr 说明出处，减少多分支并行撞号，但看不到他人未推送的分支，仍不是原子预占；`--topic <主题>` 列出该主题在现行总账与各批次中的全部卡片、状态、批次与路径。两者执行完整普通复核、退出码语义不变，不能与其他模式参数或 `--warn-only` 合用。
+- 新增 ADVISORY 诊断（不改变退出码，不追溯阻断）：`LEDGER_ARCHIVED_ENTRIES`（现行总账仍登记或引用归档卡，每轨聚合为一条）、`RELEASE_STRANDED`（`--release` 时批次早于本次发布、仍滞留活跃区的终态卡；按版本精确匹配的归档不会带走它们）、`TOPIC_EMPTY`（`--topic` 查无该主题）、`LEDGER_DUPLICATE_KEY`（同一总账或批次总账内卡号重名：JSON 只保留最后一条，合并冲突保留两侧登记时会静默吞掉一张卡）、`ARCHIVE_ID_COLLISION`（未登记的归档卡与其他卡撞号；未登记卡仍不作为依赖解析来源）。后两项此前完全不可见，先以 ADVISORY 观察，计划在后续版本另行记录决策后升级为阻断。
+- 归档 README 新增「6. 现行总账瘦身」：旧项目经人工授权一次性把现行总账中的归档登记迁入批次总账，不改写、不移动卡片文件，以普通复核发现、`--next-id` 与各主题 `--topic` 前后一致作为等价证据。新增样例 `examples/sample-archive-index.json`。
 
 ### Changed
 
 - CLI 回归测试从 `tests/test_adflow_verify.py` 迁至 `tools/test_adflow_verify.py`，维护命令改为 `python3 -m unittest discover -s tools -v`。回归测试与 `bump_version.py` 同属维护者资产，统一归入不安装到目标项目的 `tools/` 资产区，仓库根目录不再保留 `tests/` 目录。
+- 发版归档第 3 步由“改写现行总账 `file`”改为“写入批次总账并移出现行登记”，复核改用 `--topic` 从设计主题定位归档卡并确认无新增 `ARCHIVE_UNREGISTERED`（AGENTS、归档 README、发版归档 SOP、索引路由规约、文档中心、研发 README、心智模型）。建卡取号改为 `scripts/adflow-verify --next-id`（AGENTS、C/T 卡池 README、变更 SOP、异常流手册）；任务依赖经批次总账定位归档前置卡（任务 README、任务 SOP）。旧布局继续有效：初始化与升级不迁移、不瘦身现行总账，治理文件仍为 24 个，既有硬检查对旧数据不变。
+- 多分支合入规则（AGENTS 五.1、异常流手册、变更 SOP、C/T 卡池 README）：合入主干前以 `git merge --no-commit --no-ff <分支>` 在合并结果上运行校验，Exit 0 且没有 `LEDGER_DUPLICATE_KEY` / `ARCHIVE_ID_COLLISION` 时再提交，否则 `git merge --abort`。分层总账下，主干已归档进批次总账的卡与另一分支新建的同号活跃卡路径不同，可能无任何 Git 冲突地合入，此时只有校验器的 `ID_DUPLICATE` 能发现撞号。
+- 总账样例改为分层布局：变更与任务总账样例只登记活跃卡，归档卡移入批次总账样例；同时移除样例主题中指向不存在卡片的 `C015` / `C020` / `T06`。回归测试核对样例遵守分层规则，并以校验器实际解析批次总账样例。
 
 ## [1.6.0] - 2026-10-26
 

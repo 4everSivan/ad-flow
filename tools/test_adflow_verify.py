@@ -704,7 +704,261 @@ class VerifyTests(unittest.TestCase):
         self.write_json(rel, {"id": "T01", "status": "pending"})
         self.write_json("docs/devel/task/index.json", {"tasks": {"T01": {"status": "pending", "file": rel}}})
         result = self.run_tool(expect=4)
-        self.assertEqual([f["code"] for f in result["findings"]], ["ARCHIVE_NON_TERMINAL"])
+        # 旧布局由现行总账路由归档卡：终态违规只报一次，另有一条聚合的瘦身提示。
+        self.assertEqual([f["code"] for f in result["findings"]],
+                         ["ARCHIVE_NON_TERMINAL", "LEDGER_ARCHIVED_ENTRIES"])
+
+    def archived(self, batch, cid, track="change", status=None, **fields):
+        """在归档批次中放入一张冻结卡，返回其批次总账登记条目。"""
+        status = status or ("closed" if track == "change" else "completed")
+        rel = "docs/archive/%s/%s/%s.json" % (batch, track, cid)
+        self.write_json(rel, dict({"id": cid, "status": status}, **fields))
+        return dict({"status": status, "file": rel}, **fields)
+
+    def manifest(self, batch, cards=None, tasks=None, topics=None):
+        self.write_json("docs/archive/%s/index.json" % batch, {
+            "$schema": "adflow-archive-batch-v1", "release": batch, "archived_at": "2026-10-01",
+            "cards": cards or {}, "tasks": tasks or {}, "topics": topics or {}})
+
+    def test_batch_manifest_routes_archived_cards_like_the_live_ledger(self):
+        self.manifest("v0.1.0", cards={"C001": self.archived("v0.1.0", "C001")},
+                      tasks={"T01": self.archived("v0.1.0", "T01", "task")},
+                      topics={"Core": {"changes": ["C001"], "tasks": ["T01"]}})
+        successor = self.card("T02", "task", "in_progress")
+        successor["depends_on"] = ["T01"]
+        self.save_card(successor, "task")
+        before = self.files()
+        result = self.run_tool()
+        # 冻结路由参与依赖判定，归档卡不再被视为未登记，现行总账也无需瘦身提示。
+        self.assertEqual(self.codes(result) & {"DEP_DANGLING", "DEP_NOT_READY", "ARCHIVE_UNREGISTERED",
+                                               "LEDGER_ARCHIVED_ENTRIES"}, set())
+        self.assertEqual(before, self.files())
+
+    def test_batch_manifest_keeps_routing_hard_checks(self):
+        cases = {
+            "INDEX_FILE_INVALID": lambda: {"C001": dict(self.archived("v0.0.9", "C001"))},
+            "INDEX_FILE_DEAD": lambda: {"C001": {"status": "closed",
+                                                 "file": "docs/archive/v0.1.0/change/C001.json"}},
+            "INDEX_ID_DRIFT": lambda: {"C002": self.archived("v0.1.0", "C001")},
+            "INDEX_STATUS_DRIFT": lambda: {"C001": dict(self.archived("v0.1.0", "C001"), status="pending")},
+            "ARCHIVE_NON_TERMINAL": lambda: {"C001": self.archived("v0.1.0", "C001", status="verified")},
+            "ID_DUPLICATE": lambda: (self.card(), {"C001": self.archived("v0.1.0", "C001")})[1],
+        }
+        for code, cards in cases.items():
+            with self.subTest(code=code):
+                shutil.rmtree(self.root / "docs/archive", ignore_errors=True)
+                self.write_json("docs/devel/change/index.json", {"cards": {}})
+                for stale in (self.root / "docs/devel/change").glob("C*.json"):
+                    stale.unlink()
+                self.manifest("v0.1.0", cards=cards())
+                self.assertIn(code, self.codes(self.run_tool(expect=4)))
+        # 条目只能指向本批次的对应轨道。
+        shutil.rmtree(self.root / "docs/archive")
+        self.manifest("v0.1.0", tasks={"C001": self.archived("v0.1.0", "C001")})
+        self.assertIn("INDEX_FILE_INVALID", self.codes(self.run_tool(expect=4)))
+        for bad in ({"cards": []}, {"topics": {"Core": {"changes": "C001"}}}, {"topics": []}):
+            with self.subTest(bad=bad):
+                self.write_json("docs/archive/v0.1.0/index.json",
+                                dict({"$schema": "adflow-archive-batch-v1"}, **bad))
+                self.assertIn("JSON_TYPE", self.codes(self.run_tool(expect=4)))
+        self.write("docs/archive/v0.1.0/index.json", '{"$schema": "adflow-archive-batch-v1", ')
+        self.assertIn("JSON_PARSE", self.codes(self.run_tool(expect=4)))
+
+    def test_unmarked_batch_root_files_are_not_parsed_as_manifests(self):
+        # 项目自建的批次快照或无关资料不按清单解析，也不新增阻断。
+        self.archived("v0.1.0", "C001")
+        for text in ('{"kind": "project-snapshot", "cards": ["C001"]}', "{not json"):
+            with self.subTest(text=text):
+                self.write("docs/archive/v0.1.0/index.json", text)
+                result = self.run_tool()
+                self.assertEqual(self.codes(result), {"ARCHIVE_UNREGISTERED"})
+
+    def test_legacy_ledger_layout_compacts_into_batch_manifest(self):
+        legacy = {cid: self.archived("v0.1.0", cid, topic="Core") for cid in ("C001", "C002")}
+        self.card("C003")
+        index = self.read_json("docs/devel/change/index.json")
+        index["cards"].update(legacy)
+        index["topics"] = {"Core": {"design_doc": "docs/devel/design/01-core.md",
+                                    "changes": ["C001", "C002", "C003"]}}
+        self.write_json("docs/devel/change/index.json", index)
+        before = self.run_tool()
+        notes = [f for f in before["findings"] if f["code"] == "LEDGER_ARCHIVED_ENTRIES"]
+        self.assertEqual([(f["path"], f["sev"]) for f in notes],
+                         [("docs/devel/change/index.json", "ADVISORY")])
+        self.assertIn("2 张归档卡、2 处主题引用归档卡", notes[0]["msg"])
+        # 过渡期两处同时登记同一路径，不算撞号。
+        self.manifest("v0.1.0", cards=legacy, topics={"Core": {"changes": ["C001", "C002"]}})
+        self.assertNotIn("ID_DUPLICATE", self.codes(self.run_tool()))
+        # 瘦身完成：现行总账只留活跃卡，其余发现、下一卡号与主题历史均不变。
+        for cid in legacy:
+            del index["cards"][cid]
+        index["topics"]["Core"]["changes"] = ["C003"]
+        self.write_json("docs/devel/change/index.json", index)
+        after = self.run_tool()
+        strip = lambda r: [f for f in r["findings"] if f["code"] != "LEDGER_ARCHIVED_ENTRIES"]
+        self.assertEqual(strip(before), strip(after))
+        self.assertNotIn("LEDGER_ARCHIVED_ENTRIES", self.codes(after))
+        self.assertEqual(self.run_tool("--next-id", "change")["next_id"], "C004")
+        self.assertEqual([c["id"] for c in self.run_tool("--topic", "Core")["topic"]["cards"]],
+                         ["C001", "C002", "C003"])
+
+    def test_next_id_spans_live_ledger_batches_and_archive_files(self):
+        self.assertEqual(self.run_tool("--next-id", "change")["next_id"], "C001")
+        self.assertEqual(self.run_tool("--next-id", "task")["next_id"], "T01")
+        self.card("C002")
+        self.manifest("v0.1.0", cards={"C007": self.archived("v0.1.0", "C007")},
+                      tasks={"T09": self.archived("v0.1.0", "T09", "task")})
+        self.assertEqual(self.run_tool("--next-id", "change")["next_id"], "C008")
+        # 未登记的归档文件与失效登记同样占用卡号。
+        self.archived("v0.0.9", "C011")
+        self.assertEqual(self.run_tool("--next-id", "change")["next_id"], "C012")
+        index = self.read_json("docs/devel/change/index.json")
+        index["cards"]["C020"] = {"status": "pending", "file": "docs/devel/change/C020.json"}
+        self.write_json("docs/devel/change/index.json", index)
+        before = self.files()
+        self.assertEqual(self.run_tool("--next-id", "change", expect=4)["next_id"], "C021")
+        self.assertEqual(self.run_tool("--next-id", "task", expect=4)["next_id"], "T10")
+        self.assertEqual(before, self.files())
+        # 文本模式只输出卡号，非零复核另在 stderr 提示。
+        result = subprocess.run([sys.executable, str(TOOL), str(self.root), "--next-id", "change"],
+                                capture_output=True, text=True)
+        self.assertEqual((result.returncode, result.stdout), (4, "C021\n"))
+        self.assertIn("Exit 4", result.stderr)
+        # 非 git 目录只统计当前工作区。
+        basis = self.run_tool("--next-id", "change", expect=4)["next_id_basis"]
+        self.assertEqual(basis, {"max": "C020", "found_in": ["当前工作区"],
+                                 "scanned": {"branches": 0, "worktrees": 0}})
+
+    def git(self, *args, cwd=None):
+        return subprocess.run(["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test",
+                               *args], cwd=cwd or self.root, check=True, capture_output=True,
+                              text=True).stdout
+
+    def test_next_id_sees_other_branches_worktrees_and_remotes(self):
+        self.git("init", "-q")
+        self.card("C001")
+        self.git("add", "-A")
+        self.git("commit", "-qm", "base")
+        # 另一条本地分支已提交的卡片：切回主线后工作区里看不到它，但仍占号。
+        self.git("checkout", "-qb", "feat")
+        self.card("C005")
+        self.git("add", "-A")
+        self.git("commit", "-qm", "feat C005")
+        self.git("checkout", "-q", "-")
+        result = self.run_tool("--next-id", "change")
+        self.assertEqual((result["next_id"], result["next_id_basis"]["found_in"]),
+                         ("C006", ["refs/heads/feat"]))
+        # 远端跟踪分支（他人已推送、本机已 fetch）同样占号。
+        self.git("checkout", "-qb", "peer")
+        self.card("C012")
+        self.git("add", "-A")
+        self.git("commit", "-qm", "peer C012")
+        self.git("update-ref", "refs/remotes/origin/peer", "HEAD")
+        self.git("checkout", "-q", "-")
+        self.git("branch", "-qD", "peer")
+        result = self.run_tool("--next-id", "change")
+        self.assertEqual((result["next_id"], result["next_id_basis"]["found_in"]),
+                         ("C013", ["refs/remotes/origin/peer"]))
+        # 其他工作树中尚未提交的卡片也占号。
+        other = tempfile.TemporaryDirectory()
+        self.addCleanup(other.cleanup)
+        tree = Path(other.name).resolve() / "wt"
+        self.git("worktree", "add", "-q", str(tree), "-b", "wt")
+        self.addCleanup(self.git, "worktree", "remove", "--force", str(tree))
+        (tree / "docs/devel/change/C020.json").write_text('{"id": "C020", "status": "pending"}', encoding="utf-8")
+        before = {k: v for k, v in self.files().items() if not k.startswith(".git")}
+        result = self.run_tool("--next-id", "change")
+        self.assertEqual(result["next_id"], "C021")
+        self.assertEqual(result["next_id_basis"]["found_in"], ["工作树 %s" % tree])
+        self.assertEqual(result["next_id_basis"]["scanned"], {"branches": 3, "worktrees": 1})
+        self.assertEqual(before, {k: v for k, v in self.files().items() if not k.startswith(".git")})
+        # 文本模式仍只输出卡号，出处另在 stderr 说明。
+        text = subprocess.run([sys.executable, str(TOOL), str(self.root), "--next-id", "change"],
+                              capture_output=True, text=True)
+        self.assertEqual((text.returncode, text.stdout), (0, "C021\n"))
+        self.assertIn("最大卡号 C020 位于 工作树", text.stderr)
+
+    def test_duplicate_ledger_keys_are_advisory(self):
+        self.card("C001")
+        entry = '"C001": {"status": "pending", "file": "docs/devel/change/C001.json"}'
+        # 合并冲突保留两侧登记：JSON 重名键会被静默折叠成一条。
+        self.write("docs/devel/change/index.json", '{"updated_at": "a", "updated_at": "b", "cards": {%s, %s}}'
+                   % (entry, entry))
+        result = self.run_tool("--card", "C001", "--record")
+        notes = [f for f in result["findings"] if f["code"] == "LEDGER_DUPLICATE_KEY"]
+        self.assertEqual([(f["card"], f["path"], f["sev"]) for f in notes],
+                         [("C001", "docs/devel/change/index.json", "ADVISORY")])
+        self.assertIn("登记了 2 次", notes[0]["msg"])
+        self.assertNotIn("ID_DUPLICATE", self.codes(result))
+        # 旁路提示不阻断既有的指定卡回写。
+        self.assertEqual(self.read_json("docs/devel/change/C001.json")["gate"]["exit_code"], 0)
+        archived = self.archived("v0.1.0", "C009")
+        self.write("docs/archive/v0.1.0/index.json",
+                   '{"$schema": "adflow-archive-batch-v1", "cards": {"C009": %s, "C009": %s}}'
+                   % (json.dumps(archived), json.dumps(archived)))
+        self.assertIn(("C009", "docs/archive/v0.1.0/index.json"),
+                      {(f["card"], f["path"]) for f in self.run_tool()["findings"]
+                       if f["code"] == "LEDGER_DUPLICATE_KEY"})
+
+    def test_unregistered_archived_collisions_are_advisory_and_do_not_resolve_dependencies(self):
+        self.card("C002")
+        self.archived("v0.1.0", "C002")
+        result = self.run_tool()
+        self.assertEqual([(f["path"], f["sev"]) for f in result["findings"] if f["code"] == "ARCHIVE_ID_COLLISION"],
+                         [("docs/archive/v0.1.0/change/C002.json", "ADVISORY")])
+        self.assertIn("ARCHIVE_UNREGISTERED", self.codes(result))
+        # 两个批次各有一份未登记的同号卡。
+        (self.root / "docs/devel/change/C002.json").unlink()
+        self.write_json("docs/devel/change/index.json", {"cards": {}})
+        self.archived("v0.2.0", "C002")
+        self.assertEqual([f["path"] for f in self.run_tool()["findings"] if f["code"] == "ARCHIVE_ID_COLLISION"],
+                         ["docs/archive/v0.2.0/change/C002.json"])
+        # 未登记的归档前置卡仍不可作为依赖，DEP_DANGLING 照常阻断。
+        self.archived("v0.1.0", "T01", "task")
+        successor = self.card("T02", "task", "in_progress")
+        successor["depends_on"] = ["T01"]
+        self.save_card(successor, "task")
+        self.assertIn("DEP_DANGLING", self.codes(self.run_tool(expect=4)))
+
+    def test_topic_history_spans_live_ledger_and_batches(self):
+        self.manifest("v0.1.0", cards={"C001": self.archived("v0.1.0", "C001", title="旧修复", version="v0.1.0")},
+                      tasks={"T01": self.archived("v0.1.0", "T01", "task")},
+                      topics={"Core": {"changes": ["C001"], "tasks": ["T01"]}})
+        self.card("C002")  # 只声明 design_topic、尚未登记主题清单的活跃卡也应出现
+        other = self.card("C003")
+        other["target"]["design_topic"] = None
+        self.save_card(other)
+        index = self.read_json("docs/devel/change/index.json")
+        index["topics"] = {"Core": {"design_doc": "docs/devel/design/01-core.md", "changes": ["C009"]}}
+        self.write_json("docs/devel/change/index.json", index)
+        topic = self.run_tool("--topic", "Core")["topic"]
+        self.assertEqual(topic["design_docs"], ["docs/devel/design/01-core.md"])
+        self.assertEqual([(c["id"], c["status"], c["file"]) for c in topic["cards"]], [
+            ("C001", "closed", "docs/archive/v0.1.0/change/C001.json"),
+            ("C002", "pending", "docs/devel/change/C002.json"),
+            ("C009", None, None),
+            ("T01", "completed", "docs/archive/v0.1.0/task/T01.json")])
+        result = subprocess.run([sys.executable, str(TOOL), str(self.root), "--topic", "Core"],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith("### 主题 Core · docs/devel/design/01-core.md\n"))
+        self.assertIn("| C001 | closed | v0.1.0 | 旧修复 | docs/archive/v0.1.0/change/C001.json |", result.stdout)
+        self.assertIn("| C009 | 缺失 | — | — | — |", result.stdout)
+        self.assertIn("TOPIC_EMPTY", self.codes(self.run_tool("--topic", "Missing")))
+
+    def test_query_argument_rules(self):
+        self.card()
+        before = self.files()
+        for args in (("--next-id", "change", "--topic", "Core"), ("--next-id", "change", "--card", "C001"),
+                     ("--topic", "Core", "--record"), ("--topic", "Core", "--release", "v0.1.0"),
+                     ("--next-id", "change", "--mode", "init"), ("--next-id", "task", "--warn-only"),
+                     ("--card", "C001", "--receipt", "--topic", "Core"),
+                     ("--topic", "bad-name"), ("--topic", ""), ("--next-id", "other")):
+            with self.subTest(args=args):
+                result = subprocess.run([sys.executable, str(TOOL), str(self.root), *args],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(before, self.files())
 
     def test_changelog_link_ignores_template_comment_and_longer_ids(self):
         self.closed_cards("C001")
@@ -762,6 +1016,24 @@ class VerifyTests(unittest.TestCase):
         self.assertNotIn("RELEASE_BATCH_EMPTY", self.codes(result))
         result = self.run_tool("--release", "v9.9.9")
         self.assertIn("RELEASE_BATCH_EMPTY", self.codes(result))
+
+    def test_release_flags_terminal_cards_stranded_by_earlier_batches(self):
+        self.closed_cards("C001", "C002", "C003", "C004", "C005")
+        for cid, version in (("C001", "0.16.1"), ("C002", "0.17.0"), ("C003", "0.12.0+"),
+                             ("C004", "v0.17"), ("C005", "")):
+            card = self.read_json("docs/devel/change/%s.json" % cid)
+            card["version"] = version
+            self.save_card(card)
+        later = self.card("C006", status="in_progress")
+        later["version"] = "0.16.1"
+        self.save_card(later)
+        result = self.run_tool("--release", "v0.17.0")
+        # 只提示早于本次发布的终态卡；同一批次的不同写法、无批次卡与未收口卡不在此列。
+        self.assertEqual({f["card"] for f in result["findings"] if f["code"] == "RELEASE_STRANDED"},
+                         {"C001", "C003"})
+        self.assertEqual({f["sev"] for f in result["findings"] if f["code"] == "RELEASE_STRANDED"},
+                         {"ADVISORY"})
+        self.assertNotIn("RELEASE_STRANDED", self.codes(self.run_tool()))
 
     def test_release_is_read_only_preflight(self):
         self.card()
@@ -1078,6 +1350,27 @@ class VerifyTests(unittest.TestCase):
         self.assertIn("(../change/index.json#%s)" % topic, doc)
         # 设计正文不直接链接会随归档移动的卡片文件。
         self.assertNotRegex(doc, r"\]\([^)]*[CT]\d{2,3}\.json\)")
+
+    def test_index_samples_follow_layered_ledger(self):
+        # 现行总账样例只登记活跃卡，主题只列活跃卡号；归档路由只出现在批次总账样例中。
+        for sample, track, key in (("sample-change-index.json", "change", "cards"),
+                                   ("sample-task-index.json", "task", "tasks")):
+            with self.subTest(sample=sample):
+                index = json.loads((REPO / "examples" / sample).read_text(encoding="utf-8"))
+                self.assertTrue(all(e["file"] == "docs/devel/%s/%s.json" % (track, cid)
+                                    for cid, e in index[key].items()))
+                listed = {cid for t in index["topics"].values() for cid in t.get("changes", t.get("tasks", []))}
+                self.assertLessEqual(listed, set(index[key]))
+        manifest = json.loads((REPO / "examples/sample-archive-index.json").read_text(encoding="utf-8"))
+        batch = "docs/archive/%s" % manifest["release"]
+        self.write_json(batch + "/index.json", manifest)
+        for track, key in (("change", "cards"), ("task", "tasks")):
+            for cid, ent in manifest[key].items():
+                self.assertEqual(ent["file"], "%s/%s/%s.json" % (batch, track, cid))
+                self.write_json(ent["file"], {"id": cid, "status": ent["status"]})
+        result = self.run_tool()
+        self.assertEqual(self.codes(result) & {"ARCHIVE_UNREGISTERED", "LEDGER_ARCHIVED_ENTRIES"}, set())
+        self.assertEqual(self.run_tool("--next-id", "change")["next_id"], "C011")
 
 
 if __name__ == "__main__":

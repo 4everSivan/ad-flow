@@ -9,8 +9,8 @@
 1. **登记与零沉淀移出**：
    - 发现问题时，若已在 `docs/devel/todo/now.md` 登记，读取该行信息，并在建卡后**立即将该行物理删除**；
 2. **分配全局卡号**：
-   - 读取 `docs/devel/change/index.json`，获取已存在的最大卡号并 +1（如 `C027`）；
-   - 卡号全局递增，跨版本不重置；最大号 +1 不是原子预占，分支名也不保证跨分支唯一。合入时结合 `ID_DUPLICATE` 和 Git 冲突检查，撞号先修正卡号及引用，不得覆盖另一事项。
+   - 运行 `scripts/adflow-verify --next-id change` 取得下一卡号（如 `C027`），它覆盖现行总账与全部归档批次，无需通读历史登记；
+   - 卡号全局递增，跨版本不重置；`--next-id` 取号会合并本机可见分支与工作树中的卡号，但不是原子预占，分支名也不保证跨分支唯一。合入时结合 `ID_DUPLICATE` 和 Git 冲突检查，撞号先修正卡号及引用，不得覆盖另一事项。
 3. **实例化变更卡**：
    - 从目标项目的 `docs/standards/change-template.json` 复制至 `docs/devel/change/Cxxx.json`（技能包源模板为 `templates/docs/standards/change-template.json.tpl`，日常无需访问）；
    - 填写真实发布批次 `version` 与 `branch: "fix/Cxxx-[desc]"`（指定多分支开发的执行分支标签）；
@@ -64,7 +64,7 @@
 ## 阶段四：合入主干与双向闭环 (Merge & Closure)
 
 0. **合入前检查**：
-   - 在合入已获授权且人工验收完成的前提下，运行 `scripts/adflow-verify`；Exit 4 禁止合入。此时验证当前状态，不能提前声称尚未产生的合入提交已经通过祖先检查。
+   - 在合入已获授权且人工验收完成的前提下，于合并结果上运行 `scripts/adflow-verify`（`git merge --no-commit --no-ff <分支>` 后检查，未通过即 `git merge --abort`）；Exit 4 或出现 `LEDGER_DUPLICATE_KEY` / `ARCHIVE_ID_COLLISION` 时禁止合入。此时验证当前状态，不能提前声称尚未产生的合入提交已经通过祖先检查。
 1. **合入主干**：
    - 提交代码并推送主干，获取 Git Commit Hash（如 `14d108e`）；
 2. **设计方案回写**：

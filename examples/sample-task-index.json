@@ -16,7 +16,7 @@
     },
     "MarketService": {
       "design_doc": "docs/devel/design/02-后端设计方案.md",
-      "tasks": ["T06"]
+      "tasks": []
     }
   },
 

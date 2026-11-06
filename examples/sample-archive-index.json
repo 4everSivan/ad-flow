@@ -1,0 +1,41 @@
+{
+  "$schema": "adflow-archive-batch-v1",
+  "release": "v0.1.0",
+  "archived_at": "2026-09-30",
+
+  "cards": {
+    "C001": {
+      "title": "修复日K引导入库元组缺code导致klines表永空",
+      "type": "BugFix",
+      "status": "closed",
+      "branch": "fix/C001-tencent-kline-tuple",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C001.json"
+    },
+    "C008": {
+      "title": "行情数据源扩充与降级链增强",
+      "type": "Refactor",
+      "status": "closed",
+      "branch": "refactor/C008-market-sources",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C008.json"
+    },
+    "C010": {
+      "title": "修复腾讯源时间戳致分钟线单桶失真",
+      "type": "BugFix",
+      "status": "closed",
+      "branch": "fix/C010-timestamp-bucket",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C010.json"
+    }
+  },
+
+  "tasks": {},
+
+  "topics": {
+    "MarketService": { "changes": ["C001", "C008", "C010"] }
+  }
+}

@@ -13,7 +13,10 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
 
 - **设计方案**：仅声明概念主题 `<!-- @topic: TopicName -->` 与统一总账入口；
 - **执行卡片**：以 `target.design_doc` 挂接具体设计正文，以 `target.design_topic: "TopicName"` 声明所属主题；源码影响范围使用领域能力描述；
-- **索引总账**：唯一掌握每张卡当前的物理路径（是在 `devel/` 还是在 `archive/`）。
+- **现行总账**（`change/index.json`、`task/index.json`）：登记活跃卡的物理路径与状态，并保留主题与设计正文的对应关系；
+- **归档批次总账**（`docs/archive/<version>/index.json`）：发版时随本批次冻结卡片路由与主题归属，此后不再改动。
+
+**分层原则：可变的进现行总账，冻结的随批次冻结。** 归档卡不会再移动或改状态，其路由与批次一起冻结；现行总账只承载仍会变化的登记，规模取决于在研事项而非历史总量。归档时新建批次总账并删除现行登记，设计正文仍然零改动、零断链。
 
 ---
 
@@ -49,18 +52,10 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
   "topics": {
     "MarketService": {
       "design_doc": "docs/devel/design/02-后端设计方案.md",
-      "changes": ["C001", "C008", "C027"]
+      "changes": ["C027"]
     }
   },
   "cards": {
-    "C001": {
-      "title": "修复日K引导缺code",
-      "type": "BugFix",
-      "status": "closed",
-      "topic": "MarketService",
-      "version": "v0.1.0",
-      "file": "docs/archive/v0.1.0/change/C001.json"
-    },
     "C027": {
       "title": "修复夜盘时段数据污染",
       "type": "BugFix",
@@ -73,10 +68,41 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
 }
 ```
 
+任务总账同理：`tasks` 只登记活跃任务，`topics[TopicName].tasks` 只列活跃卡号；`milestones` 随阶段数增长、规模很小，保留在现行任务总账，成员清单可以包含已归档任务。
+
+### 归档批次总账 (`docs/archive/<version>/index.json`)
+
+发版归档时为本批次新建，两轨共用一份，归档后只读：
+
+```json
+{
+  "$schema": "adflow-archive-batch-v1",
+  "release": "v0.1.0",
+  "archived_at": "2026-09-30",
+  "cards": {
+    "C001": {
+      "title": "修复日K引导缺code",
+      "type": "BugFix",
+      "status": "closed",
+      "topic": "MarketService",
+      "version": "v0.1.0",
+      "file": "docs/archive/v0.1.0/change/C001.json"
+    }
+  },
+  "tasks": {},
+  "topics": {
+    "MarketService": { "changes": ["C001"] }
+  }
+}
+```
+
 ### 路由字段语义：
-- `topics[TopicName].design_doc`: 对应设计方案的仓库根基准路径；
-- `topics[TopicName].changes`: 关联的所有卡号有序数组；
-- `cards[CardID].file`: 卡片的精确物理文件路径。归档前为 `docs/devel/change/Cxxx.json`，归档后更新为 `docs/archive/<version>/change/Cxxx.json`。
+- `topics[TopicName].design_doc`: 对应设计方案的仓库根基准路径；主题没有活跃卡时也保留，设计正文的总账链接因此始终可达；
+- `topics[TopicName].changes` / `.tasks`: 本总账中仍活跃的关联卡号；归档时移入批次总账同名主题；
+- `cards[CardID].file`: 活跃卡的精确物理路径 `docs/devel/change/Cxxx.json`；
+- 批次总账 `cards` / `tasks`: 条目沿用现行总账字段，`file` 必须指向本批次对应轨道目录（如 `docs/archive/v0.1.0/change/C001.json`）；`topics` 记录本批次卡的主题归属，可一卡多主题；
+- 校验器以 `$schema: adflow-archive-batch-v1` 识别批次总账，对其条目执行与现行总账相同的路由硬检查（路径、存在、身份、状态一致、归档终态），并据此判定撞号与跨版本依赖。未声明该 schema 的批次根文件（如项目自建快照）不按清单解析；
+- **兼容旧布局**：现行总账中保留归档登记的旧项目继续有效，校验器只以聚合的 `LEDGER_ARCHIVED_ENTRIES` 旁路提示。规范同步不自动迁移，需要瘦身时按归档 README「现行总账瘦身」经人工授权执行。
 
 ---
 
@@ -84,11 +110,14 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
 
 1. **从设计小节查找变更**：
    - 提取小节中的 `@topic: TopicName`；
-   - 读取 `change/index.json` 的 `topics[TopicName].changes`；
-   - 依据 `cards[CardID].file` 直接定位到卡片文件打开。
+   - 运行 `scripts/adflow-verify --topic TopicName`，一次列出现行总账与全部批次总账中该主题的卡号、状态、批次与路径（只读）；
+   - 手工查询时读取现行总账 `topics[TopicName]` 与各 `docs/archive/<version>/index.json` 的 `topics[TopicName]`，依据条目 `file` 打开卡片。
 2. **从变更卡回写设计方案**：
    - 读取卡片中的 `target.design_doc` 与 `target.design_topic`；
    - 打开该设计文档，查找包含 `<!-- @topic: TopicName -->` 的对应小节执行回写。
+3. **分配新卡号**：
+   - 运行 `scripts/adflow-verify --next-id change`（或 `task`），取现行总账、批次总账、活跃卡池与归档目录，以及本机其他工作树和本地/远端跟踪分支中已出现的最大卡号 +1，无需通读历史登记；最大号不在当前工作区时，`--json` 的 `next_id_basis` 与文本模式的 stderr 会说明出处；
+   - 该结果不是原子预占，他人尚未推送的分支仍可能撞号；合入主干前在合并结果上运行校验（见 [06 异常流](06-exception-and-hotfix.md) 三），结合 `ID_DUPLICATE`、`LEDGER_DUPLICATE_KEY` 与 Git 冲突检查处理。
 
 ## 规范与模板入口
 

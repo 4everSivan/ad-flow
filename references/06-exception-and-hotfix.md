@@ -56,7 +56,9 @@
 
 1. **编号与分支标识 (Card & Branch Identity)**：
    - 创建分支时显式以卡号命名（如 `fix/C027-market-cache`）；分支名只标识上下文，不提供全局唯一性；
-   - 创建卡片时按对应总账最大编号递增；读取最新总账仍不是原子预占，并行分支可能得到相同编号。合入时结合 `ID_DUPLICATE` 与 Git 冲突检查，撞号先修正卡号及所有引用，不得覆盖另一事项的卡片；
+   - 创建卡片时以 `scripts/adflow-verify --next-id change|task` 取号；它覆盖现行总账、全部归档批次，以及本机其他工作树与本地/远端跟踪分支，但看不到他人尚未推送的分支，仍不是原子预占；
+   - 合入主干前先校验合并结果：`git merge --no-commit --no-ff <分支>` 后运行 `scripts/adflow-verify`，Exit 0 且没有 `LEDGER_DUPLICATE_KEY` / `ARCHIVE_ID_COLLISION` 时再提交合并；否则 `git merge --abort`，修正卡号及引用后重来。rebase 流程在 rebase 后的分支上做同一检查。撞号先修正卡号及所有引用，不得覆盖另一事项的卡片；
+   - 撞号不一定产生 Git 冲突：主干已把某张卡归档进批次总账、另一分支又新建同号活跃卡时，两份文件路径不同、合并可能完全干净，只有校验器报 `ID_DUPLICATE`。反之，冲突处理若保留了同一卡号的两份登记，JSON 只认最后一条，校验器以 `LEDGER_DUPLICATE_KEY` 提示；
 2. **基线落地队列 (Land Queue)**：
    - 实现可以完全并行，但合入主干并执行设计方案回写时采用串行收口；
    - 后合入的分支若遇到对应设计小节被修改，先 Rebase 主干，解决设计文本冲突后再更新 `change/index.json`。

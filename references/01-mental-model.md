@@ -48,7 +48,7 @@
 
 1. **脱钩物理文件**：卡片以 `target.design_doc`/`target.design_topic` 挂接设计基线，执行范围声明 `module`/`capability` 而不写死源码文件路径，防止重构产生死链；
 2. **脱钩标题锚点**：设计文档只声明概念锚标 `<!-- @topic -->`，不依赖易碎的 Markdown 标题 Hash；
-3. **版本归档零破坏**：当卡片在发版时被整体移入 `docs/archive/<version>/`，只需更新 `index.json` 中的 `file` 路径，设计文档 0 改动、0 断链。
+3. **版本归档零破坏**：当卡片在发版时被整体移入 `docs/archive/<version>/`，只需把本批次登记移入该目录的批次总账 `index.json` 并从现行总账删除，设计文档 0 改动、0 断链；现行总账的规模只随在研事项变化，不随历史累积。
 
 ---
 

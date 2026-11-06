@@ -27,7 +27,7 @@
 1. **确立现行基线真理源（Living Baseline）**：
    系统只有一套代表已批准规则的现行设计基线（`docs/devel/design/`），不搞孤立的文档小版本号，以 `@topic` 概念锚点保持全文自洽。尚未实现的能力在对应章节关联现有 T 卡，由卡片状态和验收证据说明实现进度。
 2. **集中管理卡片路由（Index Hubs）**：
-   任务卡（`Txx`）与变更卡（`Cxxx`）以 `target.design_doc` 和 `target.design_topic` 明确挂接设计基线；中枢总账（`index.json`）负责卡片的物理路径映射。历史版本封箱归档仅需调整总账指向，设计文档零修改、零断链。
+   任务卡（`Txx`）与变更卡（`Cxxx`）以 `target.design_doc` 和 `target.design_topic` 明确挂接设计基线；现行总账（`index.json`）登记活跃卡路由，归档卡路由随发布批次冻结在 `docs/archive/<version>/index.json`。现行总账规模只随在研事项变化，不随历史累积；封箱归档不改设计文档，零断链。
 3. **践行待办缓冲零沉淀纪律（Zero Sediment）**：
    零散缺陷、临时微调与远期技术债在待办池（`now.md` / `future.md`）中暂存。一旦立项建卡，**必须立即物理删除**，彻底消灭“已办事项长期堆积成文档垃圾”的慢性沉淀。
 4. **统一施工蓝图与物理运行现实，双重隔离构建与运行（Deployment & Build Reality）**：
@@ -94,9 +94,9 @@ flowchart TD
     ItemLayer -->|"target.design_doc / design_topic"| D
 ```
 
-- **基线与卡片脱钩**：卡片明确挂接设计文档及其 `@topic`，源码影响范围用领域能力描述；卡片归档路径由索引管理；
+- **基线与卡片脱钩**：卡片明确挂接设计文档及其 `@topic`，源码影响范围用领域能力描述；活跃卡路径由现行总账管理，归档卡路径由批次总账管理；
 - **设计挂接**：`target.design_doc` 指向真实设计正文，正文包含与 `target.design_topic` 匹配的 `<!-- @topic: TopicName -->`；目录 `README.md` 不能代替设计文档；
-- **版本封箱只读归档**：发版时整批卡片移动到 `docs/archive/<version>/`，只需在 `index.json` 更新物理路径，设计文档保持 0 改动、0 断链；Tag 最后打在包含归档结果与定稿 CHANGELOG 的提交上。
+- **版本封箱只读归档**：发版时整批卡片移动到 `docs/archive/<version>/`，本批次登记写入该目录的批次总账并从现行总账移出，设计文档保持 0 改动、0 断链；Tag 最后打在包含归档结果与定稿 CHANGELOG 的提交上。
 
 ---
 
@@ -306,7 +306,7 @@ $ad-flow --upgrade
 | 高于 1.6.0 | 不降级，含 `--force` 情况 |
 | 版本来源冲突或格式无效 | 报告冲突，不写入 |
 
-版本使用代码按数值分段比较。升级保留现有业务记录，不批量迁移旧卡，不把新增 `ADVISORY` 追溯升级为硬门槛。唯一记录在案的例外：1.4.0 起 `ARCHIVE_NON_TERMINAL`（归档区只允许 `closed`/`completed` 卡）为硬门禁，它是对 v1.1.0 起既有归档前置条件的机器覆盖；存量项目升级后，历史冻结非终态卡会暴露为 Exit 4，按目标项目归档 README「历史批次账实修复」流程人工定口径处置（补收/回迁/废弃 + 勘误登记），升级本身只报告不改写。
+版本使用代码按数值分段比较。升级保留现有业务记录，不批量迁移旧卡，不瘦身现行总账，不把新增 `ADVISORY` 追溯升级为硬门槛。唯一记录在案的例外：1.4.0 起 `ARCHIVE_NON_TERMINAL`（归档区只允许 `closed`/`completed` 卡）为硬门禁，它是对 v1.1.0 起既有归档前置条件的机器覆盖；存量项目升级后，历史冻结非终态卡会暴露为 Exit 4，按目标项目归档 README「历史批次账实修复」流程人工定口径处置（补收/回迁/废弃 + 勘误登记），升级本身只报告不改写。
 
 版本字段只表示规范版本，初始化完成还须通过最终检查。同版本检查包含骨架与工具、适用的来源设计及登记，并单独报告现有卡片问题；修复不重复迁移备份，不重写已有业务记录。根文档先复制备份，仅替换受管理文件，`requirements.txt`、`CMakeLists.txt` 等构建输入保留原位。
 
@@ -325,6 +325,10 @@ scripts/adflow-verify --json
 
 # 发版批次预检：打 Tag、发布或归档前，本批次活跃卡须全部 closed/completed（只读）
 scripts/adflow-verify --release v0.1.0 --json
+
+# 路由查询：建卡取号、从设计主题追溯全部现行与归档卡片（只读）
+scripts/adflow-verify --next-id change
+scripts/adflow-verify --topic MarketService
 ```
 
 也可直接运行 Python 入口：
@@ -360,7 +364,7 @@ scripts/adflow-verify --card C001 --receipt
 
 该命令执行完整普通复核（退出码语义不变），文本模式只输出一份固定格式的 Markdown 回执（`--json` 时放在 `receipt` 字段）。标题、批次行、验收表与「门禁」「同步」「人工」「驳回」「改动」行取自卡片和本次复核，执行者原样转交，只填写「未覆盖」「需要你」两行；标题的 `from → to` 来自 `--record` 预检时记录的 `gate.from_status` / `gate.target_status`；C 卡 `--record` 另记 `gate.signed_quote` / `gate.signed_rejection_count`，驳回后沿用旧确认原话时报 `SIGNOFF_STALE`。格式与填写规则写在目标项目 `AGENTS.md` 二.3，证据采集完成请求人工确认、`verified`、`closed`、`completed` 与 `rejected` 各节点通用。`--card` 仅限定回写及目标状态预检，所有活跃卡与全局问题仍参与检查；因此全局或其他卡的违规也会计入本卡记录结果。
 
-`--record` 对本次回写的卡重新计算真实前提，不把这些卡旧的失败 gate 当作新违规；修复原问题后，已有批量命令可重评恢复。未回写卡的门禁和其它实际违规仍然参与检查。索引中的归档卡只读解析身份与状态，用于跨版本依赖，不按现行规则重验或回写。
+`--record` 对本次回写的卡重新计算真实前提，不把这些卡旧的失败 gate 当作新违规；修复原问题后，已有批量命令可重评恢复。未回写卡的门禁和其它实际违规仍然参与检查。现行总账或批次总账中的归档卡只读解析身份与状态，用于撞号与跨版本依赖，不按现行规则重验或回写。
 
 | 参数 | 用途 | 写入行为 |
 |---|---|---|
@@ -371,6 +375,8 @@ scripts/adflow-verify --card C001 --receipt
 | `--record` | 兼容旧用法 | 回写全部活跃卡的 `gate`；升级不用此参数 |
 | `--card ID --receipt` | 状态同步后复核并输出该卡固定格式回执 | 无；不能搭配 `--to`、`--record`、`--warn-only` 或 `--mode init` |
 | `--release VERSION` | 发版/归档前批次预检，`v0.1.0` 与 `0.1.0` 视为同一批次 | 无；不能搭配 `--card`、`--to`、`--record` 或 `--mode init` |
+| `--next-id change\|task` | 输出覆盖现行总账、全部批次总账、归档目录及本机其他工作树与本地/远端跟踪分支的下一卡号；文本模式只打印卡号，最大号来自别处时在 stderr 说明 | 无；看不到他人未推送的分支，不是原子预占 |
+| `--topic NAME` | 列出主题在现行总账与各批次中的全部卡片、状态、批次与路径 | 无；与 `--next-id` 均不能搭配其他模式参数或 `--warn-only` |
 | `--warn-only` | 将 ERROR 降为 WARN，供观察 | 不写入，不能与 `--record` 合用；存在违规时返回 6 |
 
 | 退出码或诊断 | 含义 | 后续处理 |
@@ -379,9 +385,13 @@ scripts/adflow-verify --card C001 --receipt
 | `2` | 参数组合或取值无效 | 按命令帮助修正参数 |
 | `4` | 存在确定性治理违规 | 阻断收口，按问题代码和路径修复后重验 |
 | `6` | 存在软告警或降级观察结果 | 列出事实供人工研判；正式收口仍需 Exit 0 |
-| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、T 卡完成时缺人工确认或能力单元未完成、驳回卡残留旧确认、未登记归档卡、重复初始化标签、未渲染占位符或空发布批次 | 旁路汇报，不影响退出码、不新增硬门槛 |
+| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、T 卡完成时缺人工确认或能力单元未完成、驳回卡残留旧确认、未登记归档卡、现行总账仍登记归档卡、总账内卡号重名、未登记归档卡撞号、早期批次终态卡滞留活跃区、重复初始化标签、未渲染占位符、空发布批次或查无主题 | 旁路汇报，不影响退出码、不新增硬门槛 |
 
 `ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动、总账更新与 CHANGELOG 定稿后须复核校验再次 Exit 0，提交后在该提交上打 Tag。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
+
+`LEDGER_ARCHIVED_ENTRIES`：现行总账只需登记活跃卡。发版归档把本批次登记写入 `docs/archive/<version>/index.json`（`adflow-archive-batch-v1`）并从现行总账移出，校验器对批次总账条目执行与现行总账相同的路由硬检查。旧项目在现行总账中保留归档登记继续有效，每轨只报一条聚合 ADVISORY；升级不自动迁移，瘦身按目标项目归档 README「现行总账瘦身」经人工授权执行，以普通复核、`--next-id` 与 `--topic` 前后一致作为等价证据。
+
+多分支并行时，撞号不一定产生 Git 冲突：主干把卡片归档进批次总账后，另一分支新建的同号活跃卡路径不同，合并可能完全干净。因此合入主干前应在合并结果上校验：`git merge --no-commit --no-ff <分支>` 后运行 `scripts/adflow-verify`，Exit 0 且没有 `LEDGER_DUPLICATE_KEY`（冲突处理保留了同一卡号的两份登记，JSON 只认最后一条）与 `ARCHIVE_ID_COLLISION`（未登记归档卡撞号）时再提交。两者目前为 ADVISORY，计划在后续版本升级为阻断。
 
 校验器不替代应用测试、源码与设计一致性审查或人工验收，也不自动审计全部历史归档卡。`sync.commit` 检查的是当前 HEAD 的祖先关系，是否已合入主干需另行核对；证据字段齐全也不能证明原话真实或业务结论成立。覆盖边界见 [审计清单](references/05-audit-checklist.md)。
 
@@ -439,6 +449,7 @@ skills/ad-flow/
     ├── sample-task-card.json         # 任务卡范例
     ├── sample-change-index.json      # 变更总账范例
     ├── sample-task-index.json        # 任务总账范例
+    ├── sample-archive-index.json     # 归档批次总账范例
     └── sample-design-doc.md          # 现行设计文档范例
 ```
 
