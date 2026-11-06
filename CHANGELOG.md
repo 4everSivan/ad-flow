@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-05
+
 ### Added
 
 - AGENTS 项目宪法「四、测试规范」新增首条规则「本地既有测试规则优先」：先扫描项目既有测试规则与约定（原 agent 文件测试规范、构建/测试配置与命令、CI 测试入口、既有测试目录布局与命名习惯），存在则按已有规则组织与执行测试，不强行迁移测试位置或改写既有约定；原「测试文件归拢」等规则成为无既有约定时的默认规范。已有项目经 `$ad-flow --upgrade` 刷新宪法时同步获得该规则，项目自定义规则区不受影响。
@@ -154,7 +156,8 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/4everSivan/ad-flow/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/4everSivan/ad-flow/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/4everSivan/ad-flow/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/4everSivan/ad-flow/compare/v1.3.0...v1.4.0
