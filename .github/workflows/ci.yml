@@ -14,7 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # ubuntu-latest 已迁移到 26.04，该镜像没有 Python 3.9；固定 24.04 保留 3.9/3.12 矩阵。
+        os: [ubuntu-24.04, macos-latest]
         python: ["3.9", "3.12"]
     runs-on: ${{ matrix.os }}
     steps:
