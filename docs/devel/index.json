@@ -1,0 +1,34 @@
+{
+  "$schema": "adflow-devel-index-v1",
+  "project": "ad-flow",
+  "created": "2026-11-17",
+  "last_change": "2026-11-17",
+  "status": "active",
+  "subsystems": [
+    {
+      "name": "design",
+      "path": "docs/devel/design",
+      "type": "living_baseline",
+      "designs": [
+        {
+          "file": "docs/devel/design/01-归档与卡片查询.md",
+          "topic": "ArchiveCardQuery",
+          "status": "draft",
+          "title": "归档与卡片查询"
+        }
+      ]
+    },
+    {
+      "name": "change",
+      "path": "docs/devel/change",
+      "type": "bugfix_and_change_pool",
+      "index": "docs/devel/change/index.json"
+    },
+    {
+      "name": "task",
+      "path": "docs/devel/task",
+      "type": "milestone_task_pool",
+      "index": "docs/devel/task/index.json"
+    }
+  ]
+}

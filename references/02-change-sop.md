@@ -8,18 +8,16 @@
 
 1. **登记与零沉淀移出**：
    - 发现问题时，若已在 `docs/devel/todo/now.md` 登记，读取该行信息，并在建卡后**立即将该行物理删除**；
-2. **分配全局卡号**：
-   - 运行 `scripts/adflow-verify --next-id change` 取得下一卡号（如 `C027`），它覆盖现行总账与全部归档批次，无需通读历史登记；
-   - 卡号全局递增，跨版本不重置；`--next-id` 取号会合并本机可见分支与工作树中的卡号，但不是原子预占，分支名也不保证跨分支唯一。合入时结合 `ID_DUPLICATE` 和 Git 冲突检查，撞号先修正卡号及引用，不得覆盖另一事项。
-3. **实例化变更卡**：
-   - 从目标项目的 `docs/standards/change-template.json` 复制至 `docs/devel/change/Cxxx.json`（技能包源模板为 `templates/docs/standards/change-template.json.tpl`，日常无需访问）；
-   - 填写真实发布批次 `version` 与 `branch: "fix/Cxxx-[desc]"`（指定多分支开发的执行分支标签）；
-   - 填写 `target.module`、`target.component`、`target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`！若缺少对应设计，必须遵循“文档先行”先补齐设计正文）；
+2. **建卡只读计划（强制）**：
+   - 运行 `scripts/adflow-verify --scaffold new-card --plan --track change --design-topic <主题> --title <标题> --card-version <批次> --branch <分支> --todo <待办行文本> --json`；该计划只读，给出卡号与取号依据、模板、设计挂接、总账/主题/待办差异与缺失输入；
+   - `executable` 必须为 true；为 false 时先补齐 `missing` 输入再重跑，不得跳过计划直接建卡；
+   - 卡号全局递增，跨版本不重置；计划卡号与 `--next-id` 都不是原子预占，分支名也不保证跨分支唯一。合入时结合 `ID_DUPLICATE` 和 Git 冲突检查，撞号先修正卡号及引用，不得覆盖另一事项。
+3. **按计划实例化并补全**：
+   - 按 `writes` 创建 `docs/devel/change/Cxxx.json` 并在 `docs/devel/change/index.json` 登记，按 `topics` 追加主题，按 `todo` 删除待办行；禁止手抄模板或手写这些条目；
+   - 补全 `target.module`、`target.component`（设计文档与主题已由计划写入；★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`）；
    - 填写 `why`（现象、根因、危害）与 `changes`（`before / after / impact`）；
    - 填写 `precheck`（缺陷复现嗅探命令）与 `callback`（`before / after` 脚本）；
-   - **事前定义验收契约**：在 `verification.checks` 预先写好各核验项的 `true_if` 和 `false_if`。此时 `evidence` 置空，`result: null`；
-4. **总账登记**：
-   - 在 `docs/devel/change/index.json` 的 `cards` 增加本卡条目（包含 `branch` 映射），状态记为 `"draft"` 或 `"pending"`。
+   - **事前定义验收契约**：在 `verification.checks` 预先写好各核验项的 `true_if` 和 `false_if`。此时 `evidence` 置空，`result: null`。
 
 ---
 

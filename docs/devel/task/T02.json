@@ -1,0 +1,91 @@
+{
+  "$schema": "https://ad-flow.org/schemas/task-card.v1.json",
+  "id": "T02",
+  "title": "增加基于批次总账的历史卡片查询",
+  "version": "v1.8.0",
+  "milestone": "M1",
+  "status": "pending",
+  "branch": "feat/T02-history-topic-query",
+  "depends_on": [
+    "T01"
+  ],
+  "target": {
+    "module": "归档与卡片查询",
+    "design_doc": "docs/devel/design/01-归档与卡片查询.md",
+    "design_topic": "ArchiveCardQuery"
+  },
+  "goal": "提供 --topic <主题> --scope history，按主题定位历史卡与归档路径，让读者按需读取证据原件。",
+  "precheck": {
+    "description": "检查本卡能力是否已由既有改动交付",
+    "command": "python3 -m unittest tools.test_adflow_verify.VerifyTests.test_topic_scope_history tools.test_adflow_verify.VerifyTests.test_topic_scope_history_uses_only_ledgers",
+    "expected": "两个指定回归用例均存在且通过，并核对本卡其余验收项。",
+    "is_completed": false,
+    "evidence": ""
+  },
+  "callback": {
+    "before": [
+      "git status --short"
+    ],
+    "after": [
+      "tools/check.sh"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "T02-1",
+      "title": "解析批次与旧布局",
+      "capability": "读声明归档批次 schema 的索引，合并 topics 成员和各卡 topic，兼容现行总账中的历史路由及多主题归属，跳过未声明 schema 的自建快照。",
+      "done": false
+    },
+    {
+      "id": "T02-2",
+      "title": "输出可追溯的定位结果",
+      "capability": "输出卡号、状态、标题、卡片版本、实际归档批次和项目相对路径。可选元数据缺失时留空。校验路径所属批次及轨道，同号同路径去重，同号异路径给出诊断。",
+      "done": false
+    },
+    {
+      "id": "T02-3",
+      "title": "覆盖历史查询边界",
+      "capability": "用新旧混合、重复登记、失效登记、坏清单和跨批次任务依赖样例验证查询，保证列表不打开归档卡正文。",
+      "done": false
+    }
+  ],
+  "acceptance": {
+    "result": null,
+    "run_id": "",
+    "user_quote": "",
+    "signoff": "",
+    "checks": [
+      {
+        "item": "历史路由覆盖",
+        "true_if": "批次总账和旧总账的历史卡都可被所属主题查到，兼容同卡多主题，已归档版本与实际批次可区分。",
+        "false_if": "合法历史路由漏查、现行卡混进历史结果，或两个版本含义被混用。",
+        "evidence": "",
+        "result": null
+      },
+      {
+        "item": "重复和坏数据可识别",
+        "true_if": "同号同路径只出现一次，同号异路径、损坏批次清单和匹配登记的非法路径有明确诊断。",
+        "false_if": "静默吞掉冲突、把无效路径当作结果，或将部分结果报告为完整。",
+        "evidence": "",
+        "result": null
+      },
+      {
+        "item": "列表不读归档卡",
+        "true_if": "历史列表只从总账取数据，包含可供用户按需打开的合法路径，归档卡正文读取数为零。",
+        "false_if": "枚举卡片实体或依赖卡片正文来拼接列表字段。",
+        "evidence": "",
+        "result": null
+      }
+    ]
+  },
+  "sync": {
+    "commit": ""
+  },
+  "gate": {
+    "tool": "adflow-verify",
+    "version": "1.8.0",
+    "ran_at": "",
+    "exit_code": null
+  }
+}

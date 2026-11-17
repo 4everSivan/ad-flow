@@ -19,6 +19,7 @@
 - 维护者检查器 `tools/check_package.py`：解析 `workflow.yaml` 中以成对 `# @adflow:manifest-begin/end <名称>` 注释界定的 JSON 流式机器块，校验每块唯一且可解析，安装映射恰为 24 个治理文件加 2 个校验器文件，目的地唯一且为项目内相对路径，模板存在且无孤儿，`docs/standards` 与 `scripts` 归属正确，wrapper 保留执行位，升级映射只触碰受管资产并与安装模板一致，且与校验器 `BASE_FILES`/`STANDARD_FILES`/`TOOL_FILES`/`LEGACY_FILES` 常量及版本双锚一致。未知字段、重复字段、重复目的地与解析失败均报出具体块和条目。
 - 新增回归 `tools/test_checks_catalog.py`（诊断目录、提示场景与统计）与 `tools/test_check_package.py`（映射负例、互换模板的内容独立断言，以及按映射安装到空工程后由安装版 Shell 入口执行 `--mode init` 与普通复核）。
 - 新增只读建卡计划（A6 试点）`scripts/adflow-verify --scaffold new-card --plan`：输出建议卡号与取号依据、模板路径、设计文档与 `@topic` 锚标解析、拟创建的卡片内容、总账/主题/待办变更与缺失输入；缺失项使 `executable=false`。计划不写任何文件，卡号不构成原子预占，退出码沿用普通复核语义。写入与归档流程未实现，需另行设计冲突检测、中断恢复与人工验收后再决定是否发布。
+- 把 v1.8.0 新增命令面纳入 Agent 执行约定：`SKILL.md`、`workflow.yaml`、`AGENTS.md` 模板、变更/任务 SOP 与 C/T 卡池 README 明确 `--list-checks`、`--scaffold new-card --plan` 及其 `--track`/`--design-topic`/`--title`/`--card-version`/`--branch`/`--design-doc`/`--todo`/`--milestone`，以及 `--json` 的 `hint` 与 `summary.codes` 由 Agent 在流程中使用。建卡必须先取得 `executable=true` 的只读计划，再按 `writes`/`topics`/`todo` 落盘；人类只用自然语言，Agent 不把命令清单转交人类。新增回归 `tools/test_agent_surface.py` 校验这些参数与输出字段出现在指令层。
 
 ### Changed
 

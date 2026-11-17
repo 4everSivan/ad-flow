@@ -18,15 +18,14 @@
 
 1. **里程碑划分**：
    - 确立阶段目标，划分有序里程碑（如 `M1-工程骨架`、`M2-领域内核`、`M3-业务接入`）；
-2. **实例化任务卡**：
-   - 从目标项目的 `docs/standards/task-template.json` 复制并建立 `Txx.json`（无需访问技能包源目录）；
-   - 填写真实发布批次 `version` 与 `branch: "feat/Txx-[desc]"`（指定多分支研发的特性分支标签）；
-   - 填写 `target.design_doc` 与 `target.design_topic`（★ **绝对红线**：`design_doc` 必须指向 `00-系统总体设计.md` 或 `01~99-[模块].md`，严禁指向任何 `README.md`）；
-   - 填写 `precheck`（能力完成预检命令）与 `callback`（`before / after` 脚本钩子）；
+2. **建卡只读计划（强制）**：
+   - 运行 `scripts/adflow-verify --scaffold new-card --plan --track task --design-topic <主题> --title <标题> --card-version <批次> --branch <分支> --milestone <里程碑> [--todo <待办文本>] --json`；计划只读，给出卡号与取号依据、模板、设计挂接、总账/主题/待办差异与缺失输入；
+   - `executable` 必须为 true；为 false 时先补齐 `missing` 输入再重跑，不得跳过计划直接建卡。
+3. **按计划实例化并补全**：
+   - 按 `writes` 创建 `docs/devel/task/Txx.json` 并在 `docs/devel/task/index.json` 注册（含 `branch`、`milestones` 与 `topics`），按 `todo` 删除待办行；禁止手抄模板或手写登记；
+   - 补全 `precheck`（能力完成预检命令）与 `callback`（`before / after` 脚本钩子）；
    - **聚焦能力交付**：在 `tasks[]` 中拆解具体的 `capability`（如纯函数、数据结构契约、API 路由），严禁在任务卡中写死具体的代码物理文件路径；
-   - **声明拓扑依赖**：显式填写 `depends_on: ["T01", ...]`；
-3. **注册任务总账**：
-   - 在 `docs/devel/task/index.json` 中注册该卡（包含 `branch` 字段），分配到对应的 `milestones` 与 `topics`。
+   - **声明拓扑依赖**：显式填写 `depends_on: ["T01", ...]`。
 
 ---
 

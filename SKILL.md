@@ -43,6 +43,25 @@ Keep policies, current-step instructions, source material, examples, and output 
 
 Read the template and reference needed by the current step, not the entire skill bundle. For lifecycle semantics consult [change SOP](references/02-change-sop.md), [task SOP](references/03-task-sop.md), or [archive SOP](references/07-release-archive-sop.md) only when relevant. The installed project must contain the daily execution rules itself.
 
+### Agent Command Surface
+
+The human communicates in natural language; **the agent runs these commands itself** and never asks the human to type them or remember flags. Use the installed `scripts/adflow-verify`; treat its output as evidence, and forward only the fixed receipt verbatim.
+
+| Situation | Command the agent runs | How the agent uses the output |
+|---|---|---|
+| Process or init check | `scripts/adflow-verify --json` | Read `findings[].code` / `msg` / `hint`, group by `summary.codes`, and fix the root cause the hint points to |
+| Unfamiliar code, or need the catalog | `scripts/adflow-verify --list-checks --json` | Look up severity, meaning and default fix; never invent a code or a repair step |
+| Before creating a C or T card | `scripts/adflow-verify --scaffold new-card --plan --track change\|task --design-topic NAME --title TEXT --card-version VER --branch NAME [--design-doc PATH] [--todo TEXT] [--milestone NAME] --json` | Require `executable: true`; if `false`, collect the `missing` inputs and re-plan. Apply exactly the `writes` / `topics` / `todo` diff; the plan itself writes nothing |
+| Card checkpoint | `scripts/adflow-verify --card ID --receipt` | Forward the fixed fact rows; fill only 未覆盖 and 需要你 |
+| Release or archive preflight | `scripts/adflow-verify --release VERSION` | Exit 0 is required before moving cards or tagging |
+| Need only a card number | `scripts/adflow-verify --next-id change\|task` | Suggestion only; not a reservation |
+
+Rules:
+
+- Do not hand-copy a card template, hand-edit a ledger entry, or hand-delete a todo row that the scaffold plan already describes. Re-plan whenever inputs change.
+- `hint` is the default repair path. When it points to human evidence, historical archives, real commits or existing-asset disposition, follow it to the named SOP or ask the human; never rewrite evidence.
+- Do not present these commands to the human as a task list. Report the outcome in natural language plus the fixed receipt.
+
 ## 3. Route Before Writing
 
 Read the initialization tag in `AGENTS.md`/`Agent.md` and `adflow_version` in `docs/index.json`. Compare numeric version components using code, not textual ordering. If sources disagree or a version is malformed, report the conflict without writing.
@@ -126,7 +145,7 @@ When legacy documents or source code exist, inspect them to generate `docs/devel
 
 ### Step 8: Check, Repair, and Report
 
-1. **Mechanical evaluation:** run `scripts/adflow-verify --mode init --json` and `scripts/adflow-verify --json` in the target. Use the findings' codes and paths to locate defects. Formal gate success requires Exit 0; Exit 4 blocks success, and unresolved existing Exit 6 items are reported for human disposition rather than called passed. `ADVISORY` findings are nonblocking observations, not new closure requirements. Init mode also requires the installed verifier copy to match `adflow_version` (`TOOL_VERSION_DRIFT`), so a stale tool cannot pass for a completed installation or upgrade.
+1. **Mechanical evaluation:** run `scripts/adflow-verify --mode init --json` and `scripts/adflow-verify --json` in the target. Use the findings' codes and paths to locate defects, read `findings[].hint` as the repair path, and group by `summary.codes`; run `--list-checks --json` for an unfamiliar code instead of guessing. Formal gate success requires Exit 0; Exit 4 blocks success, and unresolved existing Exit 6 items are reported for human disposition rather than called passed. `ADVISORY` findings are nonblocking observations, not new closure requirements. Init mode also requires the installed verifier copy to match `adflow_version` (`TOOL_VERSION_DRIFT`), so a stale tool cannot pass for a completed installation or upgrade.
    When a backup exists in a target Git repository, separately use `git check-ignore --no-index` to verify coverage of the backup README and nested snapshot paths, and `git ls-files -- _adflow_backup/` to detect already tracked backups. Outside Git, inspect the root ignore rule without initializing a repository for validation.
 2. **Semantic evaluation:** check synthesized claims against source evidence, design registrations, backup preservation, and untouched runtime assets. For newly composed coding standards, confirm `common` contains nonempty arrays of English requirements grouped by concern, `languages` contains exactly the selected profiles, and each profile has its own formatting, naming, documentation, rules and official sources. For preserved standards, compare bytes with the saved original. Report language selection and existing-tool precedence; the verifier only checks this document's presence when registered and JSON readability, not coding-style compliance. The verifier does not perform semantic checks for the model.
 3. **Bounded repair:** fix only generated/managed assets within the authorized scope, then re-run affected checks. Allow at most 3 repair passes; stop earlier if the same blocker persists twice or repair needs new authority/facts. Preserve partial work and report the exact blocker; never restart migration or relax a hard gate to obtain success.
