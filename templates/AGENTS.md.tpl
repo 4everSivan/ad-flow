@@ -149,7 +149,7 @@ scripts/adflow-verify --card <卡号> --receipt
    - 文档引用的架构图、流程图、原型图，以及 App 界面截图和文档视觉素材统一存放在 `docs/assets/`；项目运行时加载的资源遵循实际构建契约，不因文档治理迁移其加载路径；
    - 文件命名必须遵循语义化连字符命名（如 `arch-overview.svg`、`ui-login.png`），严禁在项目根目录、源码目录或各级文档子目录中随意散落图片文件；
    - 图片入库前必须经过合理压缩，优先采用矢量图（`.svg`），单张原则上不超过 2MB。
-5. **发版归档 SOP（受发版与归档门禁约束）**：发版封箱前先核定本批次范围，运行 `scripts/adflow-verify --release <版本>` 确认 C 卡均 `closed`、T 卡均 `completed` 且 Exit 0，再按 [归档操作](docs/archive/README.md) 移动卡片、写入本批次总账 `docs/archive/<版本>/index.json` 并从现行总账移出本批次登记、定稿 CHANGELOG（`[Unreleased]` 改为版本标题与发布日期，卡片链接改指归档路径）并复核校验，提交后在该提交上打出对应 Git Tag（如 `git tag -a v0.1.0 -m "Release v0.1.0"`）。**严禁将非终态卡移入归档区**；历史批次账实不符的修复按归档 README「历史批次账实修复」流程由人工定口径处置。
+5. **发版归档 SOP（受发版与归档门禁约束）**：发版封箱前先核定本批次范围，运行 `scripts/adflow-verify --release <版本>` 确认 C 卡均 `closed`、T 卡均 `completed` 且 Exit 0，再按 [归档操作](docs/archive/README.md) 移动卡片、写入本批次总账 `docs/archive/<版本>/index.json` 并从现行总账移出本批次登记、定稿 CHANGELOG（`[Unreleased]` 改为版本标题与发布日期，卡片链接改指归档路径）并复核校验，提交后在该提交上打出对应 Git Tag（如 `git tag -a v0.1.0 -m "Release v0.1.0"`）。**严禁将非终态卡移入归档区**；历史批次账实不符的修复按归档 README「历史批次账实修复」流程由人工定口径处置。归档后用 `scripts/adflow-verify --topic <主题>` 从设计主题核对归档卡路径、卡号与状态。
 
 ---
 

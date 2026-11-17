@@ -1,4 +1,5 @@
-"""指令层回归：v1.8.0 新增参数必须由 Agent 在 SKILL/AGENTS 中使用。"""
+"""指令层回归：所有 CLI 参数都必须由 Agent 在 SKILL/AGENTS 中使用。"""
+import re
 import subprocess
 import sys
 import unittest
@@ -24,17 +25,22 @@ class AgentSurfaceTests(unittest.TestCase):
     def text(self, path):
         return path.read_text(encoding="utf-8")
 
-    def test_cli_exposes_every_documented_flag(self):
+    def cli_flags(self):
         result = subprocess.run([sys.executable, str(TOOL), "--help"],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        for flag in NEW_FLAGS:
-            self.assertIn(flag, result.stdout, flag)
+        return sorted(set(re.findall(r"(?<![\w-])--[a-z][a-z-]+", result.stdout)) - {"--help"})
 
-    def test_every_new_flag_is_in_skill_and_agents(self):
+    def test_cli_exposes_every_documented_flag(self):
+        for flag in NEW_FLAGS:
+            self.assertIn(flag, self.cli_flags(), flag)
+
+    def test_every_cli_flag_is_in_skill_and_agents(self):
+        flags = self.cli_flags()
+        self.assertGreaterEqual(len(flags), 20, flags)
         for name in ("SKILL.md", "AGENTS template"):
             text = self.text(SURFACES[name])
-            for flag in NEW_FLAGS:
+            for flag in flags:
                 self.assertIn(flag, text, "%s 缺少 %s" % (name, flag))
 
     def test_every_new_flag_appears_in_at_least_two_surfaces(self):
