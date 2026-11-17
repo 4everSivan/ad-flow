@@ -4,7 +4,7 @@
   "title": "增加基于批次总账的历史卡片查询",
   "version": "v1.8.0",
   "milestone": "M1",
-  "status": "in_progress",
+  "status": "completed",
   "branch": "feat/T02-history-topic-query",
   "depends_on": [
     "T01"
@@ -51,10 +51,10 @@
     }
   ],
   "acceptance": {
-    "result": null,
-    "run_id": "",
-    "user_quote": "",
-    "signoff": "",
+    "result": true,
+    "run_id": "local-20261117-17",
+    "user_quote": "确认",
+    "signoff": "sivan (AI代签)",
     "checks": [
       {
         "item": "历史路由覆盖",
@@ -85,7 +85,9 @@
   "gate": {
     "tool": "adflow-verify",
     "version": "1.8.0",
-    "ran_at": "",
-    "exit_code": null
+    "ran_at": "2026-11-17",
+    "exit_code": 0,
+    "from_status": "in_progress",
+    "target_status": "completed"
   }
 }

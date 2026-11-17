@@ -4,7 +4,7 @@
   "title": "增加按主题查询现行卡片的轻量入口",
   "version": "v1.8.0",
   "milestone": "M1",
-  "status": "in_progress",
+  "status": "completed",
   "branch": "feat/T01-active-topic-query",
   "depends_on": [],
   "target": {
@@ -49,10 +49,10 @@
     }
   ],
   "acceptance": {
-    "result": null,
-    "run_id": "",
-    "user_quote": "",
-    "signoff": "",
+    "result": true,
+    "run_id": "local-20261117-17",
+    "user_quote": "确认",
+    "signoff": "sivan (AI代签)",
     "checks": [
       {
         "item": "活跃结果正确",
@@ -83,7 +83,9 @@
   "gate": {
     "tool": "adflow-verify",
     "version": "1.8.0",
-    "ran_at": "",
-    "exit_code": null
+    "ran_at": "2026-11-17",
+    "exit_code": 0,
+    "from_status": "in_progress",
+    "target_status": "completed"
   }
 }
