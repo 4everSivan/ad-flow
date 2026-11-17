@@ -20,6 +20,7 @@ SEMVER = r"(\d+\.\d+\.\d+)"
 # A pattern that stops matching fails --check, so reworded lines are noticed rather than skipped.
 SITES = [
     ("scripts/adflow_verify.py", r'^VERSION = "{v}"'),
+    ("AGENTS.md", r'initialized v{v} -->'),
     ("workflow.yaml", r'^version: "{v}"'),
     ("workflow.yaml", r'current_version: "{v}"'),
     ("workflow.yaml", r'templates to v{v}"'),

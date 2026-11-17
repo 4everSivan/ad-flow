@@ -425,6 +425,7 @@ skills/ad-flow/
 ├── SKILL.md                          # Skill 调度大脑（面向 Agent 的初始化/升级与执行边界）
 ├── workflow.yaml                     # 初始化流水线状态机（定义 24 个治理文件与校验器断言与不可变约束）
 ├── README.md                         # 本说明文档（面向工程团队的架构与使用指引）
+├── AGENTS.md                         # 本仓库自身的执行约定（不安装到目标项目；安装版见 templates/AGENTS.md.tpl）
 ├── .github/workflows/ci.yml          # 源仓库 CI：Linux/macOS × Python 3.9/3.12 运行 tools/check.sh
 │
 ├── scripts/                          # 流程纪律可执行校验层（方案 W：仓库内可见资产，无钩子/CI）
