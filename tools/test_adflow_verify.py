@@ -1102,6 +1102,11 @@ class VerifyTests(unittest.TestCase):
         data = self.run_tool("--topic", "Core", "--scope", "active", expect=4)
         self.assertIn("INDEX_MISSING", self.codes(data))
 
+        self.write_json("docs/devel/task/index.json", {"tasks": {}, "topics": {}})
+        self.write("docs/devel/change/index.json", "{broken")
+        data = self.run_tool("--topic", "Core", "--scope", "active", expect=4)
+        self.assertIn("JSON_PARSE", self.codes(data))
+
     def test_scope_argument_rules(self):
         self.card("C001")
         for args in (("--scope", "active"),
