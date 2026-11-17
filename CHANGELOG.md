@@ -6,6 +6,26 @@
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-17
+
+### Added
+
+- 校验器内建诊断码注册表，并新增只读查询 `scripts/adflow-verify --list-checks [--json]`：列出全部 66 个诊断码（42 `ERROR` / 6 `WARN` / 18 `ADVISORY`）的默认严重级别、一句话释义与修复提示。目录为静态输出，不依赖目标项目状态，与 `--next-id`/`--topic` 同类的独占查询；JSON 顶层为 `tool`、`version`、`checks`，条目按 `code` 排序。回归测试以 AST 扫描全部发出点，双向比对注册表、默认级别与字段完整性，并拒绝绕过 `Ctx.add` 直接追加 finding 的新增调用。
+- 补齐 Step 7 设计登记契约：`docs/devel/index.json` 的 `design` 子系统新增 `designs` 数组，条目为 `{file, topic, status, title}`（项目根相对路径与 `@topic` 锚标）；SKILL、workflow、设计 README 与索引路由规约同步说明。新增 ADVISORY `DESIGN_ROUTE_DRIFT`：声明 `designs` 后报告设计文档未登记、条目指向不存在文件、缺少 `file`、`designs` 非数组或主题锚标未命中；旧布局没有该键时保持只读兼容，初始化与升级不追溯补登记。
+- 每条 finding 新增修复提示 `hint`：文本输出在问题行下显示「↳ 修复」，`--json` 的 `findings[].hint` 承载同一内容。注册表提供默认提示，调用点可传更具体的一条覆盖；42 个 `ERROR` 码全部覆盖。涉及人工原话、历史归档、真实提交或既有资产处置时，提示指向根因复查或现有 SOP，不诱导改写证据，也不改变回执与路由查询的固定输出。`JSON_PARSE` 改走统一发出路径。
+- `--json` 的 `summary` 新增 `codes`：按诊断码汇总本次最终 findings 的各严重级别条数（先应用 `--warn-only`，无发现时为 `{}`）。新增字段均为增量，旧消费者可继续解析；启用严格字段校验的消费者应在升级前核对。
+- 维护者统一检查入口 `tools/check.sh`：依次运行回归测试、`bump_version.py --check`、`check_package.py` 与 `sh -n scripts/adflow-verify`，本地与 CI 使用同一命令。
+- 源仓库 CI `.github/workflows/ci.yml`：Linux、macOS 的 Python 3.9 与 3.12 上执行 `tools/check.sh`。它只验证技能包自身，不代表目标项目验收；安装到目标项目的校验器仍不依赖钩子或 CI。
+- 维护者检查器 `tools/check_package.py`：解析 `workflow.yaml` 中以成对 `# @adflow:manifest-begin/end <名称>` 注释界定的 JSON 流式机器块，校验每块唯一且可解析，安装映射恰为 24 个治理文件加 2 个校验器文件，目的地唯一且为项目内相对路径，模板存在且无孤儿，`docs/standards` 与 `scripts` 归属正确，wrapper 保留执行位，升级映射只触碰受管资产并与安装模板一致，且与校验器 `BASE_FILES`/`STANDARD_FILES`/`TOOL_FILES`/`LEGACY_FILES` 常量及版本双锚一致。未知字段、重复字段、重复目的地与解析失败均报出具体块和条目。
+- 新增回归 `tools/test_checks_catalog.py`（诊断目录、提示场景与统计）与 `tools/test_check_package.py`（映射负例、互换模板的内容独立断言，以及按映射安装到空工程后由安装版 Shell 入口执行 `--mode init` 与普通复核）。
+- 新增只读建卡计划（A6 试点）`scripts/adflow-verify --scaffold new-card --plan`：输出建议卡号与取号依据、模板路径、设计文档与 `@topic` 锚标解析、拟创建的卡片内容、总账/主题/待办变更与缺失输入；缺失项使 `executable=false`。计划不写任何文件，卡号不构成原子预占，退出码沿用普通复核语义。写入与归档流程未实现，需另行设计冲突检测、中断恢复与人工验收后再决定是否发布。
+
+### Changed
+
+- `workflow.yaml` 的 Step 4/5/6/8 与升级 U2–U4 的机器消费映射改为 JSON 流式取值（同时是合法 YAML 值），保留原有字段层级与条目说明；新增 `execution_contract.machine_manifests` 说明块约定与检查边界。普通段落与逐步操作规则保持原 YAML 写法。
+- `SKILL.md`、`workflow.yaml` 与审计清单不再逐码复述诊断清单，改为“以 `--list-checks` 为准 + 策略说明”；`ADVISORY` 默认政策、`ARCHIVE_NON_TERMINAL` 硬门禁例外、历史批次处置与旧布局兼容保持不变。
+- README 维护章节与发版步骤改用 `./tools/check.sh`，并补充 `--list-checks`、`hint` 与 `summary.codes` 的说明。
+
 ## [1.7.0] - 2026-11-05
 
 ### Added
@@ -156,7 +176,8 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/4everSivan/ad-flow/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/4everSivan/ad-flow/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/4everSivan/ad-flow/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/4everSivan/ad-flow/compare/v1.4.0...v1.5.0

@@ -16,6 +16,8 @@
   * 只读；除非 --record（可用 --card 限定回写范围）。
   * --card ID --to STATE 仅在内存预检目标状态，不代替人工验收或修改状态。
   * 新增 ADVISORY 诊断不影响退出码，保持既有门禁标准。
+  * 每条 finding 带注册表默认 hint，调用点可给出更具体的修复提示；--list-checks 输出静态
+    诊断目录（不依赖目标项目），与校验行为共用同一张注册表。
   * 归档区只允许终态卡：非 closed/completed 即 ARCHIVE_NON_TERMINAL 确定性违规
     （v1.1.0 起既有归档前置的机器覆盖；历史冻结卡由人工口径处置，见归档 README）。
     总账路由与归档目录物理扫描双覆盖，未登记的归档卡同样受检。
@@ -29,8 +31,10 @@
                 [--card ID [--to verified|closed|completed]] [--record]
                 [--release VERSION] [--card ID --receipt]
                 [--next-id change|task] [--topic NAME]
+                [--list-checks]
 """
 import argparse
+import copy
 import json
 import re
 import subprocess
@@ -38,7 +42,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 
 # ---- 常量 ----
 TOPIC_RE = re.compile(r"<!--\s*@topic:\s*([A-Za-z0-9_]+)\s*-->")
@@ -103,6 +107,233 @@ PLACEHOLDER_FIELDS = {
     "docs/devel/task/index.json": ("updated_at",),
 }
 
+# ---- 诊断码注册表 ----
+# 单一来源：code -> (severity, meaning, hint)。severity 是常规模式（--warn-only 之前）
+# 发出时的级别，退出行为仍由调用点决定；回归测试比对全部发出点与注册表，防止两处漂移。
+# hint 是默认修复提示，调用点可传更具体的一条覆盖。--list-checks 与回归测试共用本表。
+CHECKS = {
+    "ARCHIVE_ID_COLLISION": (
+        "ADVISORY", "未登记的归档卡与其他卡撞号",
+        "为两张不同事项分配不同卡号，并同步依赖、主题与总账引用；未登记归档卡不作为依赖解析来源。"),
+    "ARCHIVE_NON_TERMINAL": (
+        "ERROR", "归档区存在非终态卡",
+        "先把卡收口到 C 卡 closed / T 卡 completed 再移入归档区；历史冻结卡按 "
+        "docs/archive/README.md「历史批次账实修复」由人工定口径处置，升级不自动改写。"),
+    "ARCHIVE_UNREGISTERED": (
+        "ADVISORY", "归档卡未经总账路由",
+        "把该卡登记到 docs/archive/<批次>/index.json（adflow-archive-batch-v1），file 指向归档路径；"
+        "或确认它应留在活跃卡池。"),
+    "BASE_FILE_MISSING": (
+        "ERROR", "缺少基础治理文件或已登记规范",
+        "按 finding 的 path 从技能包模板重新渲染缺失文件；不要手工空建占位文件，补齐后重跑 --mode init。"),
+    "CHANGELOG_LINK_MISSING": (
+        "WARN", "closed 卡号未出现在 CHANGELOG.md",
+        "在 CHANGELOG.md 对应版本条目补该卡号的双向链接。"),
+    "CHECKS_NOT_ALL_TRUE": (
+        "ADVISORY", "验收项为空或未全部为 true",
+        "逐项核对真实验收结果并落 true/false；结构门禁不能替代业务验收，未通过项不要收口。"),
+    "CHECK_RESULT_MISSING": (
+        "ERROR", "存在 result 未裁决的验收项",
+        "为每个 checks[] 项写入 result: true 或 false（二值契约），再根据结果决定是否收口。"),
+    "COMMIT_MISSING": (
+        "ERROR", "终态卡缺少 sync.commit",
+        "补 sync.commit，填本次交付的真实提交 SHA（应为当前 HEAD 的祖先）。"),
+    "COMMIT_NOT_ANCESTOR": (
+        "ERROR", "sync.commit 不是 HEAD 祖先",
+        "核对实现提交与当前分支：确认该提交属于本次交付且已进入当前历史；"
+        "未合入分支的提交不能作为终态证据。"),
+    "COMMIT_SKIPPED_NO_GIT": (
+        "WARN", "无 Git 环境，跳过 commit 祖先校验",
+        "在目标项目的 Git 仓库内复核 sync.commit 与交付的关联；本项表示环境跳过，不是通过证据。"),
+    "CONTRACT_INCOMPLETE": (
+        "ERROR", "验收项缺少 true_if/false_if",
+        "为每个验收项补齐 true_if（通过条件）与 false_if（失败条件），两者描述同一行为的两侧边界。"),
+    "CONTRACT_SYMMETRIC": (
+        "ERROR", "true_if 与 false_if 相同",
+        "分别写出通过条件与失败条件，不能复用同一段判据。"),
+    "DECOUPLING_VIOLATION": (
+        "WARN", "卡片硬编码源码物理路径",
+        "卡片只声明 module/component/capability，具体文件变动通过 sync.commit 追溯。"),
+    "DEP_CYCLE": (
+        "ADVISORY", "依赖出现环路",
+        "调整 depends_on 消除环路；本版仅提示，不新增阻断，但环路会让开工顺序无法成立。"),
+    "DEP_DANGLING": (
+        "ERROR", "depends_on 引用不存在的卡",
+        "修正卡号；若依赖任务尚未建立，先建卡并登记总账，再重跑。"),
+    "DEP_NOT_COMPLETED": (
+        "ERROR", "前置任务尚未 completed",
+        "先完成并收口前置任务，或把 depends_on 调整为真实依赖；不要把未完成前置当作已完成。"),
+    "DEP_NOT_READY": (
+        "ADVISORY", "任务已开工但前置任务未完成",
+        "先完成前置任务再推进本卡，或调整依赖与开工顺序并在卡内说明。"),
+    "DESIGN_DOC_MISSING": (
+        "ERROR", "缺少或找不到设计文档",
+        "按 finding 的字段与路径处理：字段缺失则先写/改 docs/devel/design/ 下的基线设计并打 @topic 锚标；"
+        "路径失效则修正 design_doc。禁止指向 README。"),
+    "DESIGN_ROUTE_DRIFT": (
+        "ADVISORY", "设计文档机器路由缺失或失效",
+        "在 docs/devel/index.json 的 design 子系统 `designs` 数组登记 `{file, topic, status, title}`："
+        "file 为项目根相对路径，topic 须在设计正文中存在对应 @topic 锚标；旧布局没有 designs 键时保持只读兼容。"),
+    "DESIGN_TOPIC_MISSING": (
+        "ADVISORY", "未声明 target.design_topic",
+        "为卡片补 target.design_topic，并在对应基线设计中补匹配的 <!-- @topic: X --> 锚标。"),
+    "EVIDENCE_QUOTE": (
+        "ERROR", "缺少人类原话 user_quote",
+        "在会话中取得人类明确确认后，把原话摘入 C 卡 verification.user_quote；"
+        "确认缺失时保持当前状态，不要用套话代签。"),
+    "EVIDENCE_QUOTE_CANNED": (
+        "WARN", "user_quote 疑似套话",
+        "改为人类原话摘录（含具体结论），不要只写「已确认」一类词语。"),
+    "EVIDENCE_RUNID": (
+        "ERROR", "run_id 为空或格式非法",
+        "填真实流水号：纯数字或 local-YYYYMMDD-HH；禁止内网 URL、空值与编造。"),
+    "EVIDENCE_SIGNOFF": (
+        "ERROR", "缺少 signoff",
+        "取得真实人工确认后补 signoff（代签人标识），不要自导自演。"),
+    "GATE_CLAIM_CONTRADICTION": (
+        "ERROR", "声称 gate 通过但实测有硬违规",
+        "先只读复核定位并修复根因；确认无剩余阻断、证据真实且符合状态流转后，再用 "
+        "--card <ID> --to <状态> --record 回写。不要只改 gate 期望值。"),
+    "GATE_EXIT_NONZERO": (
+        "ERROR", "终态卡未记录 gate.exit_code==0",
+        "修复 finding 中的根因后，运行 scripts/adflow-verify --card <ID> --to <状态> --record "
+        "记录真实结果；不要手填 gate 块。"),
+    "HOTFIX_OPEN": (
+        "WARN", "hotfix 卡仍未闭环",
+        "故障恢复后 24 小时内补齐卡片、核验、设计回写与 CHANGELOG，并收口该卡。"),
+    "ID_DUPLICATE": (
+        "ERROR", "卡号重复",
+        "为后建事项重新取号（scripts/adflow-verify --next-id <track>），并同步索引、依赖、主题与 "
+        "CHANGELOG 引用；不要用后一张卡覆盖前一张。"),
+    "INDEX_FILE_DEAD": (
+        "ERROR", "索引 file 路径失效",
+        "把 file 改为该卡实际路径；若卡已归档，改由 docs/archive/<批次>/index.json 路由并从活跃登记移除。"),
+    "INDEX_FILE_DRIFT": (
+        "ERROR", "索引 file 未指向该活跃卡",
+        "把索引条目的 file 改为卡片实际相对路径（docs/devel/<track>/<ID>.json）。"),
+    "INDEX_FILE_INVALID": (
+        "ERROR", "索引 file 路径非法",
+        "file 必须是目标项目内的相对路径；批次总账条目须指向本批次目录，活跃条目须指向所属轨道。"),
+    "INDEX_FILE_MISSING": (
+        "ERROR", "索引条目缺少 file",
+        "为索引条目补非空 file，值为卡片在项目内的相对路径。"),
+    "INDEX_ID_DRIFT": (
+        "ERROR", "索引键与卡片 id 不一致",
+        "统一索引键与卡片 id，并同步依赖、主题与 CHANGELOG 中的卡号引用。"),
+    "INDEX_MISSING": (
+        "ERROR", "缺少卡片总账索引",
+        "创建对应轨道的 index.json（含 cards/tasks 与 topics），并登记现有活跃卡。"),
+    "INDEX_MISSING_CARD": (
+        "ERROR", "卡片未登记到总账",
+        "在 finding 指向的 index.json 对应轨道补登记：卡号 → {status: 当前状态, file: 卡片相对路径}。"),
+    "INDEX_STATUS_DRIFT": (
+        "ERROR", "索引状态与卡片不一致",
+        "先确认真实状态，再把索引条目 status 同步为卡片当前状态；收口时卡片与索引同改。"),
+    "INDEX_TOPIC_README": (
+        "ERROR", "topics design_doc 指向 README",
+        "改指基线设计文档（00-系统总体设计.md 或 01~99-*.md），并在其中补匹配的 @topic 锚标。"),
+    "JSON_PARSE": (
+        "ERROR", "JSON 文件无法解析",
+        "按 finding 的 path 与解析位置修复 JSON（常见为逗号、引号、重复键），保留既有登记，"
+        "修好后重跑原命令。"),
+    "JSON_TYPE": (
+        "ERROR", "JSON 字段类型不符合契约",
+        "按 finding 指出的字段改为模板要求的类型（对象/数组/字符串/数字），保留其他字段后重跑。"),
+    "LEGACY_TEMPLATE_EXISTS": (
+        "ERROR", "仍存在旧模板副本",
+        "先确认快照、规范模板自定义字段与引用已迁移，再按已授权的升级流程退役 "
+        "docs/devel/{change,task}/template.json。"),
+    "LEDGER_ARCHIVED_ENTRIES": (
+        "ADVISORY", "现行总账仍登记归档卡",
+        "按 docs/archive/README.md「现行总账瘦身」把归档登记迁入 docs/archive/<批次>/index.json；"
+        "旧布局仍有效，可择机整理。"),
+    "LEDGER_DUPLICATE_KEY": (
+        "ADVISORY", "总账内卡号重名",
+        "同一卡号只保留一条登记；合并冲突时修正卡号与引用，不要两侧都留（JSON 重名键只保留最后一条）。"),
+    "MILESTONE_STATUS_DRIFT": (
+        "ADVISORY", "里程碑状态与成员任务不一致",
+        "把里程碑状态与成员任务对齐：任务未全部完成时不要把里程碑标记为 completed。"),
+    "NO_README_AS_DESIGN_DOC": (
+        "ERROR", "design_doc 指向 README",
+        "改指 docs/devel/design/ 下的基线设计（00-系统总体设计.md 或 01~99-*.md），并在该文档补匹配的 "
+        "<!-- @topic: X -->；禁止指向任何 README。"),
+    "PLACEHOLDER_DESIGN_EXISTS": (
+        "ERROR", "存在禁用的占位设计文档",
+        "删除 docs/devel/design/01-系统设计方案.md，用实际成立的基线设计取代。"),
+    "PLACEHOLDER_UNRENDERED": (
+        "ADVISORY", "模板占位符未渲染",
+        "用真实项目名与初始化日期替换 MyProject/YYYY-MM-DD；正文中的格式示例保持原样。"),
+    "REJECTION_NO_AUDIT": (
+        "ERROR", "rejected 卡缺少驳回审计",
+        "在 rejections[] 补 reason（及返工动作）；返工后重新取证并取得新确认。"),
+    "RELEASE_BATCH_EMPTY": (
+        "ADVISORY", "未找到该批次的卡片",
+        "核对版本拼写；确认本批次确无卡片时在发布记录中显式说明。"),
+    "RELEASE_NOT_TERMINAL": (
+        "ERROR", "发布批次内存在非终态卡",
+        "先收口本批次卡片（C closed / T completed），或显式延后到下一批次，再重跑 --release。"),
+    "RELEASE_SCOPE_UNKNOWN": (
+        "WARN", "未收口卡未填写 version",
+        "为该卡补真实发布批次 version，或显式移出本批次，再重跑 --release。"),
+    "RELEASE_STRANDED": (
+        "ADVISORY", "早批次终态卡仍滞留活跃区",
+        "确认该卡是否随本批次归档；不随本批次则规划下一批次并保持卡片 version 原值。"),
+    "SIGNOFF_STALE": (
+        "ADVISORY", "沿用驳回前的确认原话",
+        "驳回后清空旧 user_quote/signoff；返工完成并取得新的人工确认后再写入。"),
+    "STANDARD_ROUTE": (
+        "ERROR", "docs/index.json.standards 路由不符",
+        "只登记 canonical 三路径（docs/standards/{coding,change-template,task-template}.json），"
+        "并确认文件存在且可解析。"),
+    "STATUS_INVALID": (
+        "ERROR", "状态不在该轨允许集合",
+        "按轨道修正 status：change 为 draft/pending/in_progress/rejected/verified/closed，"
+        "task 为 pending/in_progress/completed。"),
+    "TAG_DUPLICATE": (
+        "ADVISORY", "存在多个版本不同的初始化标签",
+        "升级后只保留当前版本的 <!-- @ad-flow: initialized vX.Y.Z --> 标签，删除旧标签。"),
+    "TAG_MISSING": (
+        "ERROR", "缺少初始化版本标签",
+        "在 AGENTS.md 首部补 <!-- @ad-flow: initialized v<当前治理版本> -->。"),
+    "TASK_SIGNOFF_MISSING": (
+        "ADVISORY", "completed 任务卡缺少人工确认",
+        "取得人类明确确认后，把原话写入 acceptance.user_quote 并补 signoff。"),
+    "TASKS_NOT_ALL_DONE": (
+        "ADVISORY", "completed 任务卡仍有未完成能力单元",
+        "把 tasks[].done 与真实完成情况对齐；未全部完成时不要把任务卡置为 completed。"),
+    "TOOL_VERSION_DRIFT": (
+        "ERROR", "校验器副本版本与治理版本不一致",
+        "用技能包的 scripts/adflow_verify.py 与 scripts/adflow-verify 覆盖安装副本，使其 VERSION 与 "
+        "docs/index.json.adflow_version 一致。"),
+    "TOPIC_ANCHOR_MISSING": (
+        "ERROR", "设计文档缺少匹配的 @topic 锚标",
+        "在 finding 指出的设计文档补 <!-- @topic: <主题> -->，或修正卡内 design_topic 与实际锚标一致。"),
+    "TOPIC_EMPTY": (
+        "ADVISORY", "未找到该主题的登记或卡片",
+        "核对主题拼写，或先在设计文档补 @topic 并在总账 topics 登记。"),
+    "TRANSITION_CARD": (
+        "ERROR", "目标卡不在活跃卡池",
+        "确认卡号拼写正确且属于当前活跃卡池（未被归档），再重试。"),
+    "TRANSITION_STATE": (
+        "ERROR", "目标状态不被该轨支持",
+        "按轨道选择目标状态：change 用 verified/closed，task 用 completed。"),
+    "VERSION_DRIFT": (
+        "ERROR", "AGENTS 标签与 index 版本不一致",
+        "统一 AGENTS.md 标签与 docs/index.json.adflow_version；以 scripts/adflow_verify.py 的 VERSION 为准。"),
+    "VERSION_MISSING": (
+        "ERROR", "缺少 adflow_version",
+        "在 docs/index.json 补 adflow_version（字符串形式的当前治理版本）。"),
+    "ZERO_SEDIMENT_VIOLATION": (
+        "ERROR", "todo 残留已建卡事项",
+        "按 finding 的文件与行号在 now.md/future.md 核对事项，确认已建卡后物理删除该行。"),
+}
+
+
+def check_catalog():
+    """按 code 排序输出注册表条目，供 --list-checks 与回归测试共用。"""
+    return [{"code": code, "severity": CHECKS[code][0], "meaning": CHECKS[code][1],
+             "hint": CHECKS[code][2]} for code in sorted(CHECKS)]
+
 
 class Ctx:
     """一次运行的共享上下文。"""
@@ -151,7 +382,7 @@ class Ctx:
                         data = None
                     self._json_cache[rel] = data
                 except Exception as e:  # noqa: BLE001
-                    self.add("ERROR", "JSON_PARSE", None, rel, "JSON 解析失败: %s" % e)
+                    self.hard("JSON_PARSE", None, rel, "JSON 解析失败: %s" % e)
                     self._json_cache[rel] = None
         return self._json_cache[rel]
 
@@ -199,17 +430,20 @@ class Ctx:
             return None
 
     # ---- findings ----
-    def add(self, sev, code, card, path, msg):
-        self.findings.append({"sev": sev, "code": code, "card": card, "path": path, "msg": msg})
+    def add(self, sev, code, card, path, msg, hint=None):
+        """唯一发出路径：注册表提供默认 hint，调用点可传更具体的一条覆盖。"""
+        meta = CHECKS.get(code)
+        self.findings.append({"sev": sev, "code": code, "card": card, "path": path, "msg": msg,
+                              "hint": hint if hint is not None else (meta[2] if meta else "")})
 
-    def hard(self, code, card, path, msg):
-        self.add("ERROR", code, card, path, msg)
+    def hard(self, code, card, path, msg, hint=None):
+        self.add("ERROR", code, card, path, msg, hint)
 
-    def soft(self, code, card, path, msg):
-        self.add("WARN", code, card, path, msg)
+    def soft(self, code, card, path, msg, hint=None):
+        self.add("WARN", code, card, path, msg, hint)
 
-    def advisory(self, code, card, path, msg):
-        self.add("ADVISORY", code, card, path, msg)
+    def advisory(self, code, card, path, msg, hint=None):
+        self.add("ADVISORY", code, card, path, msg, hint)
 
 
 def is_readme(rel):
@@ -496,6 +730,55 @@ def check_milestones(ctx):
 
 
 # ---- 全局检查 ----
+def check_design_routes(ctx):
+    """设计文档机器路由：仅在 devel index 声明 designs 时生效，旧布局保持只读兼容。"""
+    rel_idx = "docs/devel/index.json"
+    idx = ctx.load_json(rel_idx)
+    if not isinstance(idx, dict):
+        return
+    subsystems = idx.get("subsystems")
+    if not isinstance(subsystems, list):
+        return
+    design = next((s for s in subsystems
+                   if isinstance(s, dict) and s.get("name") == "design"), None)
+    if not isinstance(design, dict) or "designs" not in design:
+        return  # 旧布局或尚未建立机器路由：不追溯要求
+    if not isinstance(design["designs"], list):
+        ctx.advisory("DESIGN_ROUTE_DRIFT", None, rel_idx,
+                     "design 子系统的 designs 必须为数组")
+        return
+    registered = {}
+    for i, entry in enumerate(design["designs"]):
+        if (not isinstance(entry, dict) or not isinstance(entry.get("file"), str)
+                or not entry["file"].strip()):
+            ctx.advisory("DESIGN_ROUTE_DRIFT", None, rel_idx,
+                         "designs[%d] 必须含非空 file 路径" % i)
+            continue
+        rel = entry["file"]
+        registered[rel] = entry
+        if not ctx.exists(rel):
+            ctx.advisory("DESIGN_ROUTE_DRIFT", None, rel_idx,
+                         "designs[%d] 指向不存在的设计文档: %s" % (i, rel))
+            continue
+        topic = entry.get("topic")
+        if topic is not None and not isinstance(topic, str):
+            ctx.advisory("DESIGN_ROUTE_DRIFT", None, rel_idx,
+                         "designs[%d].topic 必须为字符串" % i)
+        elif topic and topic not in ctx.topics_in(rel):
+            ctx.advisory("DESIGN_ROUTE_DRIFT", None, rel_idx,
+                         "designs[%d] 主题 @%s 未出现在 %s" % (i, topic, rel))
+    design_dir = ctx.root / "docs/devel/design"
+    if design_dir.is_dir():
+        for path in sorted(design_dir.glob("*.md")):
+            if path.name == "README.md":
+                continue
+            rel = str(path.relative_to(ctx.root))
+            if rel not in registered:
+                ctx.advisory("DESIGN_ROUTE_DRIFT", None, rel,
+                             "设计文档未登记到 docs/devel/index.json designs；"
+                             "补齐 file/topic/status/title 或确认其为非基线草稿")
+
+
 def check_globals(ctx):
     check_legacy_templates(ctx)
     check_milestones(ctx)
@@ -534,6 +817,8 @@ def check_globals(ctx):
                 ctx.hard("DESIGN_DOC_MISSING", None, idx_rel, "topics[%s].design_doc 不存在: %s" % (topic, d))
             elif topic not in ctx.topics_in(d):
                 ctx.hard("TOPIC_ANCHOR_MISSING", None, idx_rel, "topics[%s] 锚标未出现在 %s" % (topic, d))
+
+    check_design_routes(ctx)
 
 
 def check_version(ctx, required=False):
@@ -1041,6 +1326,127 @@ def topic_history(ctx, cards, name):
     return {"name": name, "design_docs": docs, "cards": rows}, "\n".join(lines)
 
 
+# ---- 建卡只读计划（A6 试点，不落盘）----
+SCAFFOLD_TRACK_KEY = {"change": "cards", "task": "tasks"}
+SCAFFOLD_TOPIC_KEY = {"change": "changes", "task": "tasks"}
+SCAFFOLD_TEMPLATE = {"change": "change_template", "task": "task_template"}
+SCAFFOLD_REQUIRED = (("design_topic", "设计主题"), ("title", "标题"),
+                     ("card_version", "发布批次"), ("branch", "执行分支"))
+
+
+def scaffold_plan(ctx, args):
+    """只读建卡计划：给出确定性写入差异与缺失输入；不写文件。
+
+    只做建议与预演：卡号来自 --next-id 口径（不是原子预占），写入需另行走廊并满足
+    冲突、中断恢复与人工验收条件。
+    """
+    track = args.track or "change"
+    card_id, basis = next_id(ctx, track)
+    template = STANDARD_FILES[SCAFFOLD_TEMPLATE[track]]
+    index_rel = "docs/devel/%s/index.json" % track
+    card_rel = "docs/devel/%s/%s.json" % (track, card_id)
+    missing = [label for name, label in SCAFFOLD_REQUIRED if not getattr(args, name)]
+
+    design_doc, anchor_ok = args.design_doc, None
+    if args.design_topic:
+        if design_doc:
+            if not ctx.exists(design_doc):
+                anchor_ok = False
+                missing.append("design_doc（文件不存在）")
+            elif args.design_topic not in ctx.topics_in(design_doc):
+                anchor_ok = False
+                missing.append("design_doc（缺少 @%s 锚标）" % args.design_topic)
+            else:
+                anchor_ok = True
+        else:
+            for path in sorted((ctx.root / "docs/devel/design").glob("*.md")):
+                rel = str(path.relative_to(ctx.root))
+                if args.design_topic in ctx.topics_in(rel):
+                    design_doc, anchor_ok = rel, True
+                    break
+            if design_doc is None:
+                missing.append("design_doc（主题 %s 未在任何设计文档中命中）" % args.design_topic)
+
+    tpl = ctx.load_json(template)
+    if not isinstance(tpl, dict):
+        missing.append("模板（%s 不存在或不可解析）" % template)
+        tpl = {}
+    card = copy.deepcopy(tpl)
+    card["id"] = card_id
+    card["status"] = card.get("status") or ("draft" if track == "change" else "pending")
+    if args.title:
+        card["title"] = args.title
+    if args.card_version:
+        card["version"] = args.card_version
+    if args.branch:
+        card["branch"] = args.branch
+    if args.design_topic:
+        target = card.get("target")
+        if not isinstance(target, dict):
+            target = card["target"] = {}
+        target["design_topic"] = args.design_topic
+        if design_doc:
+            target["design_doc"] = design_doc
+    if track == "change" and isinstance(card.get("design"), dict):
+        if args.design_topic:
+            card["design"]["topic"] = args.design_topic
+        if design_doc:
+            card["design"]["doc"] = design_doc
+    if track == "task" and args.milestone:
+        card["milestone"] = args.milestone
+
+    index = ctx.load_json(index_rel)
+    key = SCAFFOLD_TRACK_KEY[track]
+    if isinstance(index, dict) and key not in index and "cards" in index:
+        key = "cards"  # 兼容旧布局的 cards 键
+    writes = [
+        {"path": card_rel, "action": "create", "content": card},
+        {"path": index_rel, "action": "upsert", "collection": key,
+         "entry": {card_id: {"status": card.get("status"), "file": card_rel}}},
+    ]
+    topics = None
+    if args.design_topic:
+        topics = {"path": index_rel, "action": "append", "topic": args.design_topic,
+                  "key": SCAFFOLD_TOPIC_KEY[track], "card": card_id}
+    todo = None
+    if args.todo:
+        todo_path = "docs/devel/todo/%s.md" % ("now" if track == "change" else "future")
+        present = args.todo in (ctx.read_text(todo_path) or "")
+        todo = {"path": todo_path, "action": "remove", "match": args.todo, "present": present}
+        if not present:
+            missing.append("todo（未在 %s 匹配到给定文本）" % todo_path)
+
+    data = {"action": "new-card", "track": track, "card_id": card_id,
+            "next_id_basis": basis, "template": template,
+            "design": {"doc": design_doc, "topic": args.design_topic, "anchor_ok": anchor_ok},
+            "writes": writes, "topics": topics, "todo": todo,
+            "milestone": args.milestone if track == "task" else None,
+            "missing": missing, "executable": not missing}
+
+    basis_text = ("当前最大 %s 位于 %s" % (basis["max"], "、".join(basis["found_in"]))
+                  if basis.get("max") else "未发现既有卡号")
+    lines = ["scaffold new-card  track=%s  card=%s  executable=%s"
+             % (track, card_id, "yes" if data["executable"] else "no"),
+             "取号：%s（%s；本机可见分支 %d / 工作树 %d，不构成原子预占）"
+             % (card_id, basis_text, basis["scanned"]["branches"], basis["scanned"]["worktrees"]),
+             "模板：%s" % template,
+             "设计：%s @%s %s" % (design_doc or "未确定", args.design_topic or "未指定",
+                                "✓" if anchor_ok else "✗" if anchor_ok is False else "—"),
+             "写入计划（未落盘）："]
+    lines += ["  %s %s" % (w["action"], w["path"]) for w in writes]
+    if topics:
+        lines.append("  append %s topics.%s.%s += %s"
+                     % (topics["path"], topics["topic"], topics["key"], card_id))
+    if todo:
+        lines.append("  remove %s: %s（%s）" % (todo["path"], todo["match"],
+                                               "已匹配" if todo["present"] else "未匹配"))
+    if track == "task":
+        lines.append("  里程碑：%s" % (args.milestone or "未指定"))
+    lines.append("缺少输入：%s" % ("、".join(missing) or "无"))
+    lines.append("说明：计划只读；写入需单独的 scaffold 写入流程并满足冲突、中断恢复与人工验收条件。")
+    return data, "\n".join(lines)
+
+
 # ---- 初始化 DoD ----
 def run_init(ctx):
     def require_file(f, allow_legacy=False):
@@ -1230,6 +1636,15 @@ def summarize(ctx):
     return errs, warns, code
 
 
+def code_counts(findings):
+    """按诊断码汇总最终 findings 的级别计数；供 --json summary.codes 使用。"""
+    out = {}
+    for f in findings:
+        bucket = out.setdefault(f["code"], {})
+        bucket[f["sev"]] = bucket.get(f["sev"], 0) + 1
+    return {code: dict(sorted(out[code].items())) for code in sorted(out)}
+
+
 def report(ctx, mode, as_json, warn_only, release=None, payload=None):
     """payload=(JSON 字段, 文本, 提示)：回执与路由查询在文本模式只输出文本本身，便于原样转交或取用。"""
     errs, warns, code = summarize(ctx)
@@ -1243,7 +1658,7 @@ def report(ctx, mode, as_json, warn_only, release=None, payload=None):
         out = {"tool": "adflow-verify", "version": VERSION, "mode": mode,
                "target": str(ctx.root), "exit_code": code,
                "summary": {"errors": len(errs), "warnings": len(warns),
-                           "advisories": len(advisories)},
+                           "advisories": len(advisories), "codes": code_counts(ctx.findings)},
                "findings": ctx.findings}
         if release:
             out["release"] = release
@@ -1263,6 +1678,8 @@ def report(ctx, mode, as_json, warn_only, release=None, payload=None):
         for f in ctx.findings:
             loc = f["path"] if f["card"] in (None, "-") else "%s [%s]" % (f["path"], f["card"])
             print("  [%s] %-24s %s: %s" % (f["sev"], f["code"], loc, f["msg"]))
+            if f.get("hint"):
+                print("      ↳ 修复: %s" % f["hint"])
         print("summary: %d error(s), %d warning(s), %d advisory item(s)" %
               (len(errs), len(warns), len(advisories)))
         print("exit code: %d" % code)
@@ -1287,7 +1704,51 @@ def main(argv=None):
                     help="只读查询：跨现行总账与归档批次输出该轨下一个卡号")
     ap.add_argument("--topic", metavar="NAME",
                     help="只读查询：列出主题在现行总账与归档批次中的全部卡片")
+    ap.add_argument("--list-checks", action="store_true",
+                    help="只读查询：列出全部诊断码、默认严重级别、释义与修复提示（不依赖目标项目）")
+    ap.add_argument("--scaffold", choices=["new-card"],
+                    help="只读建卡计划（需搭配 --plan；不落盘，写入流程未实现）")
+    ap.add_argument("--plan", action="store_true", help="与 --scaffold new-card 搭配：只输出计划")
+    ap.add_argument("--track", choices=["change", "task"], help="scaffold 计划的目标轨道，缺省 change")
+    ap.add_argument("--design-topic", metavar="NAME", help="scaffold 计划挂接的设计主题")
+    ap.add_argument("--title", help="scaffold 计划中的卡片标题")
+    ap.add_argument("--card-version", metavar="VERSION", help="scaffold 计划中的发布批次 version")
+    ap.add_argument("--branch", help="scaffold 计划中的执行分支")
+    ap.add_argument("--design-doc", metavar="PATH", help="scaffold 计划挂接的设计文档；缺省按主题查找")
+    ap.add_argument("--todo", metavar="TEXT", help="scaffold 计划拟从待办池删除的事项文本")
+    ap.add_argument("--milestone", metavar="NAME", help="任务卡 scaffold 计划中的里程碑")
     args = ap.parse_args(argv)
+    scaffold_args = (args.track, args.design_topic, args.title, args.card_version,
+                     args.branch, args.design_doc, args.todo, args.milestone)
+    if args.scaffold:
+        if not args.plan:
+            ap.error("--scaffold 需要 --plan（当前只提供只读计划，写入流程未实现）")
+        if (args.next_id or args.topic is not None or args.card or args.to or args.record
+                or args.receipt or args.warn_only or args.release is not None
+                or args.mode == "init" or args.list_checks):
+            ap.error("--scaffold 为只读计划查询，不可与 --next-id/--topic/--card/--to/"
+                     "--record/--receipt/--release/--warn-only/--mode init/--list-checks 合用")
+    elif args.plan:
+        ap.error("--plan 需要 --scaffold new-card")
+    elif any(scaffold_args):
+        ap.error("--track/--design-topic/--title/--card-version/--branch/--design-doc/--todo/"
+                 "--milestone 仅在 --scaffold 下使用")
+    if args.list_checks:
+        if (args.next_id or args.topic is not None or args.card or args.to or args.record
+                or args.receipt or args.warn_only or args.release is not None
+                or args.mode == "init"):
+            ap.error("--list-checks 为静态目录查询，不可与 --next-id/--topic/--card/--to/"
+                     "--record/--receipt/--release/--warn-only/--mode init 合用")
+        catalog = check_catalog()
+        if args.json:
+            print(json.dumps({"tool": "adflow-verify", "version": VERSION,
+                              "checks": catalog}, ensure_ascii=False, indent=2))
+        else:
+            print("adflow-verify v%s  checks=%d" % (VERSION, len(catalog)))
+            for item in catalog:
+                print("%-24s %-9s %s" % (item["code"], item["severity"], item["meaning"]))
+                print("    ↳ 修复: %s" % item["hint"])
+        return 0
     if args.next_id or args.topic is not None:
         if args.next_id and args.topic is not None:
             ap.error("--next-id 与 --topic 一次只能查询一项")
@@ -1352,6 +1813,9 @@ def main(argv=None):
         elif args.topic is not None:
             data, text = topic_history(ctx, cards, args.topic)
             payload = ({"topic": data}, text, [])
+        elif args.scaffold:
+            data, text = scaffold_plan(ctx, args)
+            payload = ({"scaffold": data}, text, [])
 
     code = report(ctx, args.mode, args.json, args.warn_only, args.release, payload)
     return code

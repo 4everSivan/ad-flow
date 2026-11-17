@@ -2,7 +2,7 @@
 
 面向 AI Agent 与开发者的文档驱动开发治理技能：在项目中安装设计基线、双轨卡片、索引、操作规范和流程校验器。
 
-当前治理规范版本：[**1.7.0**](https://github.com/4everSivan/ad-flow/releases/tag/v1.7.0)。变更记录见 [CHANGELOG](CHANGELOG.md)。
+当前治理规范版本：[**1.8.0**](https://github.com/4everSivan/ad-flow/releases/tag/v1.8.0)。变更记录见 [CHANGELOG](CHANGELOG.md)。
 
 **首次调用完成初始化；日常直接提出开发需求；希望同步新版规范时才再次调用。** 项目内的规则、模板和校验器可独立使用，更新技能包不会后台修改已有项目。
 
@@ -50,7 +50,7 @@
 | 目标状态预检 | 在内存检查拟转入状态，可仅回写指定卡的 `gate` | 不自动改变卡片或索引状态；`--card` 不缩小全项目检查范围 |
 | 节点回执 | `--card ID --receipt` 在状态同步后复核，并按固定格式输出卡片回执（标题、批次、验收表、门禁、同步、人工、改动） | 只读；事实行取自卡片与本次复核，执行者只补「未覆盖」「需要你」 |
 | 发版批次预检 | `--release <version>` 核对本批次活跃卡均已 `closed`/`completed` | 只读；不证明发布范围完整，未填 `version` 的未收口卡交人工划定 |
-| 旁路诊断 | 报告缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、未登记归档卡、重复初始化标签和未渲染占位符 | `ADVISORY` 不改变退出码，不自动迁移旧卡 |
+| 旁路诊断 | 报告缺失主题、依赖环路、前置未完成即开工、里程碑漂移、设计路由漂移、终态验收项未全为 true、未登记归档卡、重复初始化标签和未渲染占位符 | `ADVISORY` 不改变退出码，不自动迁移旧卡 |
 
 ### 3.1 核心执行设计原则
 
@@ -136,7 +136,7 @@ flowchart TD
 
 ```text
 <目标工程根目录>/
-├── AGENTS.md                         # 【1/24 项目协作宪法】含 <!-- @ad-flow: initialized v1.7.0 --> 标签与 8 大规范
+├── AGENTS.md                         # 【1/24 项目协作宪法】含 <!-- @ad-flow: initialized v1.8.0 --> 标签与 8 大规范
 ├── CHANGELOG.md                      # 【2/24 版本更新日志】SemVer 规范，[Unreleased] 挂接变更与任务卡
 ├── .gitignore                        # 创建备份前确保忽略 /_adflow_backup/；保留已有规则（不计入 24 个治理文件）
 │
@@ -301,9 +301,9 @@ $ad-flow --upgrade
 | 目标版本状态 | 本次行为 |
 |---|---|
 | 无 ad-flow 标签且无版本记录 | 勘察后执行首次初始化 |
-| 低于 1.7.0，或已有无版本的初始化标签 | 进入保留业务资产的升级流 |
-| 等于 1.7.0 | 先只读核对安装完整性；完整则零修改退出，未完成则续做缺失步骤；显式 `--upgrade` 或 `--force` 同步规范 |
-| 高于 1.7.0 | 不降级，含 `--force` 情况 |
+| 低于 1.8.0，或已有无版本的初始化标签 | 进入保留业务资产的升级流 |
+| 等于 1.8.0 | 先只读核对安装完整性；完整则零修改退出，未完成则续做缺失步骤；显式 `--upgrade` 或 `--force` 同步规范 |
+| 高于 1.8.0 | 不降级，含 `--force` 情况 |
 | 版本来源冲突或格式无效 | 报告冲突，不写入 |
 
 版本使用代码按数值分段比较。升级保留现有业务记录，不批量迁移旧卡，不瘦身现行总账，不把新增 `ADVISORY` 追溯升级为硬门槛。唯一记录在案的例外：1.4.0 起 `ARCHIVE_NON_TERMINAL`（归档区只允许 `closed`/`completed` 卡）为硬门禁，它是对 v1.1.0 起既有归档前置条件的机器覆盖；存量项目升级后，历史冻结非终态卡会暴露为 Exit 4，按目标项目归档 README「历史批次账实修复」流程人工定口径处置（补收/回迁/废弃 + 勘误登记），升级本身只报告不改写。
@@ -329,6 +329,13 @@ scripts/adflow-verify --release v0.1.0 --json
 # 路由查询：建卡取号、从设计主题追溯全部现行与归档卡片（只读）
 scripts/adflow-verify --next-id change
 scripts/adflow-verify --topic MarketService
+
+# 诊断目录：列出全部诊断码、默认严重级别、释义与修复提示（只读，不依赖目标项目）
+scripts/adflow-verify --list-checks
+
+# 建卡只读计划（A6 试点）：只输出差异，不写文件；缺失输入时 executable=false
+scripts/adflow-verify --scaffold new-card --plan --design-topic MarketService \
+  --title "修复夜盘数据污染" --card-version v0.1.0 --branch fix/C027-night
 ```
 
 也可直接运行 Python 入口：
@@ -377,6 +384,8 @@ scripts/adflow-verify --card C001 --receipt
 | `--release VERSION` | 发版/归档前批次预检，`v0.1.0` 与 `0.1.0` 视为同一批次 | 无；不能搭配 `--card`、`--to`、`--record` 或 `--mode init` |
 | `--next-id change\|task` | 输出覆盖现行总账、全部批次总账、归档目录及本机其他工作树与本地/远端跟踪分支的下一卡号；文本模式只打印卡号，最大号来自别处时在 stderr 说明 | 无；看不到他人未推送的分支，不是原子预占 |
 | `--topic NAME` | 列出主题在现行总账与各批次中的全部卡片、状态、批次与路径 | 无；与 `--next-id` 均不能搭配其他模式参数或 `--warn-only` |
+| `--list-checks` | 列出全部诊断码、默认严重级别、释义与修复提示；静态目录，不依赖目标项目状态 | 无；与 `--next-id`/`--topic` 同类的独占只读查询，不能搭配其他模式参数 |
+| `--scaffold new-card --plan` | 只读建卡计划（试点）：给出建议卡号与取号依据、设计主题/文档解析、拟创建的卡片与总账/主题/待办变更、缺失输入 | 无；写入流程尚未实现。与 `--next-id`/`--topic` 同类的独占查询 |
 | `--warn-only` | 将 ERROR 降为 WARN，供观察 | 不写入，不能与 `--record` 合用；存在违规时返回 6 |
 
 | 退出码或诊断 | 含义 | 后续处理 |
@@ -385,7 +394,11 @@ scripts/adflow-verify --card C001 --receipt
 | `2` | 参数组合或取值无效 | 按命令帮助修正参数 |
 | `4` | 存在确定性治理违规 | 阻断收口，按问题代码和路径修复后重验 |
 | `6` | 存在软告警或降级观察结果 | 列出事实供人工研判；正式收口仍需 Exit 0 |
-| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、终态验收项未全为 true、T 卡完成时缺人工确认或能力单元未完成、驳回卡残留旧确认、未登记归档卡、现行总账仍登记归档卡、总账内卡号重名、未登记归档卡撞号、早期批次终态卡滞留活跃区、重复初始化标签、未渲染占位符、空发布批次或查无主题 | 旁路汇报，不影响退出码、不新增硬门槛 |
+| `ADVISORY` | 缺失主题、依赖环路、前置未完成即开工、里程碑漂移、设计路由漂移、终态验收项未全为 true、T 卡完成时缺人工确认或能力单元未完成、驳回卡残留旧确认、未登记归档卡、现行总账仍登记归档卡、总账内卡号重名、未登记归档卡撞号、早期批次终态卡滞留活跃区、重复初始化标签、未渲染占位符、空发布批次或查无主题 | 旁路汇报，不影响退出码、不新增硬门槛；逐码释义与默认提示以 `--list-checks` 为准 |
+
+普通复核的文本输出在每条问题下附带「↳ 修复」提示；`--json` 的 `findings[].hint` 承载同一提示，`summary.codes` 按诊断码汇总本次各严重级别条数（`--warn-only` 之后计数，无发现时为 `{}`）。提示指向根因处理；涉及人工原话、历史归档、真实提交或既有资产处置时，按提示指向的现有 SOP 取证或交人工决策，不构成改写入授权。回执和路由查询保持原有输出格式。
+
+`--scaffold new-card --plan` 是 A6 试点：只输出建卡计划，不写任何文件。输入用 `--track`（`change`/`task`，缺省 `change`）、`--design-topic`、`--title`、`--card-version`、`--branch`，可选 `--design-doc`（缺省按主题在 `docs/devel/design/*.md` 查找 `@topic` 锚标）、`--todo`（拟从 `now.md`/`future.md` 删除的事项文本）与 `--milestone`（任务卡）。计划包含建议卡号及取号依据（不构成原子预占）、模板路径、设计解析结果、拟创建/登记的卡与总账/主题/待办变更，以及缺失输入；缺失项使 `executable=false`。退出码沿用普通复核语义，项目本身存在违规时仍会输出计划。
 
 `ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动、总账更新与 CHANGELOG 定稿后须复核校验再次 Exit 0，提交后在该提交上打 Tag。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
 
@@ -408,13 +421,19 @@ skills/ad-flow/
 ├── SKILL.md                          # Skill 调度大脑（面向 Agent 的初始化/升级与执行边界）
 ├── workflow.yaml                     # 初始化流水线状态机（定义 24 个治理文件与校验器断言与不可变约束）
 ├── README.md                         # 本说明文档（面向工程团队的架构与使用指引）
+├── .github/workflows/ci.yml          # 源仓库 CI：Linux/macOS × Python 3.9/3.12 运行 tools/check.sh
 │
 ├── scripts/                          # 流程纪律可执行校验层（方案 W：仓库内可见资产，无钩子/CI）
 │   ├── adflow_verify.py              # 校验引擎（仅标准库）：P1–P14 状态感知门禁 + --mode init + gate 证伪
 │   └── adflow-verify                 # sh 薄封装（exec python3 …）
 │
 ├── tools/                            # 维护者资产（不安装到目标项目）
+│   ├── check.sh                      # 统一检查入口：回归 + 版本站点 + 包映射 + wrapper 语法
+│   ├── check_package.py              # 校验 workflow.yaml 机器块与 24+2 安装/升级映射
 │   ├── test_adflow_verify.py         # 隔离工程夹具下的 CLI 行为回归测试
+│   ├── test_checks_catalog.py        # 诊断注册表、修复提示与单次统计的回归测试
+│   ├── test_check_package.py         # 映射负例与安装后 --mode init 端到端测试
+│   ├── test_scaffold.py              # 建卡只读计划的回归测试（A6 试点）
 │   └── bump_version.py               # 维护者发版工具：核对/更新全部治理版本号并切分 CHANGELOG
 │
 ├── templates/                        # 标准脚手架资产库（供 init 一键注入）
@@ -454,13 +473,15 @@ skills/ad-flow/
 ```
 
 
-维护本技能包时，在本仓库根目录运行 CLI 回归测试：
+维护本技能包时，在源仓库根目录运行统一检查入口（本地与 CI 使用同一命令）：
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -v
+./tools/check.sh
 ```
 
-测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录、发版批次预检、项目内工具独立运行、样例与现行模板的字段同步及版本号一致性；不初始化或改写已有业务项目，也不等同于目标应用的运行验收。
+它依次执行 CLI 回归测试、`bump_version.py --check`、`check_package.py` 与 `sh -n`。源仓库 CI（`.github/workflows/ci.yml`）在 Linux、macOS 的 Python 3.9 与 3.12 上运行同一脚本；CI 只验证技能包自身，不代表目标项目的业务验收。安装到目标项目的校验器仍不依赖钩子或 CI。
+
+测试在临时工程中执行，覆盖旧版兼容、只读预检、指定卡回写、违规记录、发版批次预检、项目内工具独立运行、诊断目录与修复提示、单次诊断统计、样例与现行模板的字段同步、版本号一致性、安装映射负例，以及"按映射安装到空工程后由安装版 Shell 入口执行 `--mode init` 与普通复核"。受控技能调用和真实目标项目的升级验收仍需单独记录，机械测试不等同于这些证据。
 
 ### 技能维护与发版
 
@@ -468,6 +489,6 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -v
 
 1. 所有变化已记入 CHANGELOG 的 `[Unreleased]`，回归测试全绿；
 2. 运行 `python3 tools/bump_version.py <X.Y.Z>`：更新全部版本号，把 `[Unreleased]` 切为 `[X.Y.Z] - <今天>` 并更新比较链接；`[Unreleased]` 为空、版本未递增或现有版本号不一致时拒绝执行且不写文件；
-3. 复核 diff 后重跑测试（其中 `--check` 核对版本号与 CHANGELOG 链接），提交 `chore(release): publish vX.Y.Z`；
+3. 复核 diff 后重跑 `./tools/check.sh`（含版本号与 CHANGELOG 链接核对、回归与包映射检查），提交 `chore(release): publish vX.Y.Z`；
 4. 在**该发布提交**上打 Tag `vX.Y.Z`，GitHub Release 正文只取该版本条目；推送需单独确认；
 5. 打 Tag 后的修复记入新的 `[Unreleased]` 随下一版发布，不移动已发布的 Tag，也不在提交标题中沿用旧版本号。

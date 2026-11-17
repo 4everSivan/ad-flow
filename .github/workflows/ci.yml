@@ -1,0 +1,29 @@
+name: CI
+
+# 源仓库检查：只验证技能包自身（回归、版本站点、安装映射与资产），
+# 不代表目标项目的业务验收。安装到目标项目的校验器仍无钩子/CI 依赖。
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.9", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # 仅维护者测试使用；安装到目标项目的校验器仍只用标准库。
+      - name: Install optional YAML test dependency
+        run: python3 -m pip install PyYAML
+      - name: Check
+        run: sh tools/check.sh

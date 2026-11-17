@@ -119,6 +119,30 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
    - 运行 `scripts/adflow-verify --next-id change`（或 `task`），取现行总账、批次总账、活跃卡池与归档目录，以及本机其他工作树和本地/远端跟踪分支中已出现的最大卡号 +1，无需通读历史登记；最大号不在当前工作区时，`--json` 的 `next_id_basis` 与文本模式的 stderr 会说明出处；
    - 该结果不是原子预占，他人尚未推送的分支仍可能撞号；合入主干前在合并结果上运行校验（见 [06 异常流](06-exception-and-hotfix.md) 三），结合 `ID_DUPLICATE`、`LEDGER_DUPLICATE_KEY` 与 Git 冲突检查处理。
 
+## 五、设计文档机器路由 (`docs/devel/index.json`)
+
+设计文档的人类可读清单位于 `docs/devel/design/README.md` 的模块矩阵；机器路由位于 `docs/devel/index.json` 的 `design` 子系统：
+
+```json
+{
+  "subsystems": [
+    {
+      "name": "design",
+      "path": "docs/devel/design",
+      "readme": "docs/devel/design/README.md",
+      "designs": [
+        {"file": "docs/devel/design/01-订单模块.md", "topic": "OrderService",
+         "status": "baseline", "title": "订单模块"}
+      ]
+    }
+  ]
+}
+```
+
+- `file` 为项目根相对路径，`topic` 必须与正文中的 `<!-- @topic: TopicName -->` 一致；`status` 与正文元数据一致（`draft` / `baseline`）。
+- 声明 `designs` 后，校验器以 `DESIGN_ROUTE_DRIFT`（ADVISORY）报告：设计文档未登记、条目指向不存在文件、条目缺少 `file`、`designs` 不是数组、或 `topic` 锚标未命中。它不改变退出码，也不阻断收口。
+- **兼容旧布局**：没有 `designs` 键的项目保持只读兼容，初始化/升级不追溯补登记；新建或明确同步规范的项目按上述结构登记。
+
 ## 规范与模板入口
 
 `docs/index.json.standards` 登记 `docs/standards/coding.json`、`task-template.json` 和 `change-template.json`。规范目录无需另建 README 或索引；真实 C/T 卡片及其当前总账仍在 `docs/devel/`。旧路径只用于兼容已有项目，明确同步后以顶层登记的入口为准。已有设计文件名及其关联保留，不因模板语言调整改写历史资料。

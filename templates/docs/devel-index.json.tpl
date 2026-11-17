@@ -11,7 +11,8 @@
       "path": "docs/devel/design",
       "type": "living_baseline",
       "description": "现行系统设计基线真理源（以 @topic 锚点保持全文自洽）",
-      "readme": "docs/devel/design/README.md"
+      "readme": "docs/devel/design/README.md",
+      "designs": []
     },
     {
       "name": "change",
