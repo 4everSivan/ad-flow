@@ -34,7 +34,7 @@
       "title": "增加按主题查询现行卡片的轻量入口",
       "version": "v1.8.0",
       "milestone": "M1",
-      "status": "pending",
+      "status": "in_progress",
       "branch": "feat/T01-active-topic-query",
       "depends_on": [],
       "topic": "ArchiveCardQuery",
@@ -44,7 +44,7 @@
       "title": "增加基于批次总账的历史卡片查询",
       "version": "v1.8.0",
       "milestone": "M1",
-      "status": "pending",
+      "status": "in_progress",
       "branch": "feat/T02-history-topic-query",
       "depends_on": [
         "T01"
@@ -56,7 +56,7 @@
       "title": "验证查询性能与发布兼容并更新使用指引",
       "version": "v1.8.0",
       "milestone": "M2",
-      "status": "pending",
+      "status": "in_progress",
       "branch": "feat/T03-topic-query-validation",
       "depends_on": [
         "T01",

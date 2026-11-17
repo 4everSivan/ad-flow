@@ -329,6 +329,8 @@ scripts/adflow-verify --release v0.1.0 --json
 # 路由查询：建卡取号、从设计主题追溯全部现行与归档卡片（只读）
 scripts/adflow-verify --next-id change
 scripts/adflow-verify --topic MarketService
+scripts/adflow-verify --topic MarketService --scope active
+scripts/adflow-verify --topic MarketService --scope history
 
 # 诊断目录：列出全部诊断码、默认严重级别、释义与修复提示（只读，不依赖目标项目）
 scripts/adflow-verify --list-checks
@@ -384,6 +386,8 @@ scripts/adflow-verify --card C001 --receipt
 | `--release VERSION` | 发版/归档前批次预检，`v0.1.0` 与 `0.1.0` 视为同一批次 | 无；不能搭配 `--card`、`--to`、`--record` 或 `--mode init` |
 | `--next-id change\|task` | 输出覆盖现行总账、全部批次总账、归档目录及本机其他工作树与本地/远端跟踪分支的下一卡号；文本模式只打印卡号，最大号来自别处时在 stderr 说明 | 无；看不到他人未推送的分支，不是原子预占 |
 | `--topic NAME` | 列出主题在现行总账与各批次中的全部卡片、状态、批次与路径 | 无；与 `--next-id` 均不能搭配其他模式参数或 `--warn-only` |
+| `--topic NAME --scope active` | 只读两份现行总账与活跃卡实体，按 `file` 所属轨道排除旧总账归档项；不发现、遍历或读取归档区 | 无；结果为空返回空列表，总账缺失/损坏或登记失效报 Exit 4 |
+| `--topic NAME --scope history` | 只读批次总账与旧布局归档登记，输出卡号、状态、版本、归档批次与路径；不读归档卡正文，同号同路径去重、同号异路径报冲突 | 无；与 `--topic` 同样的独占只读查询 |
 | `--list-checks` | 列出全部诊断码、默认严重级别、释义与修复提示；静态目录，不依赖目标项目状态 | 无；与 `--next-id`/`--topic` 同类的独占只读查询，不能搭配其他模式参数 |
 | `--scaffold new-card --plan` | 只读建卡计划（试点）：给出建议卡号与取号依据、设计主题/文档解析、拟创建的卡片与总账/主题/待办变更、缺失输入 | 无；写入流程尚未实现。与 `--next-id`/`--topic` 同类的独占查询 |
 | `--warn-only` | 将 ERROR 降为 WARN，供观察 | 不写入，不能与 `--record` 合用；存在违规时返回 6 |

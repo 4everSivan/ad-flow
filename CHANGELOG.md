@@ -20,6 +20,8 @@
 - 新增回归 `tools/test_checks_catalog.py`（诊断目录、提示场景与统计）与 `tools/test_check_package.py`（映射负例、互换模板的内容独立断言，以及按映射安装到空工程后由安装版 Shell 入口执行 `--mode init` 与普通复核）。
 - 新增只读建卡计划（A6 试点）`scripts/adflow-verify --scaffold new-card --plan`：输出建议卡号与取号依据、模板路径、设计文档与 `@topic` 锚标解析、拟创建的卡片内容、总账/主题/待办变更与缺失输入；缺失项使 `executable=false`。计划不写任何文件，卡号不构成原子预占，退出码沿用普通复核语义。写入与归档流程未实现，需另行设计冲突检测、中断恢复与人工验收后再决定是否发布。
 - 把 v1.8.0 新增命令面纳入 Agent 执行约定：`SKILL.md`、`workflow.yaml`、`AGENTS.md` 模板、变更/任务 SOP 与 C/T 卡池 README 明确 `--list-checks`、`--scaffold new-card --plan` 及其 `--track`/`--design-topic`/`--title`/`--card-version`/`--branch`/`--design-doc`/`--todo`/`--milestone`，以及 `--json` 的 `hint` 与 `summary.codes` 由 Agent 在流程中使用。建卡必须先取得 `executable=true` 的只读计划，再按 `writes`/`topics`/`todo` 落盘；人类只用自然语言，Agent 不把命令清单转交人类。新增回归 `tools/test_agent_surface.py` 校验这些参数与输出字段出现在指令层。
+- 新增按主题查询范围（T01/T02）：`scripts/adflow-verify --topic <主题> --scope active|history`。`active` 只读两份现行总账与活跃卡实体，按登记 `file` 所属轨道排除旧总账归档项，不发现、遍历或读取归档区；`history` 只读声明 `adflow-archive-batch-v1` 的批次总账及旧布局归档登记，输出卡号、状态、版本、归档批次与路径，同号同路径去重、同号异路径报冲突，不读取归档卡正文。两者均不运行全量复核；总账缺失、损坏、路径越界或登记失效返回 Exit 4，合法空结果返回空列表；不指定 `--scope` 时保留原 `--topic` 输出与退出语义。
+- 新增维护者基准 `tools/bench_topic_query.py`（T03）：固定 20 个批次，对比 0/500/2,000/5,000 张归档卡下默认查询、active 与 history 的读取计数和 P50/P95。结果写入 `local/bench/`，验收规则为 active 的归档目录/清单/卡片读取为零、history 的归档卡正文读取为零。
 
 ### Changed
 

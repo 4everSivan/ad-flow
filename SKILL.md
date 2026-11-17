@@ -55,7 +55,7 @@ The human communicates in natural language; **the agent runs these commands itse
 | Card checkpoint | `scripts/adflow-verify --card ID --receipt` | Forward the fixed fact rows; fill only 未覆盖 and 需要你 |
 | Release or archive preflight | `scripts/adflow-verify --release VERSION` | Exit 0 is required before moving cards or tagging |
 | Need only a card number | `scripts/adflow-verify --next-id change\|task` | Suggestion only; not a reservation |
-| Topic history or archive lookup | `scripts/adflow-verify --topic NAME` | List cards by design topic across live and archived batches; `TOPIC_EMPTY` is advisory, not a gate |
+| Topic lookup | `scripts/adflow-verify --topic NAME [--scope active\|history]` | `active` reads only live ledgers and active card files, never touching `docs/archive/`; `history` reads batch ledgers plus legacy live archive routes and never archived card bodies; omit `--scope` for the legacy full result and exit semantics |
 | Trial observation only | `scripts/adflow-verify --warn-only` | Downgrades ERROR to WARN for observation; never treat it as passing evidence |
 
 Rules:

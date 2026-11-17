@@ -4,7 +4,7 @@
   "title": "验证查询性能与发布兼容并更新使用指引",
   "version": "v1.8.0",
   "milestone": "M2",
-  "status": "pending",
+  "status": "in_progress",
   "branch": "feat/T03-topic-query-validation",
   "depends_on": [
     "T01",
@@ -20,8 +20,8 @@
     "description": "检查维护者回归、性能证据和使用指引是否已齐备",
     "command": "tools/check.sh",
     "expected": "统一检查通过，且已存在可复跑的基准记录，路由规约与实际 CLI 对齐。",
-    "is_completed": false,
-    "evidence": ""
+    "is_completed": true,
+    "evidence": "tools/check.sh → 147 tests OK；version 1.8.0 consistent；package consistent；基准 acceptance PASS。"
   },
   "callback": {
     "before": [
@@ -36,19 +36,19 @@
       "id": "T03-1",
       "title": "复测读取量和延迟",
       "capability": "构造固定 20 批次和固定命中数的合成项目，比较 0、500、2,000、5,000 张归档卡下旧查询和显式范围查询。记录归档目录访问、批次总账及卡片正文读取数、预热后至少 20 次独立 CLI 的 P50 和 P95。",
-      "done": false
+      "done": true
     },
     {
       "id": "T03-2",
       "title": "验证发布和迁移契约",
       "capability": "运行维护者统一检查，并核对旧查询结果、退出码、下一卡号、旧账瘦身等价性，以及终态、缺失路由、撞号和归档依赖门禁。",
-      "done": false
+      "done": true
     },
     {
       "id": "T03-3",
       "title": "对齐使用说明与发布归纳",
       "capability": "在路由规约、用户文档及模板相应入口说明日常、历史和审计选项。说明正式知识搜索的建议范围及已引用的历史证据如何继续可达。在 v1.8.0 定稿时将用户侧变化纳入该版本的 CHANGELOG 条目。",
-      "done": false
+      "done": true
     }
   ],
   "acceptance": {
@@ -61,22 +61,22 @@
         "item": "性能有可复现证据",
         "true_if": "保留生成参数、运行命令、读取计数和延迟汇总。各档位 active 的归档访问及 history 的归档正文读取均为零。",
         "false_if": "只有耗时截图，没有读取量与可复现条件，或任一档位超出读取范围。",
-        "evidence": "",
-        "result": null
+        "evidence": "tools/bench_topic_query.py：20 批次、20 次 CLI；默认 P50 52.7/113.8/293.7/643.1 ms（0/500/2,000/5,000 张归档卡），active 51.3/51.4/52.4/51.4 ms，history 50.6/54.2/57.5/59.7 ms；active 归档读取与 history 归档正文读取均为 0；原始记录在 local/bench/。",
+        "result": true
       },
       {
         "item": "现有门禁和接口兼容",
         "true_if": "维护者检查通过，既有普通校验、发布预检、下一卡号、完整主题查询及归档依赖测试保持原行为。",
         "false_if": "旧命令输出、退出语义改变，或历史归档完整性缺陷未被原门禁发现。",
-        "evidence": "",
-        "result": null
+        "evidence": "tools/check.sh 147 项通过；兼容子集 10 项通过（旧 --topic、归档终态/路由、--release、--next-id、现行总账瘦身、撞号、归档依赖）。",
+        "result": true
       },
       {
         "item": "文档入口一致",
         "true_if": "实际 CLI、路由规约和用户文档使用同一参数及输出语义，并能区分查询结果、发布完整性与历史证据。",
         "false_if": "文档要求依赖尚未支持的参数，或让使用者把通过查询视为通过审计。",
-        "evidence": "",
-        "result": null
+        "evidence": "README、SKILL.md、AGENTS.md 模板与 references/04-index-routing.md 均说明 default/active/history 三个入口；CLI 参数与文档一致。",
+        "result": true
       }
     ]
   },

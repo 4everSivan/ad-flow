@@ -143,6 +143,22 @@ $$\text{执行卡片 (C/T)} \longleftrightarrow \text{索引总账 (index.json)}
 - 声明 `designs` 后，校验器以 `DESIGN_ROUTE_DRIFT`（ADVISORY）报告：设计文档未登记、条目指向不存在文件、条目缺少 `file`、`designs` 不是数组、或 `topic` 锚标未命中。它不改变退出码，也不阻断收口。
 - **兼容旧布局**：没有 `designs` 键的项目保持只读兼容，初始化/升级不追溯补登记；新建或明确同步规范的项目按上述结构登记。
 
+## 六、主题查询范围 (`--topic --scope`)
+
+`--topic <主题>` 默认沿用全量复核，输出与退出语义不变。按用途可选范围，避免为一个活跃卡命中而读取全部归档：
+
+| 意图 | 入口 | 读取范围 |
+|---|---|---|
+| 查当前卡片 | `--topic Core --scope active` | 两份现行总账的主题、卡片登记与活跃卡实体；不发现、遍历或读取 `docs/archive/` |
+| 追溯历史卡片 | `--topic Core --scope history` | 声明 `adflow-archive-batch-v1` 的批次总账，以及现行总账中兼容旧布局的归档登记；不读归档卡正文 |
+| 查询旧版完整结果 | `--topic Core` | 全量复核、现有输出与退出语义 |
+| 发布与完整性审计 | 普通校验、`--release <version>` | 现行与归档总账、卡片实体及既有完整性门禁 |
+
+- `active` 按登记 `file` 的所属轨道分流：只有父目录为 `docs/devel/<轨道>` 的条目进入结果，旧总账里仍保留的归档登记被排除；已收口但尚未移动的卡仍属于活跃卡池。
+- `history` 从批次目录与 `release` 取得归档批次，输出卡号、状态、版本、归档批次与项目根相对路径；同号同路径只出现一次，同号异路径报 `ID_DUPLICATE`，未声明 schema 的自建快照不解析。
+- 两种范围查询都接受 `--json`，不运行全量复核；所需总账缺失、损坏、路径越界或登记失效时返回 Exit 4 并给出问题码，合法但无命中的主题返回空列表（`TOPIC_EMPTY` 为 ADVISORY）。
+- 查询结果只用于定位：卡片证据与人工验收仍需按路径查看并由普通校验/人工确认负责。性能验收以归档文件读取数为主要指标，基准工具为 `tools/bench_topic_query.py`。
+
 ## 规范与模板入口
 
 `docs/index.json.standards` 登记 `docs/standards/coding.json`、`task-template.json` 和 `change-template.json`。规范目录无需另建 README 或索引；真实 C/T 卡片及其当前总账仍在 `docs/devel/`。旧路径只用于兼容已有项目，明确同步后以顶层登记的入口为准。已有设计文件名及其关联保留，不因模板语言调整改写历史资料。

@@ -1326,6 +1326,264 @@ def topic_history(ctx, cards, name):
     return {"name": name, "design_docs": docs, "cards": rows}, "\n".join(lines)
 
 
+# ---- 主题查询范围（--topic --scope）----
+def scoped_id_key(cid):
+    return (cid[:1], int(cid[1:]) if cid[1:].isdigit() else 0, cid)
+
+
+def ledger_rel(ctx, value):
+    """总账 file 归一化为项目内相对路径；绝对路径、越界、反斜杠与空值返回 None。"""
+    if not isinstance(value, str) or not value.strip() or "\\" in value:
+        return None
+    if Path(value).is_absolute():
+        return None
+    try:
+        return str((ctx.root / value).resolve().relative_to(ctx.root))
+    except ValueError:
+        return None
+
+
+def _topic_doc(ctx, tinfo, rel, name, docs):
+    if not isinstance(tinfo, dict):
+        return
+    doc = tinfo.get("design_doc")
+    if doc is None:
+        return
+    if not isinstance(doc, str):
+        ctx.hard("JSON_TYPE", None, rel, "topics[%s].design_doc 必须为字符串" % name)
+    elif doc and doc not in docs:
+        docs.append(doc)
+
+
+def _topic_members(tinfo, reg, name, key):
+    members = set()
+    if isinstance(tinfo, dict):
+        for item in tinfo.get(key) or []:
+            if isinstance(item, str):
+                members.add(item)
+    for cid, ent in reg.items():
+        if isinstance(ent, dict) and ent.get("topic") == name:
+            members.add(cid)
+    return members
+
+
+def _scoped_render(data):
+    history = data["scope"] == "history"
+    head = "### 主题 %s · %s · %s" % (
+        data["name"], "历史卡" if history else "活跃卡",
+        " / ".join(data["design_docs"]) or "—")
+    if history:
+        lines = [head, "", "| 卡号 | 状态 | 版本 | 归档批次 | 标题 | 路径 |",
+                 "|---|---|---|---|---|---|"]
+        lines += ["| %s | %s | %s | %s | %s | %s |" % (
+            cell(r["id"]), cell(r.get("status")), cell(r.get("version")), cell(r.get("batch")),
+            cell(r.get("title")), cell(r["file"])) for r in data["cards"]]
+        empty = "| （无卡片） | — | — | — | — | — |"
+    else:
+        lines = [head, "", "| 卡号 | 状态 | 批次 | 标题 | 路径 |", "|---|---|---|---|---|"]
+        lines += ["| %s | %s | %s | %s | %s |" % (
+            cell(r["id"]), cell(r.get("status")), cell(r.get("version")),
+            cell(r.get("title")), cell(r["file"])) for r in data["cards"]]
+        empty = "| （无卡片） | — | — | — | — |"
+    if not data["cards"]:
+        lines.append(empty)
+    return "\n".join(lines)
+
+
+def _scoped_payload(ctx, name, scope, docs, rows):
+    cards = sorted(rows, key=lambda r: scoped_id_key(r["id"]))
+    if not cards and not docs:
+        ctx.advisory("TOPIC_EMPTY", None, "-", "未找到主题 %s 的登记或卡片；核对主题拼写" % name)
+    data = {"name": name, "scope": scope, "design_docs": docs, "cards": cards}
+    return data, _scoped_render(data)
+
+
+def query_active_topic(ctx, name):
+    """活跃卡查询：只读两份现行总账及活跃卡实体，不发现、遍历或读取归档区。"""
+    rows, docs, by_id = [], [], {}
+    for track in ("change", "task"):
+        idx_rel = "docs/devel/%s/index.json" % track
+        if not ctx.exists(idx_rel):
+            ctx.hard("INDEX_MISSING", None, idx_rel, "缺少卡片总账索引")
+            continue
+        idx = ctx.load_json(idx_rel)
+        if not isinstance(idx, dict):
+            continue
+        check_duplicate_keys(ctx, idx_rel)
+        topics = idx.get("topics")
+        if topics is None:
+            topics = {}
+        if not isinstance(topics, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "topics 必须为对象")
+            topics = {}
+        tinfo = topics.get(name)
+        if tinfo is not None and not isinstance(tinfo, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "topics[%s] 必须为对象" % name)
+        _topic_doc(ctx, tinfo, idx_rel, name, docs)
+        reg = ledger_cards(idx, track)
+        if not isinstance(reg, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "卡片登记表必须为对象")
+            continue
+        for cid in sorted(_topic_members(tinfo, reg, name, TOPIC_KEYS[track]), key=scoped_id_key):
+            ent = reg.get(cid)
+            if not isinstance(ent, dict):
+                ctx.hard("INDEX_MISSING_CARD", cid, idx_rel, "卡片未登记到 %s" % idx_rel)
+                continue
+            f = ent.get("file")
+            if not isinstance(f, str) or not f.strip():
+                ctx.hard("INDEX_FILE_MISSING", cid, idx_rel, "索引缺少非空 file 路径")
+                continue
+            rel = ledger_rel(ctx, f)
+            if rel is None:
+                ctx.hard("INDEX_FILE_INVALID", cid, idx_rel, "索引 file 必须位于目标项目内: %s" % f)
+                continue
+            parts = Path(rel).parts
+            if parts[:2] == ("docs", "archive"):
+                continue  # 旧总账保留的归档登记不属于活跃结果
+            if len(parts) != 4 or parts[:2] != ("docs", "devel") or parts[2] != track:
+                ctx.hard("INDEX_FILE_INVALID", cid, idx_rel,
+                         "索引 file 必须指向所属活跃卡池: %s" % f)
+                continue
+            if not ctx.exists(rel):
+                ctx.hard("INDEX_FILE_DEAD", cid, idx_rel, "索引 file 路径失效: %s" % f)
+                continue
+            card = ctx.load_json(rel)
+            if not isinstance(card, dict):
+                continue
+            actual = card.get("id", Path(rel).stem)
+            if actual != cid:
+                ctx.hard("INDEX_ID_DRIFT", cid, idx_rel,
+                         "索引 %s 指向了身份为 %s 的卡片: %s" % (cid, actual, f))
+                continue
+            if ent.get("status") != card.get("status"):
+                ctx.hard("INDEX_STATUS_DRIFT", cid, idx_rel,
+                         "索引状态 %r 与卡片 %r 不一致" % (ent.get("status"), card.get("status")))
+            prev = by_id.get(cid)
+            if prev is not None:
+                if prev["file"] != rel:
+                    ctx.hard("ID_DUPLICATE", cid, idx_rel,
+                             "同一卡号指向不同活跃路径: %s 与 %s" % (prev["file"], rel))
+                continue
+            row = {"id": cid, "status": card.get("status"), "version": card.get("version"),
+                   "title": card.get("title"), "file": rel}
+            by_id[cid] = row
+            rows.append(row)
+    return _scoped_payload(ctx, name, "active", docs, rows)
+
+
+def query_history_topic(ctx, name):
+    """历史卡查询：只读批次总账与旧布局归档登记，不读取归档卡正文。"""
+    rows, docs, seen = [], [], {}
+
+    def add_row(cid, ent, track, batch, batch_dir, idx_rel):
+        f = ent.get("file")
+        if not isinstance(f, str) or not f.strip():
+            ctx.hard("INDEX_FILE_MISSING", cid, idx_rel, "索引缺少非空 file 路径")
+            return
+        rel = ledger_rel(ctx, f)
+        if rel is None:
+            ctx.hard("INDEX_FILE_INVALID", cid, idx_rel, "索引 file 必须位于目标项目内: %s" % f)
+            return
+        parts = Path(rel).parts
+        if (len(parts) != 5 or parts[:2] != ("docs", "archive")
+                or parts[2] != batch_dir or parts[3] != track):
+            ctx.hard("INDEX_FILE_INVALID", cid, idx_rel,
+                     "索引 file 必须指向本批次 %s/%s/: %s" % (batch_dir, track, f))
+            return
+        if not ctx.exists(rel):
+            ctx.hard("INDEX_FILE_DEAD", cid, idx_rel, "索引 file 路径失效: %s" % f)
+            return
+        prev = seen.get(cid)
+        if prev is not None:
+            if prev != rel:
+                ctx.hard("ID_DUPLICATE", cid, idx_rel,
+                         "同一卡号指向不同归档路径: %s 与 %s" % (prev, rel))
+            return
+        seen[cid] = rel
+        rows.append({"id": cid, "status": ent.get("status"), "version": ent.get("version"),
+                     "title": ent.get("title"), "batch": batch, "file": rel})
+
+    for idx_rel in batch_manifests(ctx):
+        data = ctx.load_json(idx_rel)
+        if not isinstance(data, dict):
+            continue
+        check_duplicate_keys(ctx, idx_rel)
+        batch_dir = Path(idx_rel).parent.name
+        release = data.get("release")
+        batch = release if isinstance(release, str) and release.strip() else batch_dir
+        topics = data.get("topics")
+        if topics is None:
+            topics = {}
+        if not isinstance(topics, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "topics 必须为对象")
+            topics = {}
+        tinfo = topics.get(name)
+        if tinfo is not None and not isinstance(tinfo, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "topics[%s] 必须为对象" % name)
+        _topic_doc(ctx, tinfo, idx_rel, name, docs)
+        for track, key in BATCH_KEYS.items():
+            reg = data.get(key)
+            if reg is None:
+                reg = {}
+            if not isinstance(reg, dict):
+                ctx.hard("JSON_TYPE", None, idx_rel, "%s 必须为对象" % key)
+                continue
+            for cid in sorted(_topic_members(tinfo, reg, name, TOPIC_KEYS[track]),
+                              key=scoped_id_key):
+                ent = reg.get(cid)
+                if not isinstance(ent, dict):
+                    ctx.hard("INDEX_MISSING_CARD", cid, idx_rel, "卡片未登记到 %s" % idx_rel)
+                    continue
+                add_row(cid, ent, track, batch, batch_dir, idx_rel)
+
+    for track in ("change", "task"):
+        idx_rel = "docs/devel/%s/index.json" % track
+        if not ctx.exists(idx_rel):
+            ctx.hard("INDEX_MISSING", None, idx_rel, "缺少卡片总账索引")
+            continue
+        idx = ctx.load_json(idx_rel)
+        if not isinstance(idx, dict):
+            continue
+        check_duplicate_keys(ctx, idx_rel)
+        topics = idx.get("topics")
+        if topics is None:
+            topics = {}
+        if not isinstance(topics, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "topics 必须为对象")
+            topics = {}
+        tinfo = topics.get(name)
+        if tinfo is not None and not isinstance(tinfo, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "topics[%s] 必须为对象" % name)
+        _topic_doc(ctx, tinfo, idx_rel, name, docs)
+        reg = ledger_cards(idx, track)
+        if not isinstance(reg, dict):
+            ctx.hard("JSON_TYPE", None, idx_rel, "卡片登记表必须为对象")
+            continue
+        for cid in sorted(_topic_members(tinfo, reg, name, TOPIC_KEYS[track]), key=scoped_id_key):
+            ent = reg.get(cid)
+            if not isinstance(ent, dict):
+                ctx.hard("INDEX_MISSING_CARD", cid, idx_rel, "卡片未登记到 %s" % idx_rel)
+                continue
+            f = ent.get("file")
+            rel = ledger_rel(ctx, f) if isinstance(f, str) else None
+            if rel is None:
+                ctx.hard("INDEX_FILE_INVALID", cid, idx_rel, "索引 file 必须位于目标项目内: %s" % f)
+                continue
+            parts = Path(rel).parts
+            if parts[:2] != ("docs", "archive"):
+                continue  # 活跃卡不属于历史结果
+            if len(parts) != 5 or parts[3] != track:
+                ctx.hard("INDEX_FILE_INVALID", cid, idx_rel,
+                         "索引 file 必须指向归档轨道: %s" % f)
+                continue
+            add_row(cid, ent, track, parts[2], parts[2], idx_rel)
+    return _scoped_payload(ctx, name, "history", docs, rows)
+
+
+def scoped_topic_query(ctx, name, scope):
+    return query_active_topic(ctx, name) if scope == "active" else query_history_topic(ctx, name)
+
+
 # ---- 建卡只读计划（A6 试点，不落盘）----
 SCAFFOLD_TRACK_KEY = {"change": "cards", "task": "tasks"}
 SCAFFOLD_TOPIC_KEY = {"change": "changes", "task": "tasks"}
@@ -1704,6 +1962,8 @@ def main(argv=None):
                     help="只读查询：跨现行总账与归档批次输出该轨下一个卡号")
     ap.add_argument("--topic", metavar="NAME",
                     help="只读查询：列出主题在现行总账与归档批次中的全部卡片")
+    ap.add_argument("--scope", choices=["active", "history"],
+                    help="与 --topic 搭配：active 只读现行总账；history 只读批次总账与旧布局归档登记")
     ap.add_argument("--list-checks", action="store_true",
                     help="只读查询：列出全部诊断码、默认严重级别、释义与修复提示（不依赖目标项目）")
     ap.add_argument("--scaffold", choices=["new-card"],
@@ -1725,19 +1985,21 @@ def main(argv=None):
             ap.error("--scaffold 需要 --plan（当前只提供只读计划，写入流程未实现）")
         if (args.next_id or args.topic is not None or args.card or args.to or args.record
                 or args.receipt or args.warn_only or args.release is not None
-                or args.mode == "init" or args.list_checks):
-            ap.error("--scaffold 为只读计划查询，不可与 --next-id/--topic/--card/--to/"
+                or args.mode == "init" or args.scope):
+            ap.error("--scaffold 为只读计划查询，不可与 --next-id/--topic/--scope/--card/--to/"
                      "--record/--receipt/--release/--warn-only/--mode init/--list-checks 合用")
     elif args.plan:
         ap.error("--plan 需要 --scaffold new-card")
     elif any(scaffold_args):
         ap.error("--track/--design-topic/--title/--card-version/--branch/--design-doc/--todo/"
                  "--milestone 仅在 --scaffold 下使用")
+    if args.scope and args.topic is None:
+        ap.error("--scope 需要 --topic")
     if args.list_checks:
         if (args.next_id or args.topic is not None or args.card or args.to or args.record
                 or args.receipt or args.warn_only or args.release is not None
-                or args.mode == "init"):
-            ap.error("--list-checks 为静态目录查询，不可与 --next-id/--topic/--card/--to/"
+                or args.mode == "init" or args.scope):
+            ap.error("--list-checks 为静态目录查询，不可与 --next-id/--topic/--scope/--card/--to/"
                      "--record/--receipt/--release/--warn-only/--mode init 合用")
         catalog = check_catalog()
         if args.json:
@@ -1780,6 +2042,10 @@ def main(argv=None):
     payload = None
     if args.mode == "init":
         run_init(ctx)
+    elif args.topic is not None and args.scope:
+        data, text = scoped_topic_query(ctx, args.topic, args.scope)
+        payload = ({"topic": data}, text, [])
+        return report(ctx, "query", args.json, False, None, payload)
     else:
         cards = collect_cards(ctx)
         if args.record:

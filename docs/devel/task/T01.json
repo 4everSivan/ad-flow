@@ -4,7 +4,7 @@
   "title": "增加按主题查询现行卡片的轻量入口",
   "version": "v1.8.0",
   "milestone": "M1",
-  "status": "pending",
+  "status": "in_progress",
   "branch": "feat/T01-active-topic-query",
   "depends_on": [],
   "target": {
@@ -17,8 +17,8 @@
     "description": "检查本卡能力是否已由既有改动交付",
     "command": "python3 -m unittest tools.test_adflow_verify.VerifyTests.test_topic_scope_active tools.test_adflow_verify.VerifyTests.test_topic_scope_active_skips_archive_io",
     "expected": "两个指定回归用例均存在且通过，并核对本卡其余验收项。",
-    "is_completed": false,
-    "evidence": ""
+    "is_completed": true,
+    "evidence": "python3 -m unittest tools.test_adflow_verify.VerifyTests.test_topic_scope_active tools.test_adflow_verify.VerifyTests.test_topic_scope_active_skips_archive_io → 2 tests OK；兼容子集 10 tests OK。"
   },
   "callback": {
     "before": [
@@ -33,19 +33,19 @@
       "id": "T01-1",
       "title": "分离查询入口",
       "capability": "为 --topic 增加显式 scope 参数和参数互斥规则。active 在全量采集前分流，未指定 scope 继续走原入口。",
-      "done": false
+      "done": true
     },
     {
       "id": "T01-2",
       "title": "从现行总账解析主题",
       "capability": "合并两轨主题成员与登记条目的 topic，兼容任务总账旧 cards 键，保留设计正文入口。按 file 所属轨道排除旧总账归档项，保留已收口但未移动的卡，支持文本及 JSON。",
-      "done": false
+      "done": true
     },
     {
       "id": "T01-3",
       "title": "验证读取范围和失败语义",
       "capability": "覆盖无匹配主题、错误或缺失总账、非法 scope 参数、越界路径。用归档访问探针证明不发现、遍历或读取归档区。",
-      "done": false
+      "done": true
     }
   ],
   "acceptance": {
@@ -58,22 +58,22 @@
         "item": "活跃结果正确",
         "true_if": "同一主题的 C/T 活跃登记完整出现，未迁移的旧归档条目被排除，已收口但仍在活跃区的卡可查。",
         "false_if": "漏掉活跃卡、混入历史卡，或把活跃状态等同于是否位于活跃卡池。",
-        "evidence": "",
-        "result": null
+        "evidence": "8 项范围查询用例通过；active 返回 C001/C002/T01，排除旧总账归档 C003；已收口未移动的卡仍出现。",
+        "result": true
       },
       {
         "item": "归档访问数为零",
         "true_if": "有归档内容或无关归档损坏时，active 仍只按现行总账返回相同结果，归档目录遍历、打开和读取次数均为零。",
         "false_if": "active 调用全量采集，或对归档目录或文件有访问。",
-        "evidence": "",
-        "result": null
+        "evidence": "mock 拦截 collect_cards/batch_manifests/scan_archive 后查询成功；归档目录 chmod 000 下仍成功；基准 active 归档目录/清单/卡片读取均为 0。",
+        "result": true
       },
       {
         "item": "兼容与错误处理",
         "true_if": "原 --topic 输出和退出语义保持一致，显式 active 正确处理无结果和总账读取错误。",
         "false_if": "旧调用行为变化，或显式查询把损坏总账当成无匹配。",
-        "evidence": "",
-        "result": null
+        "evidence": "默认 --topic 输出与退出语义由既有用例锁定；总账缺失/损坏 Exit 4；--scope 非法或与 --card/--warn-only/--next-id/--mode init 组合 Exit 2。",
+        "result": true
       }
     ]
   },

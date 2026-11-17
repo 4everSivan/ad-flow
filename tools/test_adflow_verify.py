@@ -1,6 +1,7 @@
 """CLI behavior and compatibility checks using isolated project fixtures."""
 import copy
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -945,6 +946,174 @@ class VerifyTests(unittest.TestCase):
         self.assertIn("| C001 | closed | v0.1.0 | 旧修复 | docs/archive/v0.1.0/change/C001.json |", result.stdout)
         self.assertIn("| C009 | 缺失 | — | — | — |", result.stdout)
         self.assertIn("TOPIC_EMPTY", self.codes(self.run_tool("--topic", "Missing")))
+
+    def test_topic_scope_active(self):
+        # T01：active 只返回现行卡池登记；旧总账里的归档登记与归档实体都不出现。
+        self.card("C001", status="pending")
+        self.card("C002", status="closed")
+        self.card("T01", "task", "in_progress")
+        legacy = self.archived("v0.1.0", "C003", title="旧卡", version="v0.1.0")
+        change = self.read_json("docs/devel/change/index.json")
+        change["topics"] = {"Core": {"design_doc": "docs/devel/design/01-core.md",
+                                     "changes": ["C001", "C002", "C003"]}}
+        change["cards"]["C003"] = legacy
+        self.write_json("docs/devel/change/index.json", change)
+        task = self.read_json("docs/devel/task/index.json")
+        task["topics"] = {"Core": {"design_doc": "docs/devel/design/01-core.md",
+                                   "tasks": ["T01"]}}
+        self.write_json("docs/devel/task/index.json", task)
+        data = self.run_tool("--topic", "Core", "--scope", "active")
+        topic = data["topic"]
+        self.assertEqual(topic["scope"], "active")
+        self.assertEqual([(c["id"], c["status"], c["file"]) for c in topic["cards"]], [
+            ("C001", "pending", "docs/devel/change/C001.json"),
+            ("C002", "closed", "docs/devel/change/C002.json"),
+            ("T01", "in_progress", "docs/devel/task/T01.json")])
+        self.assertEqual(data["summary"]["codes"], {})
+
+    def test_topic_scope_active_skips_archive_io(self):
+        # T01：归档清单损坏、归档目录不可读时 active 仍成功；且不调用全量采集/归档扫描。
+        self.card("C001", status="pending")
+        change = self.read_json("docs/devel/change/index.json")
+        change["topics"] = {"Core": {"design_doc": "docs/devel/design/01-core.md",
+                                     "changes": ["C001"]}}
+        self.write_json("docs/devel/change/index.json", change)
+        self.write("docs/archive/v0.1.0/index.json", "{broken")
+        self.write("docs/archive/v0.1.0/change/C099.json", "{broken")
+        self.run_tool("--topic", "Core", "--scope", "active")
+
+        sys.path.insert(0, str(REPO / "scripts"))
+        import adflow_verify as av
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from unittest import mock
+        with mock.patch.object(av, "collect_cards", side_effect=AssertionError("full collection")), \
+                mock.patch.object(av, "batch_manifests", side_effect=AssertionError("archive scan")), \
+                mock.patch.object(av, "scan_archive", side_effect=AssertionError("archive scan")):
+            with redirect_stdout(StringIO()):
+                code = av.main([str(self.root), "--topic", "Core", "--scope", "active", "--json"])
+        self.assertEqual(code, 0)
+
+        archive = self.root / "docs/archive"
+        os.chmod(str(archive), 0o000)
+        try:
+            self.run_tool("--topic", "Core", "--scope", "active")
+        finally:
+            os.chmod(str(archive), 0o755)
+
+    def test_topic_scope_history(self):
+        # T02：history 合并批次总账与旧布局登记，排除活跃卡和非 schema 快照。
+        self.card("C001", status="pending")
+        self.manifest("v0.1.0",
+                      cards={"C003": self.archived("v0.1.0", "C003", title="旧三", version="v0.1.0"),
+                             "C010": self.archived("v0.1.0", "C010", title="旧十", version="v0.1.0")},
+                      topics={"Core": {"design_doc": "docs/devel/design/01-core.md",
+                                       "changes": ["C003", "C010"]}})
+        self.manifest("v0.2.0",
+                      cards={"C020": self.archived("v0.2.0", "C020", title="旧二十", version="v0.2.0")},
+                      topics={"Core": {"changes": ["C020"]}})
+        self.write_json("docs/archive/v0.2.0/change/C030.json", {"id": "C030", "status": "closed"})
+        change = self.read_json("docs/devel/change/index.json")
+        change["topics"] = {"Core": {"design_doc": "docs/devel/design/01-core.md",
+                                     "changes": ["C001", "C030"]}}
+        change["cards"]["C030"] = {"status": "closed",
+                                   "file": "docs/archive/v0.2.0/change/C030.json"}
+        self.write_json("docs/devel/change/index.json", change)
+        self.write_json("docs/archive/self/index.json",
+                        {"topics": {"Core": {"changes": ["C099"]}},
+                         "cards": {"C099": {"file": "docs/archive/self/change/C099.json"}}})
+        # 归档卡正文损坏不影响列表：history 只读总账。
+        self.write("docs/archive/v0.1.0/change/C010.json", "{broken")
+
+        data = self.run_tool("--topic", "Core", "--scope", "history")
+        topic = data["topic"]
+        self.assertEqual(topic["scope"], "history")
+        self.assertEqual([(c["id"], c["batch"], c["version"]) for c in topic["cards"]], [
+            ("C003", "v0.1.0", "v0.1.0"),
+            ("C010", "v0.1.0", "v0.1.0"),
+            ("C020", "v0.2.0", "v0.2.0"),
+            ("C030", "v0.2.0", None)])
+        self.assertEqual(data["summary"]["codes"], {})
+
+    def test_topic_scope_history_uses_only_ledgers(self):
+        # T02：列表不得打开归档卡正文；拦截归档卡 load_json 后查询仍成功。
+        self.manifest("v0.1.0",
+                      cards={"C003": self.archived("v0.1.0", "C003", title="旧三", version="v0.1.0")},
+                      topics={"Core": {"changes": ["C003"]}})
+        self.write("docs/archive/v0.1.0/change/C003.json", "{broken")
+        sys.path.insert(0, str(REPO / "scripts"))
+        import adflow_verify as av
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from unittest import mock
+        original = av.Ctx.load_json
+
+        def guarded(ctx, rel):
+            if re.match(r"docs/archive/[^/]+/(change|task)/[^/]+\.json$", rel):
+                raise AssertionError("archived card body read: " + rel)
+            return original(ctx, rel)
+
+        with mock.patch.object(av.Ctx, "load_json", guarded):
+            with redirect_stdout(StringIO()) as out:
+                code = av.main([str(self.root), "--topic", "Core", "--scope", "history", "--json"])
+        self.assertEqual(code, 0)
+        self.assertIn("C003", out.getvalue())
+
+    def test_topic_scope_history_dedupes_and_reports_conflict(self):
+        # 同号同路径只出现一次；同号异路径显式冲突，不能部分结果冒充完整。
+        entry = self.archived("v0.1.0", "C003", title="旧三")
+        self.manifest("v0.1.0", cards={"C003": entry},
+                      topics={"Core": {"changes": ["C003"]}})
+        change = self.read_json("docs/devel/change/index.json")
+        change["topics"] = {"Core": {"changes": ["C003"]}}
+        change["cards"]["C003"] = dict(entry)  # 与批次总账同路径
+        self.write_json("docs/devel/change/index.json", change)
+        data = self.run_tool("--topic", "Core", "--scope", "history")
+        self.assertEqual([c["id"] for c in data["topic"]["cards"]], ["C003"])
+
+        self.write_json("docs/archive/v0.1.0/change/C004.json", {"id": "C004", "status": "closed"})
+        change["cards"]["C003"] = {"status": "closed",
+                                   "file": "docs/archive/v0.1.0/change/C004.json"}
+        self.write_json("docs/devel/change/index.json", change)
+        data = self.run_tool("--topic", "Core", "--scope", "history", expect=4)
+        self.assertIn("ID_DUPLICATE", self.codes(data))
+
+    def test_topic_scope_history_reports_broken_manifest_and_invalid_path(self):
+        self.write_json("docs/archive/v0.1.0/index.json",
+                        {"$schema": "adflow-archive-batch-v1", "release": "v0.1.0",
+                         "cards": {}, "tasks": {}, "topics": {}})
+        self.write("docs/archive/v0.1.0/index.json", '{"$schema": "adflow-archive-batch-v1", bad')
+        data = self.run_tool("--topic", "Core", "--scope", "history", expect=4)
+        self.assertIn("JSON_PARSE", self.codes(data))
+
+        self.write_json("docs/archive/v0.1.0/index.json",
+                        {"$schema": "adflow-archive-batch-v1", "release": "v0.1.0",
+                         "cards": {"C003": {"status": "closed",
+                                            "file": "/absolute/docs/archive/v0.1.0/change/C003.json"}},
+                         "tasks": {}, "topics": {"Core": {"changes": ["C003"]}}})
+        data = self.run_tool("--topic", "Core", "--scope", "history", expect=4)
+        self.assertIn("INDEX_FILE_INVALID", self.codes(data))
+
+    def test_topic_scope_active_reports_missing_or_broken_ledger(self):
+        change = self.read_json("docs/devel/change/index.json")
+        change["topics"] = {"Core": {"changes": ["C001"]}}
+        self.write_json("docs/devel/change/index.json", change)
+        (self.root / "docs/devel/task/index.json").unlink()
+        data = self.run_tool("--topic", "Core", "--scope", "active", expect=4)
+        self.assertIn("INDEX_MISSING", self.codes(data))
+
+    def test_scope_argument_rules(self):
+        self.card("C001")
+        for args in (("--scope", "active"),
+                     ("--topic", "Core", "--scope", "bogus"),
+                     ("--topic", "Core", "--scope", "active", "--card", "C001"),
+                     ("--topic", "Core", "--scope", "active", "--warn-only"),
+                     ("--topic", "Core", "--scope", "active", "--next-id", "change"),
+                     ("--topic", "Core", "--scope", "active", "--mode", "init")):
+            with self.subTest(args=args):
+                result = subprocess.run([sys.executable, str(TOOL), str(self.root), *args],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
 
     def test_query_argument_rules(self):
         self.card()
