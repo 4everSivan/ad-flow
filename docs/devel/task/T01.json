@@ -78,7 +78,7 @@
     ]
   },
   "sync": {
-    "commit": ""
+    "commit": "f0cdab5359b145a5a9cf5cc5df7791378d37f171"
   },
   "gate": {
     "tool": "adflow-verify",
