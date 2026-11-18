@@ -1592,6 +1592,24 @@ SCAFFOLD_REQUIRED = (("design_topic", "设计主题"), ("title", "标题"),
                      ("card_version", "发布批次"), ("branch", "执行分支"))
 
 
+def scaffold_design_issue(ctx, doc, topic):
+    if is_readme(doc):
+        return "README 不能作为设计正文"
+    if not ctx.exists(doc):
+        return "文件不存在"
+    rel = ledger_rel(ctx, doc)
+    if rel is None:
+        return "须使用 docs/devel/design/ 下的 Markdown 正文相对路径"
+    path = Path(rel)
+    if is_readme(path):
+        return "README 不能作为设计正文"
+    if not path.is_relative_to("docs/devel/design") or path.suffix.lower() != ".md":
+        return "须使用 docs/devel/design/ 下的 Markdown 正文相对路径"
+    if topic not in ctx.topics_in(rel):
+        return "缺少 @%s 锚标" % topic
+    return None
+
+
 def scaffold_plan(ctx, args):
     """只读建卡计划：给出确定性写入差异与缺失输入；不写文件。
 
@@ -1607,22 +1625,18 @@ def scaffold_plan(ctx, args):
     design_doc, anchor_ok = args.design_doc, None
     if args.design_topic:
         if design_doc:
-            if not ctx.exists(design_doc):
-                anchor_ok = False
-                missing.append("design_doc（文件不存在）")
-            elif args.design_topic not in ctx.topics_in(design_doc):
-                anchor_ok = False
-                missing.append("design_doc（缺少 @%s 锚标）" % args.design_topic)
-            else:
-                anchor_ok = True
+            issue = scaffold_design_issue(ctx, design_doc, args.design_topic)
+            anchor_ok = issue is None
+            if issue:
+                missing.append("design_doc（%s）" % issue)
         else:
             for path in sorted((ctx.root / "docs/devel/design").glob("*.md")):
                 rel = str(path.relative_to(ctx.root))
-                if args.design_topic in ctx.topics_in(rel):
+                if scaffold_design_issue(ctx, rel, args.design_topic) is None:
                     design_doc, anchor_ok = rel, True
                     break
             if design_doc is None:
-                missing.append("design_doc（主题 %s 未在任何设计文档中命中）" % args.design_topic)
+                missing.append("design_doc（主题 %s 未在现行设计正文中命中）" % args.design_topic)
 
     tpl = ctx.load_json(template)
     if not isinstance(tpl, dict):

@@ -402,7 +402,7 @@ scripts/adflow-verify --card C001 --receipt
 
 普通复核的文本输出在每条问题下附带「↳ 修复」提示；`--json` 的 `findings[].hint` 承载同一提示，`summary.codes` 按诊断码汇总本次各严重级别条数（`--warn-only` 之后计数，无发现时为 `{}`）。提示指向根因处理；涉及人工原话、历史归档、真实提交或既有资产处置时，按提示指向的现有 SOP 取证或交人工决策，不构成改写入授权。回执和路由查询保持原有输出格式。
 
-Agent 在每次创建 C/T 卡前运行 `--scaffold new-card --plan`。输入包括 `--track`（`change`/`task`，缺省 `change`）、`--design-topic`、`--title`、`--card-version`、`--branch`，以及适用的 `--design-doc`（缺省按主题在 `docs/devel/design/*.md` 查找 `@topic` 锚标）、`--todo`（C 卡匹配 `now.md`，T 卡匹配 `future.md`）和 `--milestone`（任务卡）。计划输出建议卡号及取号依据、模板路径、设计解析结果、卡片与总账/主题/待办的拟变更。Agent 读取 `scaffold.executable`，补齐 `missing` 后重跑，并在落盘前复核建议卡号和计划差异。退出码沿用普通校验语义。源仓库的执行规则见 [AGENTS.md](AGENTS.md#本仓库建卡与归档流程)。
+Agent 在每次创建 C/T 卡前运行 `--scaffold new-card --plan`。输入包括 `--track`（`change`/`task`，缺省 `change`）、`--design-topic`、`--title`、`--card-version`、`--branch`，以及适用的 `--design-doc`、`--todo`（C 卡匹配 `now.md`，T 卡匹配 `future.md`）和 `--milestone`（任务卡）。设计挂接使用 `docs/devel/design/` 内包含匹配 `@topic` 锚标的 Markdown 正文，自动查找和显式指定都排除 README。计划输出建议卡号及取号依据、模板路径、设计解析结果、卡片与总账/主题/待办的拟变更。Agent 读取 `scaffold.executable`，补齐 `missing` 后重跑，并在落盘前复核建议卡号和计划差异。退出码沿用普通校验语义。源仓库的执行规则见 [AGENTS.md](AGENTS.md#本仓库建卡与归档流程)。
 
 `ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动、总账更新与 CHANGELOG 定稿后须复核校验再次 Exit 0，提交后在该提交上打 Tag。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
 

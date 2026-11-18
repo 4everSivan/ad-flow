@@ -8,6 +8,10 @@
 
 ## [1.8.0] - 2026-11-17
 
+### Fixed
+
+- A6 的自动查找和显式 `--design-doc` 共用建卡前置校验。建卡计划只接受 `docs/devel/design/` 内含对应 `@topic` 的 Markdown 正文，排除 README 中的示例锚标。无有效设计时，计划返回 `executable=false` 并在 `missing` 说明原因。
+
 ### Added
 
 - 校验器内建诊断码注册表，并新增只读查询 `scripts/adflow-verify --list-checks [--json]`：列出全部 66 个诊断码（42 `ERROR` / 6 `WARN` / 18 `ADVISORY`）的默认严重级别、一句话释义与修复提示。目录为静态输出，不依赖目标项目状态，与 `--next-id`/`--topic` 同类的独占查询；JSON 顶层为 `tool`、`version`、`checks`，条目按 `code` 排序。回归测试以 AST 扫描全部发出点，双向比对注册表、默认级别与字段完整性，并拒绝绕过 `Ctx.add` 直接追加 finding 的新增调用。

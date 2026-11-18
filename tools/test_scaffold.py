@@ -59,6 +59,7 @@ class ScaffoldFixture(unittest.TestCase):
 
 class ScaffoldPlanTests(ScaffoldFixture):
     def test_complete_change_plan_is_executable_and_read_only(self):
+        self.write("docs/devel/design/README.md", "<!-- @topic: Core -->")
         before = self.snapshot()
         data = self.run_json("--design-topic", "Core", "--title", "修复登录提示",
                              "--card-version", "v0.1.0", "--branch", "fix/C001-login",
@@ -101,8 +102,35 @@ class ScaffoldPlanTests(ScaffoldFixture):
         plan = data["scaffold"]
         self.assertFalse(plan["executable"])
         self.assertIsNone(plan["design"]["doc"])
-        self.assertTrue(any("未在任何设计文档中命中" in item for item in plan["missing"]),
+        self.assertTrue(any("未在现行设计正文中命中" in item for item in plan["missing"]),
                         plan["missing"])
+
+    def test_readme_example_is_not_a_design_document(self):
+        readme = "docs/devel/design/README.md"
+        self.write(readme, "<!-- @topic: TopicName -->")
+        before = self.snapshot()
+        for track in ("change", "task"):
+            for explicit in (False, True):
+                with self.subTest(track=track, explicit=explicit):
+                    options = ("--design-doc", readme) if explicit else ()
+                    data = self.run_json("--track", track, "--design-topic", "TopicName",
+                                         "--title", "示例主题", "--card-version", "v0.1.0",
+                                         "--branch", "review-scaffold", *options)
+                    plan = data["scaffold"]
+                    self.assertFalse(plan["executable"], plan)
+                    self.assertIsNot(plan["design"]["anchor_ok"], True)
+                    expected = "README 不能作为设计正文" if explicit else "未在现行设计正文中命中"
+                    self.assertTrue(any(expected in item for item in plan["missing"]), plan["missing"])
+        self.assertEqual(before, self.snapshot())
+
+    def test_explicit_design_doc_outside_design_directory_blocks_plan(self):
+        outside = "docs/guide/core.md"
+        self.write(outside, "<!-- @topic: Core -->")
+        data = self.run_json("--design-topic", "Core", "--design-doc", outside,
+                             "--title", "x", "--card-version", "v0.1.0", "--branch", "fix/C001-x")
+        plan = data["scaffold"]
+        self.assertFalse(plan["executable"], plan)
+        self.assertTrue(any("docs/devel/design/" in item for item in plan["missing"]), plan["missing"])
 
     def test_explicit_design_doc_without_anchor_blocks_plan(self):
         data = self.run_json("--design-topic", "Other", "--design-doc",
@@ -124,6 +152,7 @@ class ScaffoldPlanTests(ScaffoldFixture):
 
     def test_task_track_uses_task_ledger_and_milestone(self):
         data = self.run_json("--track", "task", "--design-topic", "Core",
+                             "--design-doc", "docs/devel/design/01-core.md",
                              "--title", "导出能力", "--card-version", "v0.2.0",
                              "--branch", "feat/T01-export", "--milestone", "M1-导出",
                              "--todo", "新增导出能力")
