@@ -1584,7 +1584,7 @@ def scoped_topic_query(ctx, name, scope):
     return query_active_topic(ctx, name) if scope == "active" else query_history_topic(ctx, name)
 
 
-# ---- 建卡只读计划（A6 试点，不落盘）----
+# ---- 建卡只读计划（A6）----
 SCAFFOLD_TRACK_KEY = {"change": "cards", "task": "tasks"}
 SCAFFOLD_TOPIC_KEY = {"change": "changes", "task": "tasks"}
 SCAFFOLD_TEMPLATE = {"change": "change_template", "task": "task_template"}
@@ -1595,8 +1595,7 @@ SCAFFOLD_REQUIRED = (("design_topic", "设计主题"), ("title", "标题"),
 def scaffold_plan(ctx, args):
     """只读建卡计划：给出确定性写入差异与缺失输入；不写文件。
 
-    只做建议与预演：卡号来自 --next-id 口径（不是原子预占），写入需另行走廊并满足
-    冲突、中断恢复与人工验收条件。
+    卡号遵循 --next-id 的取号规则。Agent 核对计划后按建卡 SOP 落盘并复核。
     """
     track = args.track or "change"
     card_id, basis = next_id(ctx, track)
@@ -1701,7 +1700,7 @@ def scaffold_plan(ctx, args):
     if track == "task":
         lines.append("  里程碑：%s" % (args.milestone or "未指定"))
     lines.append("缺少输入：%s" % ("、".join(missing) or "无"))
-    lines.append("说明：计划只读；写入需单独的 scaffold 写入流程并满足冲突、中断恢复与人工验收条件。")
+    lines.append("说明：计划只读。核对建议卡号与拟变更后，按建卡 SOP 落盘并复核。")
     return data, "\n".join(lines)
 
 

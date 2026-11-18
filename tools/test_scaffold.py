@@ -1,4 +1,4 @@
-"""建卡只读计划（A6 试点）的回归用例。"""
+"""建卡只读计划（A6）的回归用例。"""
 import json
 import subprocess
 import sys
@@ -85,6 +85,7 @@ class ScaffoldPlanTests(ScaffoldFixture):
                              "--card-version", "v0.1.0", "--branch", "fix/C001-login").stdout
         self.assertIn("写入计划（未落盘）", text)
         self.assertIn("executable=yes", text)
+        self.assertIn("按建卡 SOP 落盘并复核", text)
 
     def test_missing_inputs_are_listed_and_plan_is_not_executable(self):
         data = self.run_json("--design-topic", "Core")

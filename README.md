@@ -389,7 +389,7 @@ scripts/adflow-verify --card C001 --receipt
 | `--topic NAME --scope active` | 只读两份现行总账与活跃卡实体，按 `file` 所属轨道排除旧总账归档项；不发现、遍历或读取归档区 | 无；结果为空返回空列表，总账缺失/损坏或登记失效报 Exit 4 |
 | `--topic NAME --scope history` | 只读批次总账与旧布局归档登记，输出卡号、状态、版本、归档批次与路径；不读归档卡正文，同号同路径去重、同号异路径报冲突 | 无；与 `--topic` 同样的独占只读查询 |
 | `--list-checks` | 列出全部诊断码、默认严重级别、释义与修复提示；静态目录，不依赖目标项目状态 | 无；与 `--next-id`/`--topic` 同类的独占只读查询，不能搭配其他模式参数 |
-| `--scaffold new-card --plan` | 只读建卡计划（试点）：给出建议卡号与取号依据、设计主题/文档解析、拟创建的卡片与总账/主题/待办变更、缺失输入 | 无；写入流程尚未实现。与 `--next-id`/`--topic` 同类的独占查询 |
+| `--scaffold new-card --plan` | C/T 建卡前置的只读计划（A6），输出建议卡号、设计挂接、拟变更和缺失输入 | 独占查询，零写入。Agent 按建卡 SOP 核对并落实计划 |
 | `--warn-only` | 将 ERROR 降为 WARN，供观察 | 不写入，不能与 `--record` 合用；存在违规时返回 6 |
 
 | 退出码或诊断 | 含义 | 后续处理 |
@@ -402,7 +402,7 @@ scripts/adflow-verify --card C001 --receipt
 
 普通复核的文本输出在每条问题下附带「↳ 修复」提示；`--json` 的 `findings[].hint` 承载同一提示，`summary.codes` 按诊断码汇总本次各严重级别条数（`--warn-only` 之后计数，无发现时为 `{}`）。提示指向根因处理；涉及人工原话、历史归档、真实提交或既有资产处置时，按提示指向的现有 SOP 取证或交人工决策，不构成改写入授权。回执和路由查询保持原有输出格式。
 
-`--scaffold new-card --plan` 是 A6 试点：只输出建卡计划，不写任何文件。输入用 `--track`（`change`/`task`，缺省 `change`）、`--design-topic`、`--title`、`--card-version`、`--branch`，可选 `--design-doc`（缺省按主题在 `docs/devel/design/*.md` 查找 `@topic` 锚标）、`--todo`（拟从 `now.md`/`future.md` 删除的事项文本）与 `--milestone`（任务卡）。计划包含建议卡号及取号依据（不构成原子预占）、模板路径、设计解析结果、拟创建/登记的卡与总账/主题/待办变更，以及缺失输入；缺失项使 `executable=false`。退出码沿用普通复核语义，项目本身存在违规时仍会输出计划。
+Agent 在每次创建 C/T 卡前运行 `--scaffold new-card --plan`。输入包括 `--track`（`change`/`task`，缺省 `change`）、`--design-topic`、`--title`、`--card-version`、`--branch`，以及适用的 `--design-doc`（缺省按主题在 `docs/devel/design/*.md` 查找 `@topic` 锚标）、`--todo`（C 卡匹配 `now.md`，T 卡匹配 `future.md`）和 `--milestone`（任务卡）。计划输出建议卡号及取号依据、模板路径、设计解析结果、卡片与总账/主题/待办的拟变更。Agent 读取 `scaffold.executable`，补齐 `missing` 后重跑，并在落盘前复核建议卡号和计划差异。退出码沿用普通校验语义。源仓库的执行规则见 [AGENTS.md](AGENTS.md#本仓库建卡与归档流程)。
 
 `ARCHIVE_NON_TERMINAL`：归档区卡片必须为 `closed`/`completed`，非终态卡冻结进归档区即确定性违规（Exit 4）；总账路由与归档目录物理扫描双覆盖，绕过总账直接放入归档区的卡同样受检。打 Tag、发布或移卡入归档前，本批次 C 卡须全部 `closed`、T 卡须全部 `completed`，以 `--release <version>` 取得 Exit 0（普通校验 Exit 0 本身不证明批次终态）；批次内未达终态报 `RELEASE_NOT_TERMINAL`（Exit 4），未填 `version` 的未收口卡报 `RELEASE_SCOPE_UNKNOWN`（Exit 6）。归档移动、总账更新与 CHANGELOG 定稿后须复核校验再次 Exit 0，提交后在该提交上打 Tag。历史批次账实不符按归档 README「历史批次账实修复」流程由人工定口径处置。
 

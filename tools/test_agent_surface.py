@@ -12,6 +12,7 @@ NEW_FLAGS = ["--list-checks", "--scaffold", "--plan", "--track", "--design-topic
              "--milestone"]
 SURFACES = {
     "SKILL.md": REPO / "SKILL.md",
+    "source AGENTS": REPO / "AGENTS.md",
     "AGENTS template": REPO / "templates/AGENTS.md.tpl",
     "change SOP": REPO / "references/02-change-sop.md",
     "task SOP": REPO / "references/03-task-sop.md",
@@ -55,8 +56,16 @@ class AgentSurfaceTests(unittest.TestCase):
                 self.assertIn(token, text, "%s 缺少 %s" % (name, token))
 
     def test_card_creation_requires_read_only_plan(self):
-        for name in ("AGENTS template", "change SOP", "task SOP"):
+        for name in ("source AGENTS", "AGENTS template", "change SOP", "task SOP"):
             self.assertIn("--scaffold new-card --plan", self.text(SURFACES[name]), name)
+
+    def test_source_checkout_reuses_card_templates(self):
+        for name in ("change-template.json", "task-template.json"):
+            with self.subTest(template=name):
+                checkout_template = REPO / "docs/standards" / name
+                package_template = REPO / "templates/docs/standards" / (name + ".tpl")
+                self.assertEqual(checkout_template.resolve(strict=True),
+                                 package_template.resolve(strict=True))
 
     def test_agents_rule_keeps_human_out_of_the_cli(self):
         text = self.text(SURFACES["AGENTS template"])
