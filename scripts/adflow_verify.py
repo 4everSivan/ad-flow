@@ -1603,7 +1603,7 @@ def scaffold_design_issue(ctx, doc, topic):
     path = Path(rel)
     if is_readme(path):
         return "README 不能作为设计正文"
-    if not path.is_relative_to("docs/devel/design") or path.suffix.lower() != ".md":
+    if path.parts[:3] != ("docs", "devel", "design") or path.suffix.lower() != ".md":
         return "须使用 docs/devel/design/ 下的 Markdown 正文相对路径"
     if topic not in ctx.topics_in(rel):
         return "缺少 @%s 锚标" % topic

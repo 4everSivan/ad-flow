@@ -44,7 +44,7 @@ AI 编码助手在实际项目里最常见的问题，不是写不出代码，�
 
 ### 1. 首次初始化
 
-运行校验器需要 **Python 3.9+**（仅用标准库，无需安装额外依赖）。让你的 Agent 加载本技能后，在目标项目对话中发送：
+运行校验器需要 **Python 3.7+**（仅用标准库，无需安装额外依赖；仓库 CI 在 Python 3.7、3.9、3.12 上持续验证）。让你的 Agent 加载本技能后，在目标项目对话中发送：
 
 ```text
 $ad-flow
@@ -373,7 +373,7 @@ skills/ad-flow/
 ├── workflow.yaml                     # 8 步初始化状态机与 24+2 文件安装/升级映射
 ├── README.md                         # 本说明文档
 ├── AGENTS.md                         # 维护本技能仓库自身的约定（不安装到目标项目）
-├── .github/workflows/ci.yml          # GitHub Actions：Linux/macOS × Python 3.9/3.12 运行 tools/check.sh
+├── .github/workflows/ci.yml          # GitHub Actions：Linux/macOS × Python 3.9/3.12 与 Ubuntu 22.04 × 3.7 跑 tools/check.sh
 │
 ├── scripts/                          # 随技能安装到目标项目的校验器
 │   ├── adflow_verify.py
@@ -414,7 +414,7 @@ skills/ad-flow/
 
 ### 运行仓库回归检查
 
-维护本技能包时，在仓库根目录运行（与 `.github/workflows/ci.yml` 在 Linux/macOS 的 Python 3.9 与 3.12 上跑的是同一条命令）：
+维护本技能包时，在仓库根目录运行（与 `.github/workflows/ci.yml` 在 Linux/macOS 的 Python 3.9、3.12 以及 Ubuntu 22.04 的 Python 3.7 上跑的是同一条命令）：
 
 ```bash
 ./tools/check.sh

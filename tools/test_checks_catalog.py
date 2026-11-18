@@ -15,29 +15,42 @@ sys.path.insert(0, str(REPO / "scripts"))
 import adflow_verify as av  # noqa: E402
 
 
+def string_literal(node):
+    """返回字符串字面量的值；兼容 3.8+ 的 Constant 与 3.7 的 Str 节点。"""
+    if isinstance(node, ast.Constant):
+        return node.value if isinstance(node.value, str) else None
+    str_node = getattr(ast, "Str", None)
+    if str_node is not None and isinstance(node, str_node):
+        return node.s
+    return None
+
+
 def emission_scan(path):
     """返回 (literal emission points, non-literal points, findings.append lines, add span)。"""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     points, dynamic, appends, add_span = [], [], [], None
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "add":
-            add_span = (node.lineno, node.end_lineno)
+            # end_lineno 是 3.8+ 才有的属性；3.7 用子树里最大的行号兜底。
+            end = getattr(node, "end_lineno", None)
+            if end is None:
+                end = max(child.lineno for child in ast.walk(node) if hasattr(child, "lineno"))
+            add_span = (node.lineno, end)
         if not isinstance(node, ast.Call):
             continue
         func = node.func
         name = func.attr if isinstance(func, ast.Attribute) else None
         if name in ("hard", "soft", "advisory") and node.args:
             sev = {"hard": "ERROR", "soft": "WARN", "advisory": "ADVISORY"}[name]
-            arg = node.args[0]
-            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                points.append((arg.value, sev, node.lineno))
+            value = string_literal(node.args[0])
+            if value is not None:
+                points.append((value, sev, node.lineno))
             else:
                 dynamic.append((name, node.lineno))
         if name == "add" and len(node.args) >= 2:
-            code, sev = node.args[1], node.args[0]
-            if (isinstance(code, ast.Constant) and isinstance(code.value, str)
-                    and isinstance(sev, ast.Constant)):
-                points.append((code.value, sev.value, node.lineno))
+            code, sev = string_literal(node.args[1]), string_literal(node.args[0])
+            if code is not None and sev is not None:
+                points.append((code, sev, node.lineno))
         if (name == "append" and isinstance(func.value, ast.Attribute)
                 and func.value.attr == "findings"):
             appends.append(node.lineno)

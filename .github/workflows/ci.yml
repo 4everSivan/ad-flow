@@ -15,8 +15,13 @@ jobs:
       fail-fast: false
       matrix:
         # ubuntu-latest 已迁移到 26.04，该镜像没有 Python 3.9；固定 24.04 保留 3.9/3.12 矩阵。
+        # 安装到目标项目的校验器兼容 Python 3.7+：3.7 只存在于旧镜像，单独在 ubuntu-22.04
+        # 上跑同一条 tools/check.sh（含 tools/test_python_compat.py 的语法与标准库下限守卫）。
         os: [ubuntu-24.04, macos-latest]
         python: ["3.9", "3.12"]
+        include:
+          - os: ubuntu-22.04
+            python: "3.7"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
