@@ -1,0 +1,52 @@
+{
+  "$schema": "adflow-archive-batch-v1",
+  "release": "v1.8.0",
+  "archived_at": "2026-11-18",
+  "cards": {},
+  "tasks": {
+    "T01": {
+      "title": "增加按主题查询现行卡片的轻量入口",
+      "version": "v1.8.0",
+      "milestone": "M1",
+      "status": "completed",
+      "branch": "feat/T01-active-topic-query",
+      "depends_on": [],
+      "topic": "ArchiveCardQuery",
+      "file": "docs/archive/v1.8.0/task/T01.json"
+    },
+    "T02": {
+      "title": "增加基于批次总账的历史卡片查询",
+      "version": "v1.8.0",
+      "milestone": "M1",
+      "status": "completed",
+      "branch": "feat/T02-history-topic-query",
+      "depends_on": [
+        "T01"
+      ],
+      "topic": "ArchiveCardQuery",
+      "file": "docs/archive/v1.8.0/task/T02.json"
+    },
+    "T03": {
+      "title": "验证查询性能与发布兼容并更新使用指引",
+      "version": "v1.8.0",
+      "milestone": "M2",
+      "status": "completed",
+      "branch": "feat/T03-topic-query-validation",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "topic": "ArchiveCardQuery",
+      "file": "docs/archive/v1.8.0/task/T03.json"
+    }
+  },
+  "topics": {
+    "ArchiveCardQuery": {
+      "tasks": [
+        "T01",
+        "T02",
+        "T03"
+      ]
+    }
+  }
+}

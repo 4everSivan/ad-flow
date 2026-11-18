@@ -6,7 +6,7 @@
 
 ## [Unreleased]
 
-## [1.8.0] - 2026-11-17
+## [1.8.0] - 2026-11-18
 
 ### Fixed
 
@@ -32,6 +32,7 @@
 - `workflow.yaml` 的 Step 4/5/6/8 与升级 U2–U4 的机器消费映射改为 JSON 流式取值（同时是合法 YAML 值），保留原有字段层级与条目说明；新增 `execution_contract.machine_manifests` 说明块约定与检查边界。普通段落与逐步操作规则保持原 YAML 写法。
 - `SKILL.md`、`workflow.yaml` 与审计清单不再逐码复述诊断清单，改为“以 `--list-checks` 为准 + 策略说明”；`ADVISORY` 默认政策、`ARCHIVE_NON_TERMINAL` 硬门禁例外、历史批次处置与旧布局兼容保持不变。
 - README 维护章节与发版步骤改用 `./tools/check.sh`，并补充 `--list-checks`、`hint` 与 `summary.codes` 的说明。
+- 归档本批次的任务卡和查询基准快照。 [T01](https://github.com/4everSivan/ad-flow/blob/v1.8.0/docs/archive/v1.8.0/task/T01.json) · [T02](https://github.com/4everSivan/ad-flow/blob/v1.8.0/docs/archive/v1.8.0/task/T02.json) · [T03](https://github.com/4everSivan/ad-flow/blob/v1.8.0/docs/archive/v1.8.0/task/T03.json) · [基准快照](https://github.com/4everSivan/ad-flow/blob/v1.8.0/docs/archive/v1.8.0/verification/topic-query-20261117-173834.md)
 
 ## [1.7.0] - 2026-11-05
 

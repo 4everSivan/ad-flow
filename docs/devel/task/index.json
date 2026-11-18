@@ -1,7 +1,7 @@
 {
   "$schema": "https://ad-flow.org/schemas/task-index.v1.json",
   "phase": "v1.8.0 归档与卡片查询优化",
-  "updated_at": "2026-11-17",
+  "updated_at": "2026-11-18",
   "milestones": {
     "M1": {
       "title": "轻量查询入口",
@@ -22,48 +22,8 @@
   "topics": {
     "ArchiveCardQuery": {
       "design_doc": "docs/devel/design/01-归档与卡片查询.md",
-      "tasks": [
-        "T01",
-        "T02",
-        "T03"
-      ]
+      "tasks": []
     }
   },
-  "tasks": {
-    "T01": {
-      "title": "增加按主题查询现行卡片的轻量入口",
-      "version": "v1.8.0",
-      "milestone": "M1",
-      "status": "completed",
-      "branch": "feat/T01-active-topic-query",
-      "depends_on": [],
-      "topic": "ArchiveCardQuery",
-      "file": "docs/devel/task/T01.json"
-    },
-    "T02": {
-      "title": "增加基于批次总账的历史卡片查询",
-      "version": "v1.8.0",
-      "milestone": "M1",
-      "status": "completed",
-      "branch": "feat/T02-history-topic-query",
-      "depends_on": [
-        "T01"
-      ],
-      "topic": "ArchiveCardQuery",
-      "file": "docs/devel/task/T02.json"
-    },
-    "T03": {
-      "title": "验证查询性能与发布兼容并更新使用指引",
-      "version": "v1.8.0",
-      "milestone": "M2",
-      "status": "completed",
-      "branch": "feat/T03-topic-query-validation",
-      "depends_on": [
-        "T01",
-        "T02"
-      ],
-      "topic": "ArchiveCardQuery",
-      "file": "docs/devel/task/T03.json"
-    }
-  }
+  "tasks": {}
 }
