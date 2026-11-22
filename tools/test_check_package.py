@@ -207,6 +207,24 @@ class IndependentContentTests(unittest.TestCase):
             self.assertEqual(first, anchor, "%s 的内容锚点不符" % rel)
         self.assertNotIn("MyProject", (project / "AGENTS.md").read_text(encoding="utf-8"))
 
+    def test_installed_task_grill_me_precedes_a6(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            self.materialize(REPO, project)
+            agents = (project / "AGENTS.md").read_text(encoding="utf-8")
+            task_readme = (project / "docs/devel/task/README.md").read_text(encoding="utf-8")
+            change_readme = (project / "docs/devel/change/README.md").read_text(encoding="utf-8")
+
+        task_entry, change_entry = agents.split("### 1. 功能设计入口", 1)[1].split(
+            "### 2. Bug 修复入口", 1)
+        link = "(docs/devel/task/README.md#grill-me)"
+        self.assertLess(task_entry.index(link), task_entry.index("--scaffold new-card --plan"))
+        start = task_readme.index("### Grill-me\n")
+        end = task_readme.index("--scaffold new-card --plan")
+        self.assertIn("至少一轮", task_readme[start:end])
+        self.assertNotIn("grill-me", change_entry.lower())
+        self.assertNotIn("grill-me", change_readme.lower())
+
     def test_swapped_templates_are_caught_by_content_anchors(self):
         workflow_root = copy_repo(self)
         assets_template = "templates/docs/assets/README.md.tpl"

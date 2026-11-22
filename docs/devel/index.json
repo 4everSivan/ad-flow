@@ -2,7 +2,7 @@
   "$schema": "adflow-devel-index-v1",
   "project": "ad-flow",
   "created": "2026-11-17",
-  "last_change": "2026-11-17",
+  "last_change": "2026-11-22",
   "status": "active",
   "subsystems": [
     {
@@ -15,6 +15,12 @@
           "topic": "ArchiveCardQuery",
           "status": "baseline",
           "title": "归档与卡片查询"
+        },
+        {
+          "file": "docs/devel/design/02-任务卡建卡流程.md",
+          "topic": "TaskCardCreation",
+          "status": "baseline",
+          "title": "任务卡建卡流程"
         }
       ]
     },

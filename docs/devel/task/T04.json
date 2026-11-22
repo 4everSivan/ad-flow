@@ -1,0 +1,69 @@
+{
+  "$schema": "https://ad-flow.org/schemas/task-card.v1.json",
+  "id": "T04",
+  "title": "将 grill-me 纳入 T 卡建卡流程",
+  "version": "v1.8.1",
+  "milestone": "M3",
+  "status": "in_progress",
+  "branch": "codex/t04-task-card-grill-me",
+  "depends_on": [],
+  "target": {
+    "module": "任务卡建卡流程",
+    "design_doc": "docs/devel/design/02-任务卡建卡流程.md",
+    "design_topic": "TaskCardCreation"
+  },
+  "goal": "用户提出按 T 卡推进后，Agent 依据项目内的提示词与用户至少进行一轮对抗性讨论，将结论用于建卡。",
+  "precheck": {
+    "description": "检查安装模板是否已有 T 卡讨论提示词和入口链接",
+    "command": "git grep -q -F '### Grill-me' -- templates/docs/task/README.md.tpl && git grep -q -F 'docs/devel/task/README.md#grill-me' -- templates/AGENTS.md.tpl",
+    "expected": "Exit 0 表示已有提示词标题和入口链接，再核对实际分发的内容及顺序。",
+    "is_completed": false,
+    "evidence": "改动前预检 Exit 1，任务 README 模板没有 Grill-me 小节。"
+  },
+  "callback": {
+    "before": [],
+    "after": [
+      "tools/check.sh",
+      "scripts/adflow-verify --json"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "T04-1",
+      "title": "分发 T 卡讨论规则并接入建卡入口",
+      "capability": "在 T 卡流程中引用本地提示词，讨论结论用于任务范围、依赖与验收，随后生成 A6 计划。",
+      "done": true
+    }
+  ],
+  "acceptance": {
+    "result": true,
+    "run_id": "local-20261122-22",
+    "user_quote": "发布 1.8.1 版本，然后更新 codex 中的引用",
+    "signoff": "4everSivan (AI代签)",
+    "checks": [
+      {
+        "item": "T 卡入口在 A6 前可定位提示词",
+        "true_if": "本仓任务 SOP 和目标项目 T 卡入口指向同一模板产生的提示词，提示词要求至少讨论一轮，提问方式由提案决定。",
+        "false_if": "任一入口跳过讨论、链接失效或要求安装外部 skill。",
+        "evidence": "本仓和临时安装工程的两项新增回归均通过，覆盖 A6 前的链接、安装后的提示词标题及至少一轮约定。任务 README 提示词正文允许随提案调整提问方式。",
+        "result": true
+      },
+      {
+        "item": "C 卡及安装契约兼容",
+        "true_if": "C 卡入口、A6 和 24+2 安装契约通过维护者检查，源仓库结构校验通过。",
+        "false_if": "C 卡入口加入讨论步骤、A6 发生回归或安装包检查失败。",
+        "evidence": "tools/check.sh：基线 153 项通过，接入后 155 项通过。包检查确认 24+2 资产与升级映射一致，临时安装工程的初始化和普通校验通过。源仓库 scripts/adflow-verify --json 返回 Exit 0。",
+        "result": true
+      }
+    ]
+  },
+  "sync": {
+    "commit": ""
+  },
+  "gate": {
+    "tool": "adflow-verify",
+    "version": "1.8.0",
+    "ran_at": "",
+    "exit_code": null
+  }
+}

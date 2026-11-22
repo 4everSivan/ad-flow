@@ -59,6 +59,17 @@ class AgentSurfaceTests(unittest.TestCase):
         for name in ("source AGENTS", "AGENTS template", "change SOP", "task SOP"):
             self.assertIn("--scaffold new-card --plan", self.text(SURFACES[name]), name)
 
+    def test_source_task_grill_me_precedes_a6(self):
+        prompt = "templates/docs/task/README.md.tpl#grill-me"
+        for name, prefix in (("source AGENTS", ""), ("task SOP", "../")):
+            with self.subTest(surface=name):
+                text = self.text(SURFACES[name])
+                link = "(" + prefix + prompt + ")"
+                self.assertIn(link, text)
+                before_plan = text.split("--scaffold new-card --plan", 1)[0]
+                self.assertIn(link, before_plan)
+        self.assertNotIn("grill-me", self.text(SURFACES["change SOP"]).lower())
+
     def test_source_checkout_reuses_card_templates(self):
         for name in ("change-template.json", "task-template.json"):
             with self.subTest(template=name):

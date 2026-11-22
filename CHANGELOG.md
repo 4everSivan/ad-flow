@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- T 卡增加建卡前的 `grill-me` 对抗性讨论。用户提出按 T 卡推进后，Agent 按项目任务 README 中的提示词至少讨论一轮，将结论用于设计和任务拆解，再运行 A6。见 [T04](docs/devel/task/T04.json)。
+
 ### Changed
 
 - 校验器 `scripts/adflow_verify.py` 兼容下限降至 Python 3.7+（替换 `Path.is_relative_to()` 为 `Path.parts` 切片判断）。新增 `tools/test_python_compat.py` 守卫 3.7 语法与标准库下限，并让诊断目录测试兼容 3.7 的 `ast.Str` 节点；CI 矩阵补充 Ubuntu 22.04 × Python 3.7，与 3.9 / 3.12 运行同一条 `tools/check.sh`。

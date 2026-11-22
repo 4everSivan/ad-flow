@@ -41,14 +41,15 @@
 
 ### 1. 功能设计入口 (新功能 / 大需求 / 阶段里程碑)
 1. **方向登记**：在 `docs/devel/todo/` 登记方向级灵感与事项；
-2. **设计基线定稿**：在 `docs/devel/design/` 撰写或修订对应微设计文档（`01~99-[功能名].md`，结构参考 `design/README.md`），批准后状态置为 `baseline`（现行基线），草稿保持 `draft`，并标明概念主题锚标 `<!-- @topic: TopicName -->`；未实现能力由下一步的 T 卡明确记录，不能仅凭设计认定已实现；完成设计并建卡登记后从 `todo/` 移除对应项；
-3. **任务拆解（先跑只读计划）**：建卡前必须运行 `scripts/adflow-verify --scaffold new-card --plan --track task --design-topic <主题> --title <标题> --card-version <批次> --branch <分支> [--design-doc <设计文档>] [--milestone <里程碑>] [--todo <待办文本>] --json`；`executable` 为 true 后，严格按 `writes` / `topics` 创建 `Txx.json` 与 `task/index.json` 登记（卡号取自计划 `card_id`；`--next-id`/计划卡号都不是原子预占，合入前按五.1 复核），再补全 `depends_on`、`precheck`、`callback` 与验收契约；`executable` 为 false 时先补齐 `missing` 输入再重跑；
-4. **预检与回调执行流**：
+2. **Grill-me 对抗性讨论**。用户提出按 T 卡推进后，按[任务卡提示词](docs/devel/task/README.md#grill-me)与用户至少讨论一轮，再进入设计定稿与 A6 建卡计划。
+3. **设计基线定稿**：在 `docs/devel/design/` 撰写或修订对应微设计文档（`01~99-[功能名].md`，结构参考 `design/README.md`），批准后状态置为 `baseline`（现行基线），草稿保持 `draft`，并标明概念主题锚标 `<!-- @topic: TopicName -->`；未实现能力由下一步的 T 卡明确记录，不能仅凭设计认定已实现；完成设计并建卡登记后从 `todo/` 移除对应项；
+4. **任务拆解（先跑只读计划）**：建卡前必须运行 `scripts/adflow-verify --scaffold new-card --plan --track task --design-topic <主题> --title <标题> --card-version <批次> --branch <分支> [--design-doc <设计文档>] [--milestone <里程碑>] [--todo <待办文本>] --json`；`executable` 为 true 后，严格按 `writes` / `topics` 创建 `Txx.json` 与 `task/index.json` 登记（卡号取自计划 `card_id`；`--next-id`/计划卡号都不是原子预占，合入前按五.1 复核），再补全 `depends_on`、`precheck`、`callback` 与验收契约；`executable` 为 false 时先补齐 `missing` 输入再重跑；
+5. **预检与回调执行流**：
    * **预检 (Precheck)**：开工前在授权范围内执行 `precheck.command`，检测该任务是否已在代码库中实现（若已完成则记录 `is_completed: true` 并跳过重复开发）；
    * **前置回调 (`callback.before`)**：按序执行卡内声明的前置脚本或环境准备命令；
    * **按拓扑编码**：按依赖拓扑顺序完成核心能力交付；
    * **后置回调 (`callback.after`)**：按序执行代码格式化、Lint 扫描或构建检查等收尾脚本；
-5. **核验与代签**：跑通测试并逐项验收，以节点回执（见二.3）在会话中请求人工确认；人工明确确认后，AI 代为在卡内 `acceptance` 写入人类原话 `user_quote` 与 `signoff`，再回填 `sync.commit`、预检 `completed` 并在 `task/index.json` 中闭环，阶段发版时执行归档。
+6. **核验与代签**：跑通测试并逐项验收，以节点回执（见二.3）在会话中请求人工确认；人工明确确认后，AI 代为在卡内 `acceptance` 写入人类原话 `user_quote` 与 `signoff`，再回填 `sync.commit`、预检 `completed` 并在 `task/index.json` 中闭环，阶段发版时执行归档。
 
 ### 2. Bug 修复入口 (缺陷 / 功能回调 / 参数微调 / 重构)
 1. **登记并移出 (零沉淀)**：在 `docs/devel/todo/now.md` 登记；建卡前必须运行 `scripts/adflow-verify --scaffold new-card --plan --track change --design-topic <主题> --title <标题> --card-version <批次> --branch <分支> [--design-doc <设计文档>] --todo <待办行文本> --json`；`executable` 为 true 后按 `writes` / `topics` / `todo` 创建 `Cxxx.json`、登记 `change/index.json` 并删除待办行（落地即删除）；`executable` 为 false 时先补齐 `missing` 输入再重跑；禁止手抄模板或手写登记条目；

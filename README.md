@@ -90,7 +90,9 @@ Agent 按 [workflow.yaml](workflow.yaml) 中的 8 步流水线执行初始化（
 修复登录失败时缺少错误提示的问题，按本项目规范完成变更与验证。
 ```
 
-建卡前，Agent 会先在项目内运行 `scripts/adflow-verify --scaffold new-card --plan ...` 生成只读计划；若 `scaffold.executable` 为 `false`，先补齐 `missing` 字段再重跑。确认可执行且核对建议卡号和拟变更清单后，才创建卡片、登记总账与主题、移出对应待办行，随后补全卡片正文并重跑校验。具体操作规程见 [变更 SOP](references/02-change-sop.md) 与 [任务 SOP](references/03-task-sop.md)。
+用户提出按 T 卡推进后，Agent 会先按任务目录 README 中的 `grill-me` 提示词与用户至少讨论一轮，将结论用于设计与任务拆解。
+
+建卡前，Agent 在项目内运行 `scripts/adflow-verify --scaffold new-card --plan ...` 生成只读计划；若 `scaffold.executable` 为 `false`，先补齐 `missing` 字段再重跑。确认可执行且核对建议卡号和拟变更清单后，才创建卡片、登记总账与主题、移出对应待办行，随后补全卡片正文并重跑校验。具体操作规程见 [变更 SOP](references/02-change-sop.md) 与 [任务 SOP](references/03-task-sop.md)。
 
 ### 3. 按需升级
 
@@ -169,7 +171,8 @@ flowchart TD
     ─► 授权合入、回写基线与 CHANGELOG ─► 预检 closed ─► 同步状态 ─► 输出回执
 
 [通道 B：阶段任务流 (T 卡)]
-  future.md 登记 ─► 撰写或修订设计基线 (@topic)
+  用户提出按 T 卡推进 ─► grill-me 对抗性讨论
+    ─► 撰写或修订设计基线 (@topic)
     ─► --scaffold new-card --plan（executable=true）
     ─► 落盘 task/Txx.json、登记总账与主题、移出待办
     ─► 补齐 depends_on、precheck、callback 与验收条件 ─► 复核校验
