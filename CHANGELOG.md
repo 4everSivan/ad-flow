@@ -6,9 +6,11 @@
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-22
+
 ### Added
 
-- T 卡增加建卡前的 `grill-me` 对抗性讨论。用户提出按 T 卡推进后，Agent 按项目任务 README 中的提示词至少讨论一轮，将结论用于设计和任务拆解，再运行 A6。见 [T04](docs/devel/task/T04.json)。
+- T 卡增加建卡前的 `grill-me` 对抗性讨论。用户提出按 T 卡推进后，Agent 按项目任务 README 中的提示词至少讨论一轮，将结论用于设计和任务拆解，再运行 A6。见 [T04](https://github.com/4everSivan/ad-flow/blob/v1.8.1/docs/archive/v1.8.1/task/T04.json)。
 
 ### Changed
 
@@ -192,7 +194,8 @@
 - 规范要求将构建产物、运行数据及实测报告收拢至 `local/`，避免生成物进入源码和 Git。
 - 再次调用技能时按目标版本同步项目规则、目录 README 与卡片模板，并保留已有业务设计、卡片及自定义规则。
 
-[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/4everSivan/ad-flow/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/4everSivan/ad-flow/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/4everSivan/ad-flow/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/4everSivan/ad-flow/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/4everSivan/ad-flow/compare/v1.5.0...v1.6.0

@@ -20,7 +20,7 @@
     },
     "M3": {
       "title": "T 卡建卡讨论",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         "T04"
       ]
@@ -33,16 +33,8 @@
     },
     "TaskCardCreation": {
       "design_doc": "docs/devel/design/02-任务卡建卡流程.md",
-      "tasks": [
-        "T04"
-      ]
+      "tasks": []
     }
   },
-  "tasks": {
-    "T04": {
-      "status": "in_progress",
-      "file": "docs/devel/task/T04.json",
-      "branch": "codex/t04-task-card-grill-me"
-    }
-  }
+  "tasks": {}
 }

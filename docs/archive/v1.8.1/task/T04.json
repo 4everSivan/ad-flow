@@ -4,7 +4,7 @@
   "title": "将 grill-me 纳入 T 卡建卡流程",
   "version": "v1.8.1",
   "milestone": "M3",
-  "status": "in_progress",
+  "status": "completed",
   "branch": "codex/t04-task-card-grill-me",
   "depends_on": [],
   "target": {
@@ -58,12 +58,14 @@
     ]
   },
   "sync": {
-    "commit": ""
+    "commit": "273a8f4e229fbb5bb35bbbfb23e254015f8aa90d"
   },
   "gate": {
     "tool": "adflow-verify",
-    "version": "1.8.0",
-    "ran_at": "",
-    "exit_code": null
+    "version": "1.8.1",
+    "ran_at": "2026-11-22",
+    "exit_code": 0,
+    "from_status": "in_progress",
+    "target_status": "completed"
   }
 }

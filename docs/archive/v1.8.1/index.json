@@ -1,0 +1,25 @@
+{
+  "$schema": "adflow-archive-batch-v1",
+  "release": "v1.8.1",
+  "archived_at": "2026-11-22",
+  "cards": {},
+  "tasks": {
+    "T04": {
+      "status": "completed",
+      "file": "docs/archive/v1.8.1/task/T04.json",
+      "branch": "codex/t04-task-card-grill-me",
+      "title": "将 grill-me 纳入 T 卡建卡流程",
+      "version": "v1.8.1",
+      "milestone": "M3",
+      "depends_on": [],
+      "topic": "TaskCardCreation"
+    }
+  },
+  "topics": {
+    "TaskCardCreation": {
+      "tasks": [
+        "T04"
+      ]
+    }
+  }
+}

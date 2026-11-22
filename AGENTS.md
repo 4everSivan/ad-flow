@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- @ad-flow: initialized v1.8.0 -->
+<!-- @ad-flow: initialized v1.8.1 -->
 
 > ad-flow 技能包自身的执行约定，用于维护本仓库与 `docs/devel/` 卡片。安装到目标项目时使用 [templates/AGENTS.md.tpl](templates/AGENTS.md.tpl)，技能入口见 [SKILL.md](SKILL.md)。
 
